@@ -1,3 +1,5 @@
+export const MAX_BRIEF_LENGTH = 10_000;
+
 export const DEFAULT_MAX_STEPS = 20;
 
 export const WRITER_OUTPUT_PATH = "/workspace/output/draft.md";

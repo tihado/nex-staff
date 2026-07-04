@@ -3,6 +3,7 @@ import { withWorkflow } from "workflow/next";
 import { getPublicAuthBaseUrl } from "./src/lib/auth-url";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["172.16.0.64"],
   env: {
     NEXT_PUBLIC_BETTER_AUTH_URL:
       process.env.NEXT_PUBLIC_BETTER_AUTH_URL ?? getPublicAuthBaseUrl(),

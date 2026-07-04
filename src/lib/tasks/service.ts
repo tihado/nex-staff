@@ -1,6 +1,8 @@
 import { and, count, desc, eq, gt, gte, inArray, lt, or } from "drizzle-orm";
+import { start } from "workflow/api";
 import { db } from "@/db";
 import {
+  chat,
   deliverable,
   notification,
   staff,
@@ -16,11 +18,12 @@ import {
   PREVIEW_EXCERPT_LENGTH,
   RECENTLY_COMPLETED_WINDOW_MS,
 } from "@/lib/tasks/constants";
-import { TaskNotFoundError } from "@/lib/tasks/errors";
+import { TaskDispatchError, TaskNotFoundError, TaskValidationError } from "@/lib/tasks/errors";
 import { publishTaskProgress } from "@/lib/tasks/sse";
 import type {
   ActiveTaskSummary,
   DelegateTaskInput,
+  DelegateTaskResult,
   DeliverableRecord,
   ProgressInput,
   RecentlyCompletedTaskSummary,
@@ -35,6 +38,7 @@ import type {
   TaskStatusSnapshot,
   TaskSummary,
 } from "@/lib/tasks/types";
+import { staffTaskWorkflow } from "@/lib/workflows/staff-task";
 
 function toIsoString(value: Date): string {
   return value.toISOString();
@@ -143,6 +147,81 @@ export async function markTaskRunning(
       startedAt: new Date(),
     })
     .where(eq(task.id, taskId));
+}
+
+async function assertChatBelongsToUser(
+  userId: string,
+  chatId: string | undefined
+): Promise<string | undefined> {
+  if (!chatId) {
+    return;
+  }
+
+  const existing = await db.query.chat.findFirst({
+    where: and(eq(chat.id, chatId), eq(chat.userId, userId)),
+    columns: { id: true },
+  });
+
+  if (!existing) {
+    throw new TaskValidationError("Chat not found.");
+  }
+
+  return chatId;
+}
+
+export async function delegateTask(
+  userId: string,
+  input: DelegateTaskInput
+): Promise<DelegateTaskResult> {
+  const chatId = await assertChatBelongsToUser(userId, input.chatId);
+
+  const staffRow = await db.query.staff.findFirst({
+    where: and(eq(staff.id, input.staffId), eq(staff.userId, userId)),
+  });
+
+  if (!staffRow) {
+    throw new TaskValidationError(
+      "Staff member not found. Use list_staff to see your team."
+    );
+  }
+
+  if (staffRow.status === "offline") {
+    throw new TaskValidationError(
+      `${staffRow.name} is currently offline and cannot receive tasks.`
+    );
+  }
+
+  const taskRow = await createDelegatedTask(userId, {
+    ...input,
+    chatId,
+  });
+
+  let workflowRunId: string;
+
+  try {
+    const run = await start(staffTaskWorkflow, [taskRow.id]);
+    workflowRunId = run.runId;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to start workflow.";
+
+    await markTaskFailed(taskRow.id, message);
+
+    throw new TaskDispatchError(
+      `Task was created but workflow failed to start: ${message}`
+    );
+  }
+
+  await markTaskRunning(taskRow.id, workflowRunId);
+
+  return {
+    taskId: taskRow.id,
+    staffId: staffRow.id,
+    staffName: staffRow.name,
+    status: "running",
+    workflowRunId,
+    message: `Task delegated to ${staffRow.name}. You can keep chatting.`,
+  };
 }
 
 export async function getTaskForWorkflow(taskId: string): Promise<{

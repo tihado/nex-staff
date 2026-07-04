@@ -160,6 +160,11 @@ export const taskStatusEnum = pgEnum("task_status", [
 
 export interface TaskMetadata {
   acceptanceCriteria?: string;
+  checkpoints?: Array<{
+    criteria: string;
+    label: string;
+    order: number;
+  }>;
   dependsOn?: string[];
   documentIds?: string[];
   error?: string;

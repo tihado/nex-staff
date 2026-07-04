@@ -11,6 +11,7 @@ import { useVoiceOutput } from "@/hooks/use-voice-output";
 import { useVoicePreferences } from "@/hooks/use-voice-preferences";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import {
+  createAssistantChatId,
   fetchAssistantChatHistory,
   getOrCreateAssistantChatId,
 } from "@/lib/chat/assistant-session";
@@ -38,6 +39,7 @@ interface DialogueOverlayProps {
   avatarSprite?: string;
   chatId?: string;
   embedded?: boolean;
+  freshSession?: boolean;
   greeting: string;
   hasWriterOnRoster?: boolean;
   hireContext?: HireDialogueContext;
@@ -357,6 +359,7 @@ export function DialogueOverlay({
   taskId,
   layout = "overlay",
   embedded = false,
+  freshSession = false,
 }: DialogueOverlayProps) {
   const [chatId, setChatId] = useState<string | null>(chatIdProp ?? null);
   const [initialMessages, setInitialMessages] = useState<
@@ -367,7 +370,9 @@ export function DialogueOverlay({
     let cancelled = false;
 
     async function loadSession() {
-      const id = chatIdProp ?? getOrCreateAssistantChatId();
+      const id =
+        chatIdProp ??
+        (freshSession ? createAssistantChatId() : getOrCreateAssistantChatId());
       const messages = await fetchAssistantChatHistory(id);
 
       if (cancelled) {
@@ -383,7 +388,7 @@ export function DialogueOverlay({
     return () => {
       cancelled = true;
     };
-  }, [chatIdProp]);
+  }, [chatIdProp, freshSession]);
 
   if (!chatId || initialMessages === null) {
     return (

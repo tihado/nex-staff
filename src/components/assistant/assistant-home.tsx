@@ -152,6 +152,7 @@ export function AssistantHome({
 
         {dialogueOpen ? (
           <DialogueOverlay
+            freshSession
             greeting={greeting}
             onClose={() => setDialogueOpen(false)}
             portraitIcon="android"

@@ -2,6 +2,10 @@ import type { AssistantUIMessage } from "@/lib/agents/assistant";
 
 export const ASSISTANT_CHAT_STORAGE_KEY = "nex-staff-assistant-chat-id";
 
+export function createAssistantChatId(): string {
+  return crypto.randomUUID();
+}
+
 export function getOrCreateAssistantChatId(): string {
   const existingId = sessionStorage.getItem(ASSISTANT_CHAT_STORAGE_KEY);
 
@@ -9,7 +13,7 @@ export function getOrCreateAssistantChatId(): string {
     return existingId;
   }
 
-  const chatId = crypto.randomUUID();
+  const chatId = createAssistantChatId();
   sessionStorage.setItem(ASSISTANT_CHAT_STORAGE_KEY, chatId);
   return chatId;
 }

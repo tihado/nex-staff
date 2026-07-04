@@ -25,6 +25,20 @@ function closeFlow(actions: HireFlowChoiceActions): void {
   actions.onCancel?.();
 }
 
+function handleTaskProposeChoice(
+  choiceId: string,
+  actions: HireFlowChoiceActions
+): void {
+  if (choiceId === "hire-accept") {
+    actions.setPhase("gather_tone");
+    return;
+  }
+
+  if (choiceId === "hire-decline") {
+    actions.reset();
+  }
+}
+
 function handleProposeChoice(
   choiceId: string,
   actions: HireFlowChoiceActions
@@ -111,6 +125,7 @@ const PHASE_HANDLERS: Partial<
     (choiceId: string, actions: HireFlowChoiceActions) => void
   >
 > = {
+  task_propose: handleTaskProposeChoice,
   propose: handleProposeChoice,
   explain: (_choiceId, actions) => actions.setPhase("propose"),
   gather_tone: handleGatherToneChoice,
@@ -120,8 +135,11 @@ const PHASE_HANDLERS: Partial<
     handleTerminalChoice(choiceId, "hire-limit-ok", actions),
   celebrate: (choiceId, actions) =>
     handleTerminalChoice(choiceId, "hire-done", actions),
-  delegate_offer: (choiceId, actions) =>
-    handleTerminalChoice(choiceId, "hire-delegate-later", actions),
+  delegate_offer: (choiceId, actions) => {
+    if (choiceId === "hire-delegate-later") {
+      actions.reset();
+    }
+  },
 };
 
 export function applyScriptedChoice(

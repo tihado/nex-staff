@@ -2,6 +2,7 @@ export type HireTone = "casual" | "formal" | "technical";
 
 export type HireFlowPhase =
   | "idle"
+  | "task_propose"
   | "propose"
   | "explain"
   | "gather_name"

@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DialogueState } from "@/hooks/use-dialogue-engine";
+import {
+  DEFAULT_HIRE_WRITER_NAME,
+  summarizeTaskBrief,
+} from "@/lib/dialogue/hire-intent";
 import type { DialogueChoice } from "@/lib/dialogue/types";
 import {
   fetchDocuments,
@@ -58,6 +62,7 @@ export interface UseHireFlowResult {
   scripted: HireFlowScriptedContent | null;
   startFromAssistant: (pendingTaskBrief?: string) => void;
   startFromDesk: (deskId: string) => void;
+  startFromTaskBrief: (brief: string, suggestedName?: string) => void;
 }
 
 function isScriptedPhase(phase: HireFlowPhase): boolean {
@@ -97,6 +102,30 @@ export function useHireFlow(
       setErrorMessage(null);
       setHiredResult(null);
       setPhase("propose");
+    },
+    [occupiedDeskSlotIds]
+  );
+
+  const startFromTaskBrief = useCallback(
+    (brief: string, suggestedName: string = DEFAULT_HIRE_WRITER_NAME) => {
+      const trimmedBrief = brief.trim();
+      const slotId = resolveStaffDeskSlotId("hire-desk-a", occupiedDeskSlotIds);
+
+      if (!slotId) {
+        setErrorMessage("All desk slots are full.");
+        setPhase("error");
+        return;
+      }
+
+      setDraft({
+        ...DEFAULT_DRAFT,
+        pendingTaskBrief: trimmedBrief,
+        name: suggestedName,
+        deskSlotId: slotId,
+      });
+      setErrorMessage(null);
+      setHiredResult(null);
+      setPhase("task_propose");
     },
     [occupiedDeskSlotIds]
   );
@@ -191,6 +220,20 @@ export function useHireFlow(
     }
 
     switch (phase) {
+      case "task_propose":
+        return {
+          line: `Chưa có Writer — muốn hire ${draft.name} để ${summarizeTaskBrief(draft.pendingTaskBrief ?? "")} không?`,
+          choices: [
+            {
+              id: "hire-accept",
+              label: `Có, hire ${draft.name}`,
+              shortcut: "A",
+            },
+            { id: "hire-decline", label: "Không, để sau", shortcut: "B" },
+          ],
+          dialogueState: "player-choice",
+        };
+
       case "propose":
         return {
           line: "Muốn hire Content Writer cho bàn này? Họ sẽ viết blog và nội dung dài theo tone bạn chọn.",
@@ -273,10 +316,14 @@ export function useHireFlow(
           dialogueState: "player-choice",
         };
 
-      case "delegate_offer":
+      case "delegate_offer": {
+        const taskSummary = draft.pendingTaskBrief
+          ? summarizeTaskBrief(draft.pendingTaskBrief)
+          : "việc này";
+
         return {
           line: hiredResult
-            ? `Giao việc ngay cho ${hiredResult.name}?`
+            ? `${hiredResult.name} đã sẵn sàng! Giao việc ${taskSummary} ngay không?`
             : "Giao việc ngay?",
           choices: [
             { id: "hire-delegate-now", label: "Giao việc ngay", shortcut: "A" },
@@ -284,6 +331,7 @@ export function useHireFlow(
           ],
           dialogueState: "player-choice",
         };
+      }
 
       default:
         return null;
@@ -291,6 +339,7 @@ export function useHireFlow(
   }, [
     documentChoices,
     draft.name,
+    draft.pendingTaskBrief,
     draft.tone,
     errorMessage,
     hiredResult,
@@ -304,6 +353,7 @@ export function useHireFlow(
     isScriptedActive: isScriptedPhase(phase),
     hiredResult,
     startFromDesk,
+    startFromTaskBrief,
     startFromAssistant,
     handleScriptedChoice,
     handleNameInput,

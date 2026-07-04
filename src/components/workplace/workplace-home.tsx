@@ -17,6 +17,7 @@ import {
   type WorkspaceDesk,
 } from "@/components/workplace/workspace-layout";
 import { useWorkspaceState } from "@/hooks/use-workspace-state";
+import { hasContentWriterOnRoster } from "@/lib/dialogue/hire-intent";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,7 @@ export function WorkplaceHome({
     loading: tasksLoading,
     occupiedDeskSlotIds,
     refresh: reloadWorkspace,
+    staff,
     tasks,
   } = useWorkspaceState();
   const [dialogue, setDialogue] = useState<ActiveDialogue | null>(null);
@@ -95,6 +97,8 @@ export function WorkplaceHome({
   );
 
   const hasDoneDesk = desks.some((desk) => desk.state === "done");
+
+  const hasWriterOnRoster = hasContentWriterOnRoster(staff);
 
   const sparkleAnchor = useMemo(() => {
     if (!hireCelebration) {
@@ -261,6 +265,7 @@ export function WorkplaceHome({
       {dialogue ? (
         <DialogueOverlay
           greeting={dialogue.greeting}
+          hasWriterOnRoster={hasWriterOnRoster}
           hireContext={dialogue.hireContext}
           occupiedDeskSlotIds={occupiedDeskSlotIds}
           onClose={() => setDialogue(null)}

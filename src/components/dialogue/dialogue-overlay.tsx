@@ -13,6 +13,7 @@ import {
   getOrCreateAssistantChatId,
 } from "@/lib/chat/assistant-session";
 import { extractHireStaffSuccessOutput } from "@/lib/dialogue/hire-choices";
+import { detectWriteIntent } from "@/lib/dialogue/hire-intent";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export interface HireDialogueContext {
 interface DialogueOverlayProps {
   chatId?: string;
   greeting: string;
+  hasWriterOnRoster?: boolean;
   hireContext?: HireDialogueContext;
   layout?: "overlay" | "panel";
   occupiedDeskSlotIds?: string[];
@@ -97,6 +99,7 @@ function DialogueOverlayPanel({
   chatId,
   initialMessages,
   hireContext,
+  hasWriterOnRoster = false,
   occupiedDeskSlotIds = [],
   onClose,
   onStaffHired,
@@ -125,7 +128,8 @@ function DialogueOverlayPanel({
     speakerRole,
     portraitSprite: speakerId,
     greeting,
-    pendingTaskBrief: hireContext?.pendingTaskBrief,
+    pendingTaskBrief:
+      hireFlow.draft.pendingTaskBrief ?? hireContext?.pendingTaskBrief,
   });
 
   const startedDeskHireRef = useRef(false);
@@ -156,6 +160,10 @@ function DialogueOverlayPanel({
       return;
     }
 
+    if (hireFlow.phase !== "idle") {
+      return;
+    }
+
     const output = extractHireStaffSuccessOutput(lastAssistant);
 
     if (!(output && lastAssistant)) {
@@ -179,10 +187,12 @@ function DialogueOverlayPanel({
       hiredAt: new Date().toISOString(),
       activeTasks: 0,
     });
-  }, [hireContext?.mode, lastAssistant, onStaffHired]);
+  }, [hireContext?.mode, hireFlow.phase, lastAssistant, onStaffHired]);
 
   const useScriptedUi =
-    hireContext?.mode === "scripted" && hireFlow.isScriptedActive;
+    hireContext?.mode === "scripted"
+      ? hireFlow.isScriptedActive
+      : hireFlow.isScriptedActive && hireFlow.phase !== "idle";
 
   const displayText = useScriptedUi
     ? (hireFlow.scripted?.line ?? greeting)
@@ -207,10 +217,10 @@ function DialogueOverlayPanel({
         const delegateMessage = hireFlow.handleDelegateNow();
 
         if (delegateMessage) {
+          hireFlow.reset();
           engine.submitInput({ text: delegateMessage });
         }
 
-        hireFlow.reset();
         return;
       }
 
@@ -231,9 +241,24 @@ function DialogueOverlayPanel({
         return;
       }
 
+      const writeIntent =
+        hireContext?.mode === "assistant" &&
+        hireFlow.phase === "idle" &&
+        !hasWriterOnRoster
+          ? detectWriteIntent(payload.text)
+          : null;
+
+      if (writeIntent) {
+        hireFlow.startFromTaskBrief(
+          writeIntent.brief,
+          writeIntent.suggestedName
+        );
+        return;
+      }
+
       engine.submitInput(payload);
     },
-    [engine, hireFlow, useScriptedUi]
+    [engine, hasWriterOnRoster, hireContext?.mode, hireFlow, useScriptedUi]
   );
 
   const [logOpen, setLogOpen] = useState(false);
@@ -395,6 +420,7 @@ export function DialogueOverlay({
   greeting,
   chatId: chatIdProp,
   hireContext,
+  hasWriterOnRoster,
   occupiedDeskSlotIds,
   onClose,
   onStaffHired,
@@ -453,6 +479,7 @@ export function DialogueOverlay({
     <DialogueOverlayPanel
       chatId={chatId}
       greeting={greeting}
+      hasWriterOnRoster={hasWriterOnRoster}
       hireContext={hireContext}
       initialMessages={initialMessages}
       layout={layout}

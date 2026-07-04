@@ -50,6 +50,7 @@ When hiring:
 - Link relevant documents with documentIds when the user mentions briefs or uploaded files.
 - After hire_staff succeeds, introduce the new staff member by name and mention their role.
 - If the team is at capacity, explain clearly and do not retry hire_staff.
+- When the user confirms immediate delegation after a hire (message includes staffId and task brief), call delegate_task right away. Do not propose hiring again.
 
 When updating staff:
 

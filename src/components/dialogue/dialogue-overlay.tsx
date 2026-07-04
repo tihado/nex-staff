@@ -152,8 +152,9 @@ function DialogueOverlayPanel({
 
   const isThinking = hireFlow.phase === "submitting" || engine.isThinking;
   const isAnimating = !useScriptedUi && engine.isStreaming;
+  const isPlayerInput = state === "player-input";
   const useTypewriter =
-    !(useScriptedUi || isAnimating || isThinking) &&
+    !(useScriptedUi || isAnimating || isThinking || isPlayerInput) &&
     Boolean(displayText.trim());
 
   const [typewriterComplete, setTypewriterComplete] = useState(!useTypewriter);
@@ -226,7 +227,7 @@ function DialogueOverlayPanel({
     displayText
   );
 
-  const showInput = state === "player-input" && canShowPlayerUi;
+  const showInput = isPlayerInput;
   const showChoices = state === "player-choice" && canShowPlayerUi;
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
 

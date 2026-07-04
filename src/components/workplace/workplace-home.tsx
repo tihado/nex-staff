@@ -18,7 +18,11 @@ import {
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
 } from "@/components/workplace/workspace-layout";
-import { useWorkspaceState } from "@/hooks/use-workspace-state";
+import {
+  type TaskCompletionBanner,
+  type TaskFailureBanner,
+  useWorkspaceState,
+} from "@/hooks/use-workspace-state";
 import { hasContentWriterOnRoster } from "@/lib/dialogue/hire-intent";
 import { uiStrings } from "@/lib/i18n/ui";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
@@ -82,6 +86,98 @@ function buildReceptionGreeting(
   return baseGreeting;
 }
 
+function notificationTopClass(hasPriorNotification: boolean): string {
+  return cn(
+    "pointer-events-auto absolute left-1/2 w-[min(92vw,420px)] -translate-x-1/2",
+    hasPriorNotification ? "top-44" : "top-20"
+  );
+}
+
+interface WorkplaceNotificationsProps {
+  actionError: string | null;
+  banner: TaskCompletionBanner | null;
+  failureBanner: TaskFailureBanner | null;
+  hireCelebration: HireCelebration | null;
+  onBannerClick: () => void;
+  onClearActionError: () => void;
+  onClearHireCelebration: () => void;
+  onFailureBannerClick: () => void;
+}
+
+function WorkplaceNotifications({
+  failureBanner,
+  banner,
+  hireCelebration,
+  actionError,
+  onFailureBannerClick,
+  onBannerClick,
+  onClearHireCelebration,
+  onClearActionError,
+}: WorkplaceNotificationsProps) {
+  const hasPriorToCompletion = Boolean(failureBanner);
+  const hasPriorToHire = Boolean(failureBanner || banner);
+  const hasPriorToError = Boolean(failureBanner || banner || hireCelebration);
+
+  return (
+    <>
+      {failureBanner ? (
+        <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
+          <button
+            className="w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+            onClick={onFailureBannerClick}
+            type="button"
+          >
+            <PixelNotification
+              autoDismissMs={0}
+              message={`${uiStrings.workplace.bannerFailed(failureBanner.staffName, failureBanner.title)} — ${failureBanner.error}`}
+              title={uiStrings.somethingWentWrong}
+            />
+          </button>
+        </div>
+      ) : null}
+
+      {banner ? (
+        <div className={notificationTopClass(hasPriorToCompletion)}>
+          <button
+            className="w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+            onClick={onBannerClick}
+            type="button"
+          >
+            <PixelNotification
+              autoDismissMs={0}
+              message={uiStrings.workplace.bannerCompleted(
+                banner.staffName,
+                banner.title
+              )}
+              title={uiStrings.questComplete}
+            />
+          </button>
+        </div>
+      ) : null}
+
+      {hireCelebration ? (
+        <div className={notificationTopClass(hasPriorToHire)}>
+          <PixelNotification
+            message={uiStrings.workplace.hireJoined(hireCelebration.name)}
+            onDismiss={onClearHireCelebration}
+            title={uiStrings.newHire}
+          />
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <div className={notificationTopClass(hasPriorToError)}>
+          <PixelNotification
+            message={actionError}
+            onDismiss={onClearActionError}
+            title={uiStrings.somethingWentWrong}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 /**
  * Workplace home (#8): a top-down pixel office floor. Agents work at desks,
  * walk to the pantry when done, and show status emotes. Clicking Reception or a
@@ -97,7 +193,9 @@ export function WorkplaceHome({
     banner,
     desks,
     dismissBanner,
+    dismissFailureBanner,
     error: tasksError,
+    failureBanner,
     getPendingCompletion,
     loading: tasksLoading,
     occupiedDeskSlotIds,
@@ -125,7 +223,7 @@ export function WorkplaceHome({
   const hasModalLayer =
     completionCutscene !== null || deliverablePreview !== null;
   const hasNotificationLayer = Boolean(
-    banner || hireCelebration || actionError
+    banner || failureBanner || hireCelebration || actionError
   );
 
   const staffOptions = useMemo(
@@ -316,6 +414,15 @@ export function WorkplaceHome({
     [acknowledgeCompletion, showActionError]
   );
 
+  const handleFailureBannerClick = useCallback(() => {
+    if (!failureBanner) {
+      return;
+    }
+
+    setTaskBoardOpen(true);
+    dismissFailureBanner();
+  }, [dismissFailureBanner, failureBanner]);
+
   const handleBannerClick = useCallback(() => {
     if (!banner) {
       return;
@@ -388,49 +495,16 @@ export function WorkplaceHome({
         </OverlayStack.Layer>
 
         <OverlayStack.Layer active={hasNotificationLayer} id="notification">
-          {banner ? (
-            <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
-              <button
-                className="w-full cursor-pointer border-0 bg-transparent p-0 text-left"
-                onClick={handleBannerClick}
-                type="button"
-              >
-                <PixelNotification
-                  autoDismissMs={0}
-                  message={uiStrings.workplace.bannerCompleted(
-                    banner.staffName,
-                    banner.title
-                  )}
-                  title={uiStrings.questComplete}
-                />
-              </button>
-            </div>
-          ) : null}
-
-          {hireCelebration ? (
-            <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
-              <PixelNotification
-                message={uiStrings.workplace.hireJoined(hireCelebration.name)}
-                onDismiss={() => setHireCelebration(null)}
-                title={uiStrings.newHire}
-              />
-            </div>
-          ) : null}
-
-          {actionError ? (
-            <div
-              className={cn(
-                "pointer-events-auto absolute left-1/2 w-[min(92vw,420px)] -translate-x-1/2",
-                banner || hireCelebration ? "top-44" : "top-20"
-              )}
-            >
-              <PixelNotification
-                message={actionError}
-                onDismiss={() => setActionError(null)}
-                title={uiStrings.somethingWentWrong}
-              />
-            </div>
-          ) : null}
+          <WorkplaceNotifications
+            actionError={actionError}
+            banner={banner}
+            failureBanner={failureBanner}
+            hireCelebration={hireCelebration}
+            onBannerClick={handleBannerClick}
+            onClearActionError={() => setActionError(null)}
+            onClearHireCelebration={() => setHireCelebration(null)}
+            onFailureBannerClick={handleFailureBannerClick}
+          />
         </OverlayStack.Layer>
 
         <OverlayStack.Layer active={hasOverlayLayer} id="overlay">

@@ -858,6 +858,17 @@ async function getDeliverableMap(
   return map;
 }
 
+function extractFailureMessage(
+  metadata: TaskMetadata | null | undefined
+): string | null {
+  if (!metadata?.error || typeof metadata.error !== "string") {
+    return null;
+  }
+
+  const trimmed = metadata.error.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function mapTaskSummary(
   row: typeof task.$inferSelect,
   staffMember: TaskStaffSummary,
@@ -876,6 +887,8 @@ function mapTaskSummary(
     createdAt: toIsoString(row.createdAt),
     staffId: row.staffId,
     staff: staffMember,
+    failureMessage:
+      row.status === "failed" ? extractFailureMessage(row.metadata) : null,
     deliverable: deliverableRow
       ? {
           id: deliverableRow.id,
@@ -1090,13 +1103,13 @@ export function buildTaskCompletedSsePayload(
 
 export function buildTaskFailedSsePayload(
   taskRow: TaskSummary,
-  error: string
+  fallbackError = "Task failed."
 ): TaskFailedSsePayload {
   return {
     type: "task.failed",
     taskId: taskRow.id,
     staffId: taskRow.staffId,
-    error,
+    error: taskRow.failureMessage ?? fallbackError,
   };
 }
 

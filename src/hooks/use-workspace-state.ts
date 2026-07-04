@@ -18,6 +18,7 @@ import {
 import type { StaffSummary } from "@/lib/staff/types";
 import type {
   TaskCompletedSsePayload,
+  TaskFailedSsePayload,
   TaskProgressSsePayload,
   TaskSummary,
 } from "@/lib/tasks/types";
@@ -33,6 +34,14 @@ interface DerivedAgent {
 }
 
 export interface TaskCompletionBanner {
+  staffId: string;
+  staffName: string;
+  taskId: string;
+  title: string;
+}
+
+export interface TaskFailureBanner {
+  error: string;
   staffId: string;
   staffName: string;
   taskId: string;
@@ -58,6 +67,18 @@ function deriveAgent(
         activeTask.progressPercent >= IDEA_PROGRESS_THRESHOLD
           ? "idea"
           : "thinking",
+    };
+  }
+
+  const failedTask = tasks.find((task) => task.status === "failed");
+
+  if (failedTask) {
+    return {
+      state: "failed",
+      location: "desk",
+      pendingTaskId: null,
+      progress: failedTask.progressPercent,
+      emote: "failed",
     };
   }
 
@@ -242,7 +263,9 @@ interface UseWorkspaceStateResult {
   banner: TaskCompletionBanner | null;
   desks: WorkspaceDesk[];
   dismissBanner: () => void;
+  dismissFailureBanner: () => void;
   error: string | null;
+  failureBanner: TaskFailureBanner | null;
   getPendingCompletion: (taskId: string) => PendingTaskCompletion | undefined;
   loading: boolean;
   occupiedDeskSlotIds: string[];
@@ -262,6 +285,9 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<TaskCompletionBanner | null>(null);
+  const [failureBanner, setFailureBanner] = useState<TaskFailureBanner | null>(
+    null
+  );
 
   const refreshPending = useCallback(async () => {
     const pending = await fetchPendingTaskCompletions();
@@ -273,7 +299,7 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
       const [staffResult, tasksResult, pending] = await Promise.all([
         fetchJson<{ staff: StaffSummary[] }>("/api/staff"),
         fetchJson<{ tasks: TaskSummary[] }>(
-          "/api/tasks?status=running,pending,completed"
+          "/api/tasks?status=running,pending,completed,failed"
         ),
         fetchPendingTaskCompletions(),
       ]);
@@ -349,10 +375,49 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     [refreshPending, staff]
   );
 
+  const handleFailed = useCallback(
+    (payload: TaskFailedSsePayload) => {
+      const failedAt = new Date().toISOString();
+      const staffName =
+        staff.find((member) => member.id === payload.staffId)?.name ?? "Staff";
+      const failedTask = tasks.find((task) => task.id === payload.taskId);
+
+      setTasks((current) => {
+        if (!current.some((task) => task.id === payload.taskId)) {
+          load().catch(() => {
+            /* ignore refresh errors */
+          });
+          return current;
+        }
+
+        return current.map((task) =>
+          task.id === payload.taskId
+            ? {
+                ...task,
+                status: "failed" as const,
+                failureMessage: payload.error,
+                completedAt: failedAt,
+              }
+            : task
+        );
+      });
+
+      setFailureBanner({
+        taskId: payload.taskId,
+        staffId: payload.staffId,
+        staffName,
+        title: failedTask?.brief.slice(0, 120) ?? "Task",
+        error: payload.error,
+      });
+    },
+    [load, staff, tasks]
+  );
+
   useTaskEventSource(
     {
       onProgress: handleProgress,
       onCompleted: handleCompleted,
+      onFailed: handleFailed,
     },
     true
   );
@@ -374,6 +439,10 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
 
   const dismissBanner = useCallback(() => {
     setBanner(null);
+  }, []);
+
+  const dismissFailureBanner = useCallback(() => {
+    setFailureBanner(null);
   }, []);
 
   const acknowledgeCompletion = useCallback(
@@ -415,7 +484,9 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     banner,
     desks,
     dismissBanner,
+    dismissFailureBanner,
     error,
+    failureBanner,
     getPendingCompletion,
     loading,
     occupiedDeskSlotIds,

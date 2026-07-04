@@ -1,10 +1,22 @@
 import { MAX_STAFF_PER_USER } from "@/lib/staff/constants";
 
-export type AgentEmote = "thinking" | "idea" | "done" | "notify" | null;
+export type AgentEmote =
+  | "thinking"
+  | "idea"
+  | "done"
+  | "notify"
+  | "failed"
+  | null;
 
 export type AgentLocation = "desk" | "pantry" | "roaming";
 
-export type DeskState = "empty" | "idle" | "working" | "done" | "offline";
+export type DeskState =
+  | "empty"
+  | "idle"
+  | "working"
+  | "done"
+  | "failed"
+  | "offline";
 
 /** Sprite scale for desks and staff on the workspace floor. */
 export const WORKSPACE_DESK_SPRITE_SIZE = 100;

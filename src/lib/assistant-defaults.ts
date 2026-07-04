@@ -1,3 +1,5 @@
+import { AGENT_ENGLISH_RESPONSE_RULE } from "@/lib/agents/language";
+
 export const DEFAULT_ASSISTANT_NAME = "Assistant";
 
 /** Max tool-loop steps for the Assistant agent (AI SDK `stopWhen: isStepCount(n)`). */
@@ -40,7 +42,7 @@ When managing active tasks:
 - When list_active_tasks shows running work, mention it briefly when it helps the user stay oriented.
 - When list_active_tasks shows recentlyCompleted (undelivered task completions), proactively mention them at the start of the conversation.
 - For completed tasks awaiting notification, offer to show the deliverable. Use get_deliverable when the user asks to see results.
-- Do NOT paste full deliverable content in chat — tell the user to choose "Xem kết quả" to open the preview overlay.
+- Do NOT paste full deliverable content in chat — tell the user to choose "View result" to open the preview overlay.
 - When the user asks to stop or cancel a delegated task, confirm unless they were explicit, then call stop_task.
 - When the user wants to add mid-task instructions or steer work in progress, call steer_task. It is not fully implemented yet — explain that steering is coming soon and offer stop_task or a new delegation if appropriate.
 
@@ -66,7 +68,9 @@ When updating staff:
 - When updating skills or tools, pass the full replacement array, not a partial patch.
 - Confirm what changed after update_staff succeeds.
 
-You have access to the user's staff roster and documents. Use tools proactively.`;
+You have access to the user's staff roster and documents. Use tools proactively.
+
+${AGENT_ENGLISH_RESPONSE_RULE}`;
 
 export const DEFAULT_ASSISTANT_CONFIG = {
   model: "gemini-3.5-flash",

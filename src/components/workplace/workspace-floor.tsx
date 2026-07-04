@@ -58,11 +58,11 @@ export type WorkspaceZone = "archive" | "taskboard";
 interface WorkspaceFloorProps {
   assistantName: string;
   desks: WorkspaceDesk[];
-  hasDoneDesk?: boolean;
   onHire: (deskId: string) => void;
   onSelectAgent: (desk: WorkspaceDesk) => void;
   onSelectReception: () => void;
   onSelectZone: (zone: WorkspaceZone) => void;
+  pendingCompletionCount?: number;
 }
 
 const WOOD_FLOOR =
@@ -145,7 +145,7 @@ function resolveAgentAnchor(
 export function WorkspaceFloor({
   assistantName,
   desks,
-  hasDoneDesk = false,
+  pendingCompletionCount = 0,
   onHire,
   onSelectAgent,
   onSelectReception,
@@ -236,7 +236,7 @@ export function WorkspaceFloor({
         <WorkspaceZoneCell
           anchor={TASK_BOARD_ZONE.anchor}
           ariaLabel="Open the task board"
-          badge={hasDoneDesk}
+          badgeCount={pendingCompletionCount}
           label="Task Board"
           onClick={() => onSelectZone("taskboard")}
         >

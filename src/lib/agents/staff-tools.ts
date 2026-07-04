@@ -1,5 +1,6 @@
 import type { ToolSet } from "ai";
 import type { staff } from "@/db/schema";
+import { ensureEnglishResponseRule } from "@/lib/agents/language";
 import {
   createSandboxBashTool,
   createSandboxFileTool,
@@ -33,7 +34,7 @@ export function buildStaffInstructions(
     `## Deliverable\n\nWrite the final output to ${WRITER_OUTPUT_PATH} as Markdown.`
   );
 
-  return sections.join("\n\n");
+  return ensureEnglishResponseRule(sections.join("\n\n"));
 }
 
 export function buildStaffTools(

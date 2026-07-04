@@ -10,6 +10,7 @@ import { DocumentShelf } from "@/components/archive-room/document-shelf";
 import { PixelCloseButton, PixelPanel } from "@/components/pixel";
 import { useDocuments } from "@/hooks/use-documents";
 import type { DocumentSummary } from "@/lib/documents/types";
+import { uiStrings } from "@/lib/i18n/ui";
 import { cn } from "@/lib/utils";
 
 interface ArchiveRoomOverlayProps {
@@ -166,8 +167,7 @@ export function ArchiveRoomOverlay({
           className="font-[family-name:var(--font-body)] text-[20px] text-text-muted"
           id="archive-room-title"
         >
-          Thư viện tài liệu — mỗi file là một cuốn trên kệ, sẵn sàng gán cho
-          staff.
+          {uiStrings.archive.description}
         </p>
 
         {loading ? (

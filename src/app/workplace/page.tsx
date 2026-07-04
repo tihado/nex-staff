@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { AssistantHome } from "@/components/assistant/assistant-home";
+import { WorkplaceHome } from "@/components/workplace/workplace-home";
 import { getAssistantPageProps } from "@/lib/assistant-page-props";
 
-export default async function HomePage() {
+export default async function WorkplacePage() {
   const props = await getAssistantPageProps();
 
   if (!props) {
@@ -10,7 +10,7 @@ export default async function HomePage() {
   }
 
   return (
-    <AssistantHome
+    <WorkplaceHome
       assistantName={props.assistantName}
       greeting={props.greeting}
       viewerLabel={props.viewerLabel}

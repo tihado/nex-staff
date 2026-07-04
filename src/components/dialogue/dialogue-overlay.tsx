@@ -19,6 +19,7 @@ import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
 
 interface DialogueOverlayProps {
+  avatarSprite?: string;
   chatId?: string;
   greeting: string;
   onClose: () => void;
@@ -56,6 +57,7 @@ function DialogueOverlayPanel({
   speakerName,
   speakerRole,
   portraitIcon,
+  avatarSprite,
   greeting,
   chatId,
   initialMessages,
@@ -155,7 +157,11 @@ function DialogueOverlayPanel({
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
           {showNpcBox ? (
             <div className="flex items-end gap-3 sm:gap-4">
-              <DialoguePortrait icon={portraitIcon} speakerId={speakerId} />
+              <DialoguePortrait
+                avatarSprite={avatarSprite}
+                icon={portraitIcon}
+                speakerId={speakerId}
+              />
 
               <div className="min-w-0 flex-1">
                 <PixelDialogueBox
@@ -225,6 +231,7 @@ export function DialogueOverlay({
   speakerName,
   speakerRole,
   portraitIcon,
+  avatarSprite,
   greeting,
   chatId: chatIdProp,
   onClose,
@@ -274,6 +281,7 @@ export function DialogueOverlay({
 
   return (
     <DialogueOverlayPanel
+      avatarSprite={avatarSprite}
       chatId={chatId}
       greeting={greeting}
       initialMessages={initialMessages}

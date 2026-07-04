@@ -4,6 +4,11 @@ import type { useChat } from "@ai-sdk/react";
 import { useCallback, useMemo } from "react";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { extractDelegateProposalChoices } from "@/lib/dialogue/delegate-choices";
+import {
+  extractHireDelegateChoices,
+  extractHireProposalChoices,
+  HIRE_DELEGATE_CHOICES,
+} from "@/lib/dialogue/hire-choices";
 import type { DialogueChoice } from "@/lib/dialogue/types";
 
 const MAX_LINE_LENGTH = 80;
@@ -33,6 +38,7 @@ type ChatHelpers = ReturnType<typeof useChat<AssistantUIMessage>>;
 export interface UseDialogueEngineOptions {
   chat: ChatHelpers;
   greeting: string;
+  pendingTaskBrief?: string;
   portraitSprite: string;
   speakerId: string;
   speakerName: string;
@@ -123,11 +129,6 @@ interface ToolPartLike {
 }
 
 const CHOICE_MAP: Record<string, DialogueChoice[]> = {
-  hire_staff: [
-    { id: "hire-confirm", label: "Yes, hire now!", shortcut: "A" },
-    { id: "hire-more", label: "Ask more first", shortcut: "B" },
-    { id: "hire-cancel", label: "No, maybe later", shortcut: "C" },
-  ],
   create_document: [
     { id: "doc-open", label: "Open document", shortcut: "A" },
     { id: "doc-continue", label: "Continue", shortcut: "B" },
@@ -135,7 +136,8 @@ const CHOICE_MAP: Record<string, DialogueChoice[]> = {
 };
 
 function extractChoices(
-  message: AssistantUIMessage | undefined
+  message: AssistantUIMessage | undefined,
+  pendingTaskBrief?: string
 ): DialogueChoice[] {
   if (!message) {
     return [];
@@ -145,6 +147,21 @@ function extractChoices(
 
   if (delegateChoices.length > 0) {
     return delegateChoices;
+  }
+
+  const hireDelegateChoices = extractHireDelegateChoices(
+    message,
+    pendingTaskBrief
+  );
+
+  if (hireDelegateChoices.length > 0) {
+    return HIRE_DELEGATE_CHOICES;
+  }
+
+  const hireChoices = extractHireProposalChoices(message);
+
+  if (hireChoices.length > 0) {
+    return hireChoices;
   }
 
   for (const part of message.parts as ToolPartLike[]) {
@@ -177,6 +194,7 @@ export function useDialogueEngine(
     speakerRole,
     portraitSprite,
     greeting,
+    pendingTaskBrief,
   } = options;
   const { messages, status, sendMessage } = chat;
 
@@ -230,8 +248,8 @@ export function useDialogueEngine(
   }, [messages, greeting, isFirstVisit, npcLine]);
 
   const choices = useMemo(
-    () => (isBusy ? [] : extractChoices(lastAssistant)),
-    [lastAssistant, isBusy]
+    () => (isBusy ? [] : extractChoices(lastAssistant, pendingTaskBrief)),
+    [lastAssistant, isBusy, pendingTaskBrief]
   );
 
   const isThinking = status === "submitted";

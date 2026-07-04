@@ -8,6 +8,11 @@ import {
   type WorkspaceDesk,
 } from "@/components/workplace/workspace-layout";
 import { useTaskEventSource } from "@/hooks/use-task-event-source";
+import type { DeskAssignments } from "@/lib/staff/desk-assignments";
+import {
+  pruneDeskAssignments,
+  readDeskAssignments,
+} from "@/lib/staff/desk-assignments";
 import type { StaffSummary } from "@/lib/staff/types";
 import type {
   TaskCompletedSsePayload,
@@ -80,8 +85,9 @@ function deriveAgent(
 }
 
 function buildDesks(
-  staff: StaffSummary[],
-  tasks: TaskSummary[]
+  staffMembers: StaffSummary[],
+  tasks: TaskSummary[],
+  deskAssignments: DeskAssignments
 ): WorkspaceDesk[] {
   const tasksByStaff = new Map<string, TaskSummary[]>();
   for (const task of tasks) {
@@ -90,8 +96,34 @@ function buildDesks(
     tasksByStaff.set(task.staffId, existing);
   }
 
-  return WORKSPACE_DESK_SLOTS.map((slot, index) => {
-    const staffMember = staff[index];
+  const staffBySlot = new Map<string, StaffSummary>();
+  const unassigned: StaffSummary[] = [];
+
+  for (const member of staffMembers) {
+    const slotId = deskAssignments[member.id];
+
+    if (slotId) {
+      staffBySlot.set(slotId, member);
+    } else {
+      unassigned.push(member);
+    }
+  }
+
+  let unassignedIndex = 0;
+
+  for (const slot of WORKSPACE_DESK_SLOTS) {
+    if (staffBySlot.has(slot.id)) {
+      continue;
+    }
+
+    if (unassignedIndex < unassigned.length) {
+      staffBySlot.set(slot.id, unassigned[unassignedIndex]);
+      unassignedIndex += 1;
+    }
+  }
+
+  return WORKSPACE_DESK_SLOTS.map((slot) => {
+    const staffMember = staffBySlot.get(slot.id);
 
     if (!staffMember) {
       return {
@@ -123,6 +155,32 @@ function buildDesks(
       avatarSprite: staffMember.avatarSprite,
     };
   });
+}
+
+/** Mirrors desk layout fallback so hire flow respects visually occupied slots. */
+export function getOccupiedDeskSlotIds(
+  staffMembers: StaffSummary[],
+  deskAssignments: DeskAssignments
+): string[] {
+  const occupied = new Set(Object.values(deskAssignments));
+  const assignedStaffIds = new Set(Object.keys(deskAssignments));
+  const unassigned = staffMembers.filter(
+    (member) => !assignedStaffIds.has(member.id)
+  );
+  let unassignedIndex = 0;
+
+  for (const slot of WORKSPACE_DESK_SLOTS) {
+    if (occupied.has(slot.id)) {
+      continue;
+    }
+
+    if (unassignedIndex < unassigned.length) {
+      occupied.add(slot.id);
+      unassignedIndex += 1;
+    }
+  }
+
+  return [...occupied];
 }
 
 function upsertTaskProgress(
@@ -164,13 +222,16 @@ interface UseWorkspaceStateResult {
   dismissBanner: () => void;
   error: string | null;
   loading: boolean;
+  occupiedDeskSlotIds: string[];
   refresh: () => Promise<void>;
+  staff: StaffSummary[];
   tasks: TaskSummary[];
 }
 
 export function useWorkspaceState(): UseWorkspaceStateResult {
   const [staff, setStaff] = useState<StaffSummary[]>([]);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const [deskAssignments, setDeskAssignments] = useState<DeskAssignments>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<TaskCompletionBanner | null>(null);
@@ -184,8 +245,11 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
         ),
       ]);
 
+      pruneDeskAssignments(staffResult.staff.map((member) => member.id));
+
       setStaff(staffResult.staff);
       setTasks(tasksResult.tasks);
+      setDeskAssignments(readDeskAssignments());
       setError(null);
     } catch (loadError) {
       setError(
@@ -242,7 +306,15 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     true
   );
 
-  const desks = useMemo(() => buildDesks(staff, tasks), [staff, tasks]);
+  const desks = useMemo(
+    () => buildDesks(staff, tasks, deskAssignments),
+    [staff, tasks, deskAssignments]
+  );
+
+  const occupiedDeskSlotIds = useMemo(
+    () => getOccupiedDeskSlotIds(staff, deskAssignments),
+    [staff, deskAssignments]
+  );
 
   const dismissBanner = useCallback(() => {
     setBanner(null);
@@ -254,7 +326,9 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     dismissBanner,
     error,
     loading,
+    occupiedDeskSlotIds,
     refresh: load,
+    staff,
     tasks,
   };
 }

@@ -45,6 +45,7 @@ export interface HireStaffInput {
 }
 
 export interface HireStaffResult extends StaffSummary {
+  assignedDeskSlotId?: string;
   duplicateNameWarning?: string;
 }
 

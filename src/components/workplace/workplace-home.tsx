@@ -26,7 +26,6 @@ import type { HireStaffResult } from "@/lib/staff/types";
 import type { TaskDetail } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
-import { ZoneOverlay } from "./zone-overlay";
 
 interface WorkplaceHomeProps {
   assistantName: string;
@@ -43,12 +42,6 @@ interface ActiveDialogue {
   speakerName: string;
   speakerRole?: string;
   taskId?: string;
-}
-
-interface ActiveZone {
-  description: string;
-  icon: string;
-  title: string;
 }
 
 interface HireCelebration {
@@ -104,7 +97,6 @@ export function WorkplaceHome({
     useState<PendingTaskCompletion | null>(null);
   const [deliverablePreview, setDeliverablePreview] =
     useState<DeliverablePreviewState | null>(null);
-  const [zone, setZone] = useState<ActiveZone | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [hireCelebration, setHireCelebration] =
@@ -117,7 +109,6 @@ export function WorkplaceHome({
 
   const overlayOpen =
     dialogue !== null ||
-    zone !== null ||
     taskBoardOpen ||
     archiveOpen ||
     completionCutscene !== null ||
@@ -488,15 +479,6 @@ export function WorkplaceHome({
           speakerName={dialogue.speakerName}
           speakerRole={dialogue.speakerRole}
           taskId={dialogue.taskId}
-        />
-      ) : null}
-
-      {zone ? (
-        <ZoneOverlay
-          description={zone.description}
-          icon={zone.icon}
-          onClose={() => setZone(null)}
-          title={zone.title}
         />
       ) : null}
     </GameShell>

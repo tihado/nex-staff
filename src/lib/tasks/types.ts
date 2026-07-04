@@ -98,6 +98,7 @@ export interface DeliverableRecord {
 }
 
 export interface TaskStaffSummary {
+  avatarSprite: string;
   id: string;
   name: string;
   role: string;

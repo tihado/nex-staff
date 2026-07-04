@@ -1,4 +1,5 @@
 import { PixelProgressBar } from "@/components/pixel";
+import { StaffAvatar } from "@/components/staff/staff-avatar";
 import { truncateTaskBrief } from "@/lib/tasks/format";
 import type { TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
@@ -26,9 +27,16 @@ export function TaskStickyNote({ task, onSelect }: TaskStickyNoteProps) {
           {task.status === "pending" ? "▷" : "▶"} {title}
         </span>
       </div>
-      <p className="font-[family-name:var(--font-pixel)] text-[8px] text-ink-muted uppercase">
-        {task.staff.name}
-      </p>
+      <div className="flex items-center gap-2">
+        <StaffAvatar
+          size={32}
+          spriteId={task.staff.avatarSprite}
+          staffId={task.staff.id}
+        />
+        <p className="font-[family-name:var(--font-pixel)] text-[8px] text-ink-muted uppercase">
+          {task.staff.name}
+        </p>
+      </div>
       <PixelProgressBar
         label={`${task.progressPercent}%`}
         value={task.progressPercent}

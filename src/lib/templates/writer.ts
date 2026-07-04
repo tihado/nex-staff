@@ -20,7 +20,6 @@ You write clear, engaging blog posts for startup founders and technical audience
 
 export const writerTemplate = {
   role: "Content Writer",
-  avatarSprite: "writer-01",
   useSandbox: true,
   defaultInstructions: `You are a Content Writer on the Nex Staff team. You write blog posts and long-form content for startup founders.
 

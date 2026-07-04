@@ -1,6 +1,7 @@
 "use client";
 
 import { PixelIcon } from "@/components/pixel";
+import { StaffAvatar } from "@/components/staff/staff-avatar";
 import {
   PixelAssistant,
   PixelKing,
@@ -18,6 +19,7 @@ const EMOTION_ICON: Record<DialogueEmotion, string> = {
 const PORTRAIT_SIZE = 56;
 
 interface DialoguePortraitProps {
+  avatarSprite?: string;
   className?: string;
   emotion?: DialogueEmotion;
   icon?: string;
@@ -32,6 +34,7 @@ interface DialoguePortraitProps {
 export function DialoguePortrait({
   speakerId,
   icon,
+  avatarSprite,
   emotion = "neutral",
   className,
 }: DialoguePortraitProps) {
@@ -42,6 +45,14 @@ export function DialoguePortrait({
     figure = <PixelAssistant size={PORTRAIT_SIZE} />;
   } else if (speakerId === "boss") {
     figure = <PixelKing size={PORTRAIT_SIZE} />;
+  } else if (avatarSprite) {
+    figure = (
+      <StaffAvatar
+        size={PORTRAIT_SIZE}
+        spriteId={avatarSprite}
+        staffId={speakerId}
+      />
+    );
   }
 
   return (

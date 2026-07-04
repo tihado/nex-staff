@@ -7,7 +7,6 @@ import type {
 import { writerTemplate } from "@/lib/templates/writer";
 
 export interface AppliedStaffProfile {
-  avatarSprite: string;
   instructions: string;
   role: string;
   skills: StaffSkill[];
@@ -27,7 +26,6 @@ export function applyTemplate(
 
   return {
     role: overrides.role || template.role,
-    avatarSprite: template.avatarSprite,
     useSandbox: overrides.useSandbox ?? template.useSandbox,
     instructions: mergeInstructions(
       template.defaultInstructions,
@@ -59,7 +57,6 @@ export function resolveStaffProfile(
 
   return {
     role: input.role,
-    avatarSprite: "default",
     useSandbox: input.useSandbox ?? false,
     instructions: input.instructions,
     skills: [],

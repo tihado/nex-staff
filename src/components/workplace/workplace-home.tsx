@@ -23,6 +23,7 @@ import { hasContentWriterOnRoster } from "@/lib/dialogue/hire-intent";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
+import { getCoderWebsitePreviewUrl } from "@/lib/tasks/coder-preview";
 import type { TaskDetail } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
@@ -61,6 +62,7 @@ interface DeliverablePreviewState {
   content: string;
   contentType: string;
   title: string;
+  websitePreviewUrl?: string | null;
 }
 
 function buildReceptionGreeting(
@@ -188,6 +190,7 @@ export function WorkplaceHome({
         content: detail.deliverable.content,
         contentType: detail.deliverable.contentType,
         acknowledgeTaskId: acknowledgeOnClose ? taskId : undefined,
+        websitePreviewUrl: getCoderWebsitePreviewUrl(detail.metadata),
       });
     },
     []
@@ -417,6 +420,7 @@ export function WorkplaceHome({
             });
           }}
           title={deliverablePreview.title}
+          websitePreviewUrl={deliverablePreview.websitePreviewUrl}
         />
       ) : null}
 

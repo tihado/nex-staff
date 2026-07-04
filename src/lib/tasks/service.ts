@@ -12,6 +12,7 @@ import {
   taskPreview,
 } from "@/db/schema";
 import { createNotification } from "@/lib/notifications/service";
+import { getCoderWebsitePreviewUrl } from "@/lib/tasks/coder-preview";
 import {
   DEFAULT_TASK_EVENTS_LIMIT,
   DEFAULT_TASK_LIST_LIMIT,
@@ -536,7 +537,7 @@ export async function createTaskCompletedNotification(
 ): Promise<void> {
   const taskRow = await db.query.task.findFirst({
     where: eq(task.id, taskId),
-    columns: { userId: true, staffId: true },
+    columns: { metadata: true, userId: true, staffId: true },
   });
 
   if (!taskRow) {
@@ -553,6 +554,10 @@ export async function createTaskCompletedNotification(
     columns: { id: true, title: true },
   });
 
+  const websitePreviewUrl = getCoderWebsitePreviewUrl(
+    (taskRow.metadata ?? {}) as TaskMetadata
+  );
+
   await createNotification({
     userId: taskRow.userId,
     taskId,
@@ -562,6 +567,7 @@ export async function createTaskCompletedNotification(
       staffRole: staffRow?.role ?? "",
       deliverableId: deliverableRow?.id ?? null,
       deliverableTitle: deliverableRow?.title ?? null,
+      websitePreviewUrl: websitePreviewUrl ?? null,
     },
   });
 }

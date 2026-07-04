@@ -9,6 +9,7 @@ interface DeliverablePreviewOverlayProps {
   contentType: string;
   onClose: () => void;
   title: string;
+  websitePreviewUrl?: string | null;
 }
 
 function downloadFilename(title: string, contentType: string): string {
@@ -43,6 +44,7 @@ export function DeliverablePreviewOverlay({
   content,
   contentType,
   onClose,
+  websitePreviewUrl,
 }: DeliverablePreviewOverlayProps) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
     "idle"
@@ -108,6 +110,16 @@ export function DeliverablePreviewOverlay({
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
+          {websitePreviewUrl ? (
+            <PixelButton
+              onClick={() => {
+                window.open(websitePreviewUrl, "_blank", "noopener,noreferrer");
+              }}
+              type="button"
+            >
+              Mở website preview
+            </PixelButton>
+          ) : null}
           <PixelButton onClick={handleCopy} type="button">
             {copyButtonLabel(copyState)}
           </PixelButton>

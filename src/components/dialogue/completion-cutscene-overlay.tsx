@@ -8,6 +8,7 @@ import { PixelButton, PixelDialogueBox } from "@/components/pixel";
 import {
   buildCompletionCutsceneGreeting,
   COMPLETION_CUTSCENE_CHOICES,
+  COMPLETION_CUTSCENE_PREVIEW_CHOICES,
 } from "@/lib/dialogue/completion-choices";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 
@@ -30,11 +31,27 @@ export function CompletionCutsceneOverlay({
 }: CompletionCutsceneOverlayProps) {
   const greeting = buildCompletionCutsceneGreeting(
     completion.staffName,
-    completion.title
+    completion.title,
+    completion.websitePreviewUrl
   );
+
+  const choices = completion.websitePreviewUrl
+    ? COMPLETION_CUTSCENE_PREVIEW_CHOICES
+    : COMPLETION_CUTSCENE_CHOICES;
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
+      if (choiceId === "completion-preview" && completion.websitePreviewUrl) {
+        window.open(
+          completion.websitePreviewUrl,
+          "_blank",
+          "noopener,noreferrer"
+        );
+        onAcknowledge(completion.taskId);
+        onClose();
+        return;
+      }
+
       if (choiceId === "completion-view") {
         onViewDeliverable(completion.taskId);
         return;
@@ -52,6 +69,7 @@ export function CompletionCutsceneOverlay({
     },
     [
       completion.taskId,
+      completion.websitePreviewUrl,
       onAcknowledge,
       onClose,
       onDelegateMore,
@@ -116,10 +134,7 @@ export function CompletionCutsceneOverlay({
 
         <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
           <div className="w-full sm:max-w-sm">
-            <ChoiceMenu
-              choices={COMPLETION_CUTSCENE_CHOICES}
-              onSelect={handleSelectChoice}
-            />
+            <ChoiceMenu choices={choices} onSelect={handleSelectChoice} />
           </div>
         </div>
       </div>

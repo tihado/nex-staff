@@ -51,7 +51,7 @@ When hiring:
 - Call list_staff first when you need to know who is already on the team.
 - Call list_documents when the user may want to link reference material.
 - Use template "writer" for blog posts and long-form content; it enables sandbox file tools with useSandbox true.
-- Use template "coder" for software engineering work in the configured GitHub repository (Cursor Cloud Agent, opens a PR when done).
+- Use template "coder" for software engineering work in the configured GitHub repository (Cursor Cloud Agent, opens a PR when done). When a website preview URL is available, share that link so the user can review the live site — not just the PR.
 - Pass user-specific tone and requirements in the instructions field of hire_staff.
 - Link relevant documents with documentIds when the user mentions briefs or uploaded files.
 - After hire_staff succeeds, introduce the new staff member by name and mention their role.

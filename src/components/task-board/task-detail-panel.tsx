@@ -12,6 +12,7 @@ import { useTaskDetail } from "@/hooks/use-task-detail";
 import type { TaskDialogueContext } from "@/lib/dialogue/task-context";
 import type { TaskCheckpoint } from "@/lib/tasks/checkpoints";
 import { parseTaskCheckpoints } from "@/lib/tasks/checkpoints";
+import { getCoderWebsitePreviewUrl } from "@/lib/tasks/coder-preview";
 import {
   formatTaskEventLabel,
   shouldShowTaskEvent,
@@ -211,6 +212,9 @@ export function TaskDetailPanel({
     shouldShowTaskEvent(event.type)
   );
   const outputItems = buildTaskOutputItems(task, detail, preview);
+  const websitePreviewUrl = detail
+    ? getCoderWebsitePreviewUrl(detail.metadata)
+    : undefined;
 
   const handleAskAssistant = () => {
     onAskAssistant?.({
@@ -268,6 +272,26 @@ export function TaskDetailPanel({
                 onSelectItem={handleSelectOutputItem}
               />
 
+              {websitePreviewUrl ? (
+                <section className="flex flex-col gap-2">
+                  <h3 className="font-[family-name:var(--font-pixel)] text-[8px] text-ink-muted uppercase">
+                    Website preview
+                  </h3>
+                  <PixelButton
+                    onClick={() => {
+                      window.open(
+                        websitePreviewUrl,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
+                    }}
+                    type="button"
+                  >
+                    Mở website preview
+                  </PixelButton>
+                </section>
+              ) : null}
+
               {variant === "modal" && onAskAssistant ? (
                 <div className="pt-1">
                   <PixelButton onClick={handleAskAssistant}>
@@ -286,6 +310,7 @@ export function TaskDetailPanel({
           contentType={previewItem.contentType}
           onClose={() => setPreviewItem(null)}
           title={previewItem.title}
+          websitePreviewUrl={websitePreviewUrl}
         />
       ) : null}
     </>

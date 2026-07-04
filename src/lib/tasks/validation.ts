@@ -52,3 +52,8 @@ export const delegateTaskBodySchema = z.object({
   checkpoints: z.array(taskCheckpointSchema).optional(),
   staffId: z.string().uuid(),
 });
+
+/** Tool input — chatId comes from toolsContext, not the model. */
+export const delegateTaskToolInputSchema = delegateTaskBodySchema.omit({
+  chatId: true,
+});

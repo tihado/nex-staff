@@ -3,9 +3,13 @@
 import type { useChat } from "@ai-sdk/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
+import { extractDelegateProposalChoices } from "@/lib/dialogue/delegate-choices";
+import type { DialogueChoice } from "@/lib/dialogue/types";
 
 const MAX_LINE_LENGTH = 80;
 const SENTENCE_BOUNDARY = /[^.!?]+[.!?]+[\])'"`]*\s*|[^.!?]+$/g;
+
+export type { DialogueChoice } from "@/lib/dialogue/types";
 
 export type DialogueEmotion = "neutral" | "happy" | "think" | "alert";
 
@@ -23,12 +27,6 @@ export interface DialogueLine {
   speakerName: string;
   speakerRole?: string;
   text: string;
-}
-
-export interface DialogueChoice {
-  id: string;
-  label: string;
-  shortcut?: string;
 }
 
 type ChatHelpers = ReturnType<typeof useChat<AssistantUIMessage>>;
@@ -121,14 +119,6 @@ const CHOICE_MAP: Record<string, DialogueChoice[]> = {
     { id: "hire-more", label: "Ask more first", shortcut: "B" },
     { id: "hire-cancel", label: "No, maybe later", shortcut: "C" },
   ],
-  delegate_task: [
-    { id: "delegate-status", label: "View task status", shortcut: "A" },
-    {
-      id: "delegate-continue",
-      label: "Continue with something else",
-      shortcut: "B",
-    },
-  ],
   create_document: [
     { id: "doc-open", label: "Open document", shortcut: "A" },
     { id: "doc-continue", label: "Continue", shortcut: "B" },
@@ -140,6 +130,12 @@ function extractChoices(
 ): DialogueChoice[] {
   if (!message) {
     return [];
+  }
+
+  const delegateChoices = extractDelegateProposalChoices(message);
+
+  if (delegateChoices.length > 0) {
+    return delegateChoices;
   }
 
   for (const part of message.parts as ToolPartLike[]) {

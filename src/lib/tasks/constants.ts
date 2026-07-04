@@ -1,3 +1,5 @@
+export const TASK_START_STEP = "Starting...";
+
 export const MAX_BRIEF_LENGTH = 10_000;
 
 export const DEFAULT_MAX_STEPS = 20;

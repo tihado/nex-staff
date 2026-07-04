@@ -17,8 +17,13 @@ import {
   DEFAULT_TASK_LIST_LIMIT,
   PREVIEW_EXCERPT_LENGTH,
   RECENTLY_COMPLETED_WINDOW_MS,
+  TASK_START_STEP,
 } from "@/lib/tasks/constants";
-import { TaskDispatchError, TaskNotFoundError, TaskValidationError } from "@/lib/tasks/errors";
+import {
+  TaskDispatchError,
+  TaskNotFoundError,
+  TaskValidationError,
+} from "@/lib/tasks/errors";
 import { publishTaskProgress } from "@/lib/tasks/sse";
 import type {
   ActiveTaskSummary,
@@ -111,6 +116,10 @@ export async function createDelegatedTask(
     metadata.documentIds = [...new Set(input.documentIds)];
   }
 
+  if (input.checkpoints && input.checkpoints.length > 0) {
+    metadata.checkpoints = input.checkpoints;
+  }
+
   const [row] = await db
     .insert(task)
     .values({
@@ -119,6 +128,8 @@ export async function createDelegatedTask(
       chatId: input.chatId,
       brief: input.brief,
       status: "pending",
+      progressPercent: 0,
+      currentStep: TASK_START_STEP,
       metadata,
     })
     .returning();
@@ -190,6 +201,8 @@ export async function delegateTask(
       `${staffRow.name} is currently offline and cannot receive tasks.`
     );
   }
+
+  // MVP: allow delegation while staff is already working (simple parallel queue).
 
   const taskRow = await createDelegatedTask(userId, {
     ...input,

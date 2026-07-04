@@ -2,9 +2,15 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { PixelButton } from "@/components/pixel";
 import { authClient } from "@/lib/auth-client";
 
 type AuthMode = "sign-in" | "sign-up";
+
+const INPUT_CLASS =
+  "h-12 w-full border-[3px] border-wood bg-white px-3 font-body text-[20px] text-ink leading-none outline-none transition-colors focus:border-leaf";
+const LABEL_CLASS =
+  "block font-pixel text-[9px] text-ink uppercase tracking-widest";
 
 export function EmailPasswordForm() {
   const searchParams = useSearchParams();
@@ -69,19 +75,16 @@ export function EmailPasswordForm() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-5">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         {mode === "sign-up" ? (
           <div className="space-y-2">
-            <label
-              className="font-medium text-sm text-zinc-700 dark:text-zinc-300"
-              htmlFor="name"
-            >
+            <label className={LABEL_CLASS} htmlFor="name">
               Name
             </label>
             <input
               autoComplete="name"
-              className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-zinc-400 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className={INPUT_CLASS}
               id="name"
               onChange={(event) => setName(event.target.value)}
               placeholder="Your name"
@@ -92,15 +95,12 @@ export function EmailPasswordForm() {
         ) : null}
 
         <div className="space-y-2">
-          <label
-            className="font-medium text-sm text-zinc-700 dark:text-zinc-300"
-            htmlFor="email"
-          >
+          <label className={LABEL_CLASS} htmlFor="email">
             Email
           </label>
           <input
             autoComplete="email"
-            className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-zinc-400 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            className={INPUT_CLASS}
             id="email"
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
@@ -111,21 +111,18 @@ export function EmailPasswordForm() {
         </div>
 
         <div className="space-y-2">
-          <label
-            className="font-medium text-sm text-zinc-700 dark:text-zinc-300"
-            htmlFor="password"
-          >
+          <label className={LABEL_CLASS} htmlFor="password">
             Password
           </label>
           <input
             autoComplete={
               mode === "sign-up" ? "new-password" : "current-password"
             }
-            className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-zinc-900 outline-none ring-zinc-400 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            className={INPUT_CLASS}
             id="password"
             minLength={8}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="********"
             required
             type="password"
             value={password}
@@ -133,22 +130,22 @@ export function EmailPasswordForm() {
         </div>
 
         {error ? (
-          <p className="text-center text-red-600 text-sm dark:text-red-400">
+          <p className="border-[3px] border-pixel-alert bg-pixel-alert/10 px-3 py-2 text-center font-body text-[18px] text-pixel-alert">
             {error}
           </p>
         ) : null}
 
-        <button
-          className="flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 px-4 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        <PixelButton
+          className="w-full justify-center py-3"
           disabled={isLoading}
           type="submit"
         >
           {submitLabel}
-        </button>
+        </PixelButton>
       </form>
 
       <button
-        className="text-center text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
+        className="font-pixel text-[9px] text-sky-accent uppercase tracking-widest hover:text-leaf-dark"
         onClick={() => {
           setMode(mode === "sign-in" ? "sign-up" : "sign-in");
           setError(null);
@@ -156,8 +153,8 @@ export function EmailPasswordForm() {
         type="button"
       >
         {mode === "sign-in"
-          ? "Need an account? Sign up"
-          : "Already have an account? Sign in"}
+          ? "> Need an account? Sign up"
+          : "> Already have an account? Sign in"}
       </button>
     </div>
   );

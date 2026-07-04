@@ -65,6 +65,45 @@
   --font-family-body: var(--font-body);
 }
 
+/* --- Pixel design system tokens (subset of #16, see docs/UI-UX.md) --- */
+@theme {
+  --color-bg-scene: #cdeefb;
+  --color-bg-dialogue: #fff6df;
+  --color-border-dialogue: #7a4a24;
+  --color-pixel-accent: #e8a33d;
+  --color-pixel-highlight: #ffe66d;
+  --color-pixel-success: #4ecdc4;
+  --color-pixel-alert: #ff6b6b;
+  --color-pixel-text: #4a2e1a;
+  --color-pixel-text-muted: #9a6d43;
+  --color-text-primary: #4a2e1a;
+  --color-text-muted: #9a6d43;
+  --color-nameplate-bg: #7a4a24;
+  --color-choice-bg: #edcf98;
+  --color-choice-hover: #ffd23f;
+
+  --font-pixel: var(--font-press-start), monospace;
+  --font-body: var(--font-vt323), monospace;
+}
+
+/* --- Bright daytime theme tokens (workplace scene + login chrome) --- */
+@theme {
+  --color-sky-top: #58b7ee;
+  --color-sky-mid: #8fd4f2;
+  --color-sky-low: #cdeefb;
+  --color-sun: #ffd23f;
+  --color-sun-glow: #ffe9a3;
+  --color-panel: #fff6df;
+  --color-panel-shadow: #ecd7a3;
+  --color-ink: #4a2e1a;
+  --color-ink-muted: #9a6d43;
+  --color-wood: #7a4a24;
+  --color-wood-dark: #573417;
+  --color-leaf: #57a93a;
+  --color-leaf-dark: #2f7d2e;
+  --color-sky-accent: #2e86c1;
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -148,5 +187,158 @@
   .sprite,
   .portrait {
     image-rendering: pixelated;
+  }
+}
+
+/* --- Pixel / retro rendering + animations (docs/UI-UX.md) --- */
+.sprite,
+.portrait {
+  image-rendering: pixelated;
+}
+
+/* --- Retro 8-bit wooden plank button (game menu style) --- */
+.pixel-wood-btn {
+  position: relative;
+  color: #ffce3a;
+  text-shadow: 2px 2px 0 #4a2410;
+  image-rendering: pixelated;
+  background-color: #c98f43;
+  /* Hard-edged horizontal wood grain bands (no smooth gradient = retro) */
+  background-image: linear-gradient(
+    180deg,
+    #dcab5c 0%,
+    #dcab5c 22%,
+    #c98f43 22%,
+    #c98f43 52%,
+    #b87d36 52%,
+    #b87d36 80%,
+    #a76d2c 80%,
+    #a76d2c 100%
+  );
+  /* Stacked hard rings = double pixel frame + crisp drop shadow */
+  box-shadow:
+    0 0 0 3px #4a2410,
+    0 0 0 6px #7a4a24,
+    inset 0 0 0 2px rgba(255, 240, 205, 0.35),
+    5px 5px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+/* Square metal rivets in the plank corners */
+.pixel-wood-btn::before,
+.pixel-wood-btn::after {
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  content: "";
+  background: #e6e6e6;
+  box-shadow:
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #7c7c7c;
+  transform: translateY(-50%);
+}
+
+.pixel-wood-btn::before {
+  left: 6px;
+}
+
+.pixel-wood-btn::after {
+  right: 6px;
+}
+
+.pixel-wood-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.pixel-wood-btn:active:not(:disabled) {
+  box-shadow:
+    0 0 0 3px #4a2410,
+    0 0 0 6px #7a4a24,
+    inset 0 0 0 2px rgba(255, 240, 205, 0.3),
+    2px 2px 0 0 rgba(0, 0, 0, 0.35);
+  transform: translate(2px, 2px);
+}
+
+.pixel-wood-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  filter: grayscale(0.4) brightness(0.9);
+}
+
+/* --- Retro double-frame for panels / dialogue boxes --- */
+.pixel-frame {
+  image-rendering: pixelated;
+  border: 4px solid #4a2410;
+  box-shadow:
+    0 0 0 4px #7a4a24,
+    inset 0 0 0 3px rgba(255, 240, 205, 0.55),
+    6px 6px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes advance-prompt {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes pixel-sun-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pixel-sun-spin {
+  animation: pixel-sun-spin 24s linear infinite;
+}
+
+@keyframes portrait-bounce {
+  0% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.cursor-blink,
+.advance-indicator {
+  animation: blink 1s step-end infinite;
+}
+
+.advance-indicator {
+  animation: advance-prompt 0.9s ease-in-out infinite;
+}
+
+.portrait-bounce {
+  animation: portrait-bounce 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink,
+  .advance-indicator,
+  .portrait-bounce,
+  .pixel-sun-spin {
+    animation: none;
   }
 }

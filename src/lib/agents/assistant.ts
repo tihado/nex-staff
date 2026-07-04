@@ -7,7 +7,7 @@ import {
   ASSISTANT_MAX_STEPS,
   DEFAULT_ASSISTANT_CONFIG,
 } from "@/lib/assistant-defaults";
-import { documentTools } from "@/lib/tools/documents";
+import { type AssistantTools, assistantTools } from "@/lib/tools/assistant";
 
 export interface AssistantRuntimeContext extends Record<string, unknown> {
   assistantId: string;
@@ -19,7 +19,7 @@ export interface CreateAssistantOptions {
   chatId?: string;
 }
 
-type AssistantTools = typeof documentTools;
+type AssistantAgentTools = AssistantTools;
 
 function buildDocumentToolsContext(userId: string) {
   return {
@@ -54,18 +54,20 @@ export async function createAssistant(
 
   const toolsContext = buildDocumentToolsContext(userId);
 
-  return new ToolLoopAgent<never, AssistantTools, AssistantRuntimeContext>({
-    model: getGeminiModel(modelId),
-    instructions: assistantRow.instructions,
-    tools: documentTools,
-    toolsContext,
-    stopWhen: isStepCount(ASSISTANT_MAX_STEPS),
-    prepareCall: async (call) => ({
-      ...call,
-      runtimeContext,
+  return new ToolLoopAgent<never, AssistantAgentTools, AssistantRuntimeContext>(
+    {
+      model: getGeminiModel(modelId),
+      instructions: assistantRow.instructions,
+      tools: assistantTools,
       toolsContext,
-    }),
-  });
+      stopWhen: isStepCount(ASSISTANT_MAX_STEPS),
+      prepareCall: async (call) => ({
+        ...call,
+        runtimeContext,
+        toolsContext,
+      }),
+    }
+  );
 }
 
 export type AssistantAgent = Awaited<ReturnType<typeof createAssistant>>;

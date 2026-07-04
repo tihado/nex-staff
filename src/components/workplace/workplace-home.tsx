@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArchiveRoomOverlay } from "@/components/archive-room/archive-room-overlay";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
 import { GameShell } from "@/components/layout";
@@ -34,12 +35,6 @@ interface ActiveZone {
   title: string;
 }
 
-const ARCHIVE_ZONE: ActiveZone = {
-  title: "Archive Room",
-  description: "The archive opens in a later update (#9).",
-  icon: "archive",
-};
-
 const HIRE_ZONE: ActiveZone = {
   title: "Hire an agent",
   description: "The hire flow opens in a later update (#11).",
@@ -49,7 +44,7 @@ const HIRE_ZONE: ActiveZone = {
 /**
  * Workplace home (#8): a top-down pixel office floor. Agents work at desks,
  * walk to the pantry when done, and show status emotes. Clicking Reception or a
- * staff member opens the RPG dialogue; archive opens a placeholder overlay.
+ * staff member opens the RPG dialogue; archive opens the document shelf overlay.
  */
 export function WorkplaceHome({
   assistantName,
@@ -68,8 +63,24 @@ export function WorkplaceHome({
   const [dialogue, setDialogue] = useState<ActiveDialogue | null>(null);
   const [zone, setZone] = useState<ActiveZone | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const overlayOpen = dialogue !== null || zone !== null || taskBoardOpen;
+  const overlayOpen =
+    dialogue !== null || zone !== null || taskBoardOpen || archiveOpen;
+
+  const staffOptions = useMemo(
+    () =>
+      desks
+        .filter((desk): desk is WorkspaceDesk & { staffId: string } =>
+          Boolean(desk.staffId)
+        )
+        .map((desk) => ({
+          id: desk.staffId,
+          name: desk.label,
+          role: desk.role,
+        })),
+    [desks]
+  );
 
   const hasDoneDesk = desks.some((desk) => desk.state === "done");
 
@@ -111,7 +122,7 @@ export function WorkplaceHome({
       return;
     }
 
-    setZone(ARCHIVE_ZONE);
+    setArchiveOpen(true);
   };
 
   return (
@@ -162,6 +173,13 @@ export function WorkplaceHome({
           loading={tasksLoading}
           onClose={() => setTaskBoardOpen(false)}
           tasks={tasks}
+        />
+      ) : null}
+
+      {archiveOpen ? (
+        <ArchiveRoomOverlay
+          onClose={() => setArchiveOpen(false)}
+          staffOptions={staffOptions}
         />
       ) : null}
 

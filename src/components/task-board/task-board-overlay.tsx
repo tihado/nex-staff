@@ -9,6 +9,7 @@ import {
   buildTaskDialogueContextFromSummary,
   buildTaskDialogueGreeting,
 } from "@/lib/dialogue/task-context";
+import { uiStrings } from "@/lib/i18n/ui";
 import type { TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -128,16 +129,19 @@ export function TaskBoardOverlay({
           "flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-3xl flex-col overflow-hidden p-4 sm:p-6"
         )}
         contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
-        title="Task Board"
+        title={uiStrings.taskBoard.title}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-4">
           <div className="flex shrink-0 items-start justify-end">
-            <PixelCloseButton aria-label="Close task board" onClick={onClose} />
+            <PixelCloseButton
+              aria-label={uiStrings.taskBoard.close}
+              onClick={onClose}
+            />
           </div>
 
           {loading ? (
             <p className="font-body text-[20px] text-text-muted">
-              Loading active tasks…
+              {uiStrings.taskBoard.loading}
             </p>
           ) : null}
 
@@ -152,8 +156,7 @@ export function TaskBoardOverlay({
               className="font-body text-[20px] text-text-muted"
               id="task-board-title"
             >
-              No active tasks. Delegate work from the Assistant to see progress
-              here.
+              {uiStrings.taskBoard.empty}
             </p>
           ) : null}
 

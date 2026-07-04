@@ -20,6 +20,7 @@ import {
 } from "@/components/workplace/workspace-layout";
 import { useWorkspaceState } from "@/hooks/use-workspace-state";
 import { hasContentWriterOnRoster } from "@/lib/dialogue/hire-intent";
+import { uiStrings } from "@/lib/i18n/ui";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
@@ -145,7 +146,7 @@ export function WorkplaceHome({
   useEffect(() => {
     if (taskBoardOpen) {
       reloadWorkspace().catch(() => {
-        showActionError("Could not refresh tasks. Please try again.");
+        showActionError(uiStrings.errors.refreshTasks);
       });
     }
   }, [taskBoardOpen, reloadWorkspace, showActionError]);
@@ -169,14 +170,14 @@ export function WorkplaceHome({
         });
 
         if (!response.ok) {
-          showActionError("Could not load deliverable. Please try again.");
+          showActionError(uiStrings.errors.loadDeliverable);
           return;
         }
 
         const detail = (await response.json()) as TaskDetail;
 
         if (!detail.deliverable) {
-          showActionError("This task has no deliverable to preview yet.");
+          showActionError(uiStrings.errors.noDeliverable);
           return;
         }
 
@@ -187,7 +188,7 @@ export function WorkplaceHome({
           acknowledgeTaskId: acknowledgeOnClose ? taskId : undefined,
         });
       } catch {
-        showActionError("Could not load deliverable. Please try again.");
+        showActionError(uiStrings.errors.loadDeliverable);
       }
     },
     [showActionError]
@@ -201,7 +202,7 @@ export function WorkplaceHome({
       try {
         await acknowledgeCompletion(taskId);
       } catch {
-        showActionError("Could not save your response. Please try again.");
+        showActionError(uiStrings.errors.saveResponse);
       }
     }
   }, [
@@ -259,7 +260,7 @@ export function WorkplaceHome({
       speakerRole: desk.role,
       portraitIcon: "human",
       avatarSprite: desk.avatarSprite,
-      greeting: `Hi boss! I'm ${desk.label}. What can I help with?`,
+      greeting: `Chào boss! Tôi là ${desk.label}. Cần hỗ trợ gì không?`,
     });
   };
 
@@ -296,7 +297,7 @@ export function WorkplaceHome({
       try {
         await acknowledgeCompletion(taskId);
       } catch {
-        showActionError("Could not dismiss notification. Please try again.");
+        showActionError(uiStrings.errors.dismissNotification);
       }
     },
     [acknowledgeCompletion, showActionError]
@@ -313,7 +314,7 @@ export function WorkplaceHome({
 
   const handleRetryWorkspaceLoad = useCallback(() => {
     reloadWorkspace().catch(() => {
-      showActionError("Could not reload workspace. Please try again.");
+      showActionError(uiStrings.errors.reloadWorkspace);
     });
   }, [reloadWorkspace, showActionError]);
 
@@ -339,7 +340,7 @@ export function WorkplaceHome({
               {tasksError}
             </p>
             <PixelButton onClick={handleRetryWorkspaceLoad} type="button">
-              Retry
+              {uiStrings.retry}
             </PixelButton>
           </div>
         ) : null}
@@ -360,7 +361,7 @@ export function WorkplaceHome({
           {tasksLoading ? (
             <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/30">
               <p className="border-[3px] border-wood bg-panel px-4 py-3 font-[family-name:var(--font-pixel)] text-[10px] text-ink uppercase tracking-widest">
-                Loading workspace…
+                {uiStrings.loadingWorkspace}
               </p>
             </div>
           ) : null}
@@ -387,7 +388,7 @@ export function WorkplaceHome({
             <PixelNotification
               autoDismissMs={0}
               message={`✨ ${banner.staffName} hoàn thành: ${banner.title}`}
-              title="Quest complete"
+              title={uiStrings.questComplete}
             />
           </button>
         </div>
@@ -396,9 +397,9 @@ export function WorkplaceHome({
       {hireCelebration ? (
         <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
           <PixelNotification
-            message={`✨ ${hireCelebration.name} joined the team!`}
+            message={`✨ ${hireCelebration.name} đã gia nhập đội!`}
             onDismiss={() => setHireCelebration(null)}
-            title="New hire"
+            title={uiStrings.newHire}
           />
         </div>
       ) : null}
@@ -413,7 +414,7 @@ export function WorkplaceHome({
           <PixelNotification
             message={actionError}
             onDismiss={() => setActionError(null)}
-            title="Something went wrong"
+            title={uiStrings.somethingWentWrong}
           />
         </div>
       ) : null}

@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
-import { PixelButton, PixelIcon } from "@/components/pixel";
+import { PixelButton, PixelIcon, PixelNotification } from "@/components/pixel";
+import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
+import { useWorkspaceTasks } from "@/hooks/use-workspace-tasks";
+import type { TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import {
   PixelAssistant,
@@ -34,6 +37,37 @@ export function WorkplaceHome({
   viewerLabel,
 }: WorkplaceHomeProps) {
   const [dialogueOpen, setDialogueOpen] = useState(false);
+  const [taskBoardOpen, setTaskBoardOpen] = useState(false);
+  const {
+    acknowledgeCompletedDesks,
+    banner,
+    deskStates,
+    dismissBanner,
+    error: tasksError,
+    loading: tasksLoading,
+    reload: reloadTasks,
+    tasks,
+  } = useWorkspaceTasks(true);
+
+  const hasDoneDesk = deskStates.some((desk) => desk.state === "done");
+
+  useEffect(() => {
+    if (taskBoardOpen) {
+      reloadTasks().catch(() => {
+        /* ignore refresh errors */
+      });
+    }
+  }, [taskBoardOpen, reloadTasks]);
+
+  const handleTaskSelect = (_task: TaskSummary) => {
+    setTaskBoardOpen(false);
+    setDialogueOpen(true);
+  };
+
+  const openTaskBoard = () => {
+    acknowledgeCompletedDesks();
+    setTaskBoardOpen(true);
+  };
 
   useEffect(() => {
     if (dialogueOpen) {
@@ -128,19 +162,34 @@ export function WorkplaceHome({
             name="sparkles"
             size={18}
           />
-          {/* Archive & Task Board zones */}
-          <div className="absolute top-28 left-6 flex flex-col items-center gap-1 sm:left-16">
+          {/* Archive zone (placeholder until #9) */}
+          <div className="pointer-events-auto absolute top-28 left-6 flex flex-col items-center gap-1 sm:left-16">
             <PixelIcon className="text-ink" name="archive" size={44} />
             <span className="rounded-none border-2 border-wood bg-panel px-1 font-pixel text-[8px] text-ink uppercase">
               Archive
             </span>
           </div>
-          <div className="absolute top-28 right-6 flex flex-col items-center gap-1 sm:right-16">
-            <PixelIcon className="text-ink" name="clipboard" size={44} />
+          <button
+            aria-label="Open task board"
+            className="pointer-events-auto absolute top-28 right-6 flex flex-col items-center gap-1 sm:right-16"
+            onClick={openTaskBoard}
+            type="button"
+          >
+            <span className="relative">
+              <PixelIcon className="text-ink" name="clipboard" size={44} />
+              {hasDoneDesk ? (
+                <span
+                  aria-hidden
+                  className="absolute -top-1 -right-1 flex size-5 animate-bounce items-center justify-center rounded-full border-2 border-wood bg-alert font-pixel text-[10px] text-white"
+                >
+                  !
+                </span>
+              ) : null}
+            </span>
             <span className="rounded-none border-2 border-wood bg-panel px-1 font-pixel text-[8px] text-ink uppercase">
               Task Board
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Reception NPC */}
@@ -206,6 +255,26 @@ export function WorkplaceHome({
         {/* Grassy ground */}
         <PixelGround height={190} />
       </main>
+
+      {banner ? (
+        <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
+          <PixelNotification
+            message={`${banner.title} is ready to review.`}
+            onDismiss={dismissBanner}
+            title="Task complete"
+          />
+        </div>
+      ) : null}
+
+      {taskBoardOpen ? (
+        <TaskBoardOverlay
+          error={tasksError}
+          loading={tasksLoading}
+          onClose={() => setTaskBoardOpen(false)}
+          onSelectTask={handleTaskSelect}
+          tasks={tasks}
+        />
+      ) : null}
 
       {dialogueOpen ? (
         <DialogueOverlay

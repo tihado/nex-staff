@@ -52,6 +52,13 @@ export function getTrustedAuthOrigins(): string[] {
     "https://*.vercel.app",
   ]);
 
+  if (process.env.NODE_ENV !== "production") {
+    for (let port = 3000; port <= 3010; port++) {
+      origins.add(`http://localhost:${port}`);
+      origins.add(`http://127.0.0.1:${port}`);
+    }
+  }
+
   const vercelUrl = getVercelAppUrl();
   if (vercelUrl) {
     origins.add(new URL(vercelUrl).origin);

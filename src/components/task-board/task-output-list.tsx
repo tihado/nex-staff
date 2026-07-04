@@ -8,15 +8,15 @@ interface TaskOutputListProps {
   onSelectItem: (item: TaskOutputItem) => void;
 }
 
-function outputKindLabel(kind: TaskOutputItem["kind"]): string {
-  return kind === "deliverable" ? "Deliverable" : "Draft";
+function outputIcon(kind: TaskOutputItem["kind"]): string {
+  return kind === "deliverable" ? "file" : "notes";
 }
 
 export function TaskOutputList({ items, onSelectItem }: TaskOutputListProps) {
   if (items.length === 0) {
     return (
-      <p className="font-body text-[18px] text-text-muted">
-        No output yet. Items will appear here as the task runs.
+      <p className="font-body text-[18px] text-ink-muted italic">
+        No rewards yet — deliverables appear when the quest completes.
       </p>
     );
   }
@@ -26,19 +26,16 @@ export function TaskOutputList({ items, onSelectItem }: TaskOutputListProps) {
       {items.map((item) => (
         <li key={item.id}>
           <button
-            className="flex w-full items-center gap-3 border-2 border-wood bg-panel px-3 py-3 text-left transition-colors hover:bg-[#fff9c4]/80 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
+            className="flex w-full items-center gap-3 border-2 border-wood bg-panel px-3 py-2.5 text-left transition-colors hover:bg-[#fff9c4] focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
             onClick={() => onSelectItem(item)}
             type="button"
           >
             <span className="flex size-9 shrink-0 items-center justify-center border-2 border-wood-dark bg-bg-dialogue text-ink">
-              <PixelIcon
-                name={item.kind === "deliverable" ? "file" : "notes"}
-                size={18}
-              />
+              <PixelIcon name={outputIcon(item.kind)} size={18} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-[family-name:var(--font-pixel)] text-[8px] text-ink-muted uppercase">
-                {outputKindLabel(item.kind)}
+              <span className="block font-[family-name:var(--font-pixel)] text-[7px] text-ink-muted uppercase">
+                {item.kind === "deliverable" ? "Deliverable" : "Draft"}
               </span>
               <span className="block truncate font-body text-[18px] text-ink">
                 {item.title}

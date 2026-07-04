@@ -66,7 +66,7 @@ export async function GET(req: Request) {
 
         if (taskRow.status === "failed" && !completedSent.has(taskRow.id)) {
           enqueueEvent("task.failed", {
-            ...buildTaskFailedSsePayload(taskRow, "Task failed."),
+            ...buildTaskFailedSsePayload(taskRow),
           });
           completedSent.add(taskRow.id);
           return;

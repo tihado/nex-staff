@@ -15,8 +15,10 @@ import type { StaffSandboxHandle } from "@/lib/sandbox/types";
 import { isCursorCloudStaff } from "@/lib/staff/config";
 import { DEFAULT_STAFF_MODEL } from "@/lib/staff/constants";
 import { DEFAULT_MAX_STEPS } from "@/lib/tasks/constants";
+import { isTaskCancelledError } from "@/lib/tasks/errors";
 import {
   appendTaskPreview,
+  assertTaskNotCancelled,
   createTaskCompletedNotification,
   getTaskForWorkflow,
   markTaskFailed,
@@ -27,6 +29,11 @@ import {
 } from "@/lib/tasks/service";
 import type { ProgressInput } from "@/lib/tasks/types";
 import { runCursorStaffTaskStep } from "@/lib/workflows/staff-task-cursor";
+
+async function assertTaskNotCancelledStep(taskId: string): Promise<void> {
+  "use step";
+  await assertTaskNotCancelled(taskId);
+}
 
 async function reportProgressStep(
   taskId: string,
@@ -122,6 +129,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
     const { task, staff } = await loadTaskAndStaffStep(taskId);
     staffId = staff.id;
 
+    await assertTaskNotCancelledStep(taskId);
     await setStaffWorkingStep(staff.id);
 
     if (isCursorCloudStaff(staff.config, staff.useSandbox)) {
@@ -172,6 +180,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
       writable: getWritable<UIMessageChunk>(),
       maxSteps,
       onStepFinish: async (step: StepResult<ToolSet>) => {
+        await assertTaskNotCancelledStep(taskId);
         stepIndex += 1;
 
         await reportProgressStep(taskId, {
@@ -215,6 +224,8 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
       },
     });
 
+    await assertTaskNotCancelledStep(taskId);
+
     const fallbackText =
       result.steps.at(-1)?.text ??
       result.messages
@@ -244,6 +255,10 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
 
     await createTaskCompletedNotificationStep(taskId);
   } catch (error) {
+    if (isTaskCancelledError(error)) {
+      return;
+    }
+
     await markTaskFailedStep(taskId, error);
 
     const message =

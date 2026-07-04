@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PixelButton, PixelIcon } from "@/components/pixel";
 import type { DialogueSubmitPayload } from "@/hooks/use-dialogue-engine";
 import { uploadDocument } from "@/lib/documents/upload-client";
+import { cn } from "@/lib/utils";
 import { DialogueMarkdown } from "./dialogue-markdown";
 
 const MARKDOWN_SYNTAX_PATTERN =
@@ -23,6 +24,8 @@ interface PendingFileAttachment {
 }
 
 interface DialogueInputProps {
+  align?: "left" | "right";
+  compact?: boolean;
   disabled?: boolean;
   onSubmit: (payload: DialogueSubmitPayload) => void | Promise<void>;
   playerName: string;
@@ -35,6 +38,8 @@ interface DialogueInputProps {
 export function DialogueInput({
   playerName,
   disabled = false,
+  compact = false,
+  align = "left",
   onSubmit,
 }: DialogueInputProps) {
   const [value, setValue] = useState("");
@@ -138,10 +143,28 @@ export function DialogueInput({
 
   return (
     <div className="relative">
-      <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
-        <PixelIcon name="chevron-down" size={12} /> {playerName}
-      </div>
-      <div className="pixel-frame bg-bg-dialogue px-5 pt-6 pb-4">
+      {compact ? (
+        <div
+          className={cn(
+            "mb-1.5 flex",
+            align === "right" ? "justify-end" : "justify-start"
+          )}
+        >
+          <div className="inline-flex items-center gap-1 border-2 border-border-dialogue bg-nameplate-bg px-2 py-0.5 font-pixel text-[8px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+            <PixelIcon name="chevron-down" size={10} /> {playerName}
+          </div>
+        </div>
+      ) : (
+        <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+          <PixelIcon name="chevron-down" size={12} /> {playerName}
+        </div>
+      )}
+      <div
+        className={cn(
+          "pixel-frame bg-bg-dialogue pb-4",
+          compact ? "px-3 pt-2" : "px-5 pt-6"
+        )}
+      >
         <input
           accept={ACCEPTED_FILE_TYPES}
           className="sr-only"
@@ -192,7 +215,10 @@ export function DialogueInput({
         ) : null}
 
         <textarea
-          className="min-h-[4rem] w-full resize-none bg-transparent font-pixel text-[11px] text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "w-full resize-none bg-transparent font-pixel text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50",
+            compact ? "min-h-[2.5rem] text-[10px]" : "min-h-[4rem] text-[11px]"
+          )}
           disabled={isBusy}
           id="dialogue-input"
           onChange={(event) => setValue(event.target.value)}

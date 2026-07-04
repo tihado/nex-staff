@@ -14,10 +14,12 @@ import type { DeskAssignments } from "@/lib/staff/desk-assignments";
 import {
   pruneDeskAssignments,
   readDeskAssignments,
+  writeDeskAssignments,
 } from "@/lib/staff/desk-assignments";
 import type { StaffSummary } from "@/lib/staff/types";
 import type {
   TaskCompletedSsePayload,
+  TaskFailedSsePayload,
   TaskProgressSsePayload,
   TaskSummary,
 } from "@/lib/tasks/types";
@@ -33,6 +35,14 @@ interface DerivedAgent {
 }
 
 export interface TaskCompletionBanner {
+  staffId: string;
+  staffName: string;
+  taskId: string;
+  title: string;
+}
+
+export interface TaskFailureBanner {
+  error: string;
   staffId: string;
   staffName: string;
   taskId: string;
@@ -61,6 +71,18 @@ function deriveAgent(
     };
   }
 
+  const failedTask = tasks.find((task) => task.status === "failed");
+
+  if (failedTask) {
+    return {
+      state: "failed",
+      location: "desk",
+      pendingTaskId: null,
+      progress: failedTask.progressPercent,
+      emote: "failed",
+    };
+  }
+
   if (pendingCompletion) {
     return {
       state: "done",
@@ -83,7 +105,7 @@ function deriveAgent(
 
   return {
     state: "idle",
-    location: "roaming",
+    location: "desk",
     pendingTaskId: null,
     progress: 0,
     emote: null,
@@ -242,7 +264,9 @@ interface UseWorkspaceStateResult {
   banner: TaskCompletionBanner | null;
   desks: WorkspaceDesk[];
   dismissBanner: () => void;
+  dismissFailureBanner: () => void;
   error: string | null;
+  failureBanner: TaskFailureBanner | null;
   getPendingCompletion: (taskId: string) => PendingTaskCompletion | undefined;
   loading: boolean;
   occupiedDeskSlotIds: string[];
@@ -262,6 +286,9 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<TaskCompletionBanner | null>(null);
+  const [failureBanner, setFailureBanner] = useState<TaskFailureBanner | null>(
+    null
+  );
 
   const refreshPending = useCallback(async () => {
     const pending = await fetchPendingTaskCompletions();
@@ -273,7 +300,7 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
       const [staffResult, tasksResult, pending] = await Promise.all([
         fetchJson<{ staff: StaffSummary[] }>("/api/staff"),
         fetchJson<{ tasks: TaskSummary[] }>(
-          "/api/tasks?status=running,pending,completed"
+          "/api/tasks?status=running,pending,completed,failed"
         ),
         fetchPendingTaskCompletions(),
       ]);
@@ -299,6 +326,39 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Persist auto-filled desk slots so staff stay on the same workstation across reloads. */
+  useEffect(() => {
+    if (staff.length === 0) {
+      return;
+    }
+
+    const assignments = readDeskAssignments();
+    const occupied = new Set(Object.values(assignments));
+    const unassigned = staff.filter((member) => !assignments[member.id]);
+    let unassignedIndex = 0;
+    let changed = false;
+
+    for (const slot of WORKSPACE_DESK_SLOTS) {
+      if (occupied.has(slot.id)) {
+        continue;
+      }
+
+      if (unassignedIndex >= unassigned.length) {
+        break;
+      }
+
+      assignments[unassigned[unassignedIndex].id] = slot.id;
+      occupied.add(slot.id);
+      unassignedIndex += 1;
+      changed = true;
+    }
+
+    if (changed) {
+      writeDeskAssignments(assignments);
+      setDeskAssignments({ ...assignments });
+    }
+  }, [staff]);
 
   const handleProgress = useCallback(
     (payload: TaskProgressSsePayload) => {
@@ -349,10 +409,49 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     [refreshPending, staff]
   );
 
+  const handleFailed = useCallback(
+    (payload: TaskFailedSsePayload) => {
+      const failedAt = new Date().toISOString();
+      const staffName =
+        staff.find((member) => member.id === payload.staffId)?.name ?? "Staff";
+      const failedTask = tasks.find((task) => task.id === payload.taskId);
+
+      setTasks((current) => {
+        if (!current.some((task) => task.id === payload.taskId)) {
+          load().catch(() => {
+            /* ignore refresh errors */
+          });
+          return current;
+        }
+
+        return current.map((task) =>
+          task.id === payload.taskId
+            ? {
+                ...task,
+                status: "failed" as const,
+                failureMessage: payload.error,
+                completedAt: failedAt,
+              }
+            : task
+        );
+      });
+
+      setFailureBanner({
+        taskId: payload.taskId,
+        staffId: payload.staffId,
+        staffName,
+        title: failedTask?.brief.slice(0, 120) ?? "Task",
+        error: payload.error,
+      });
+    },
+    [load, staff, tasks]
+  );
+
   useTaskEventSource(
     {
       onProgress: handleProgress,
       onCompleted: handleCompleted,
+      onFailed: handleFailed,
     },
     true
   );
@@ -374,6 +473,10 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
 
   const dismissBanner = useCallback(() => {
     setBanner(null);
+  }, []);
+
+  const dismissFailureBanner = useCallback(() => {
+    setFailureBanner(null);
   }, []);
 
   const acknowledgeCompletion = useCallback(
@@ -415,7 +518,9 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     banner,
     desks,
     dismissBanner,
+    dismissFailureBanner,
     error,
+    failureBanner,
     getPendingCompletion,
     loading,
     occupiedDeskSlotIds,

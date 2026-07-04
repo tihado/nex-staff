@@ -117,6 +117,7 @@ export interface TaskSummary {
   createdAt: string;
   currentStep: string | null;
   deliverable: TaskDeliverableSummary | null;
+  failureMessage: string | null;
   id: string;
   lastEventAt: string | null;
   progressPercent: number;

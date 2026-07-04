@@ -19,6 +19,7 @@ export const uiStrings = {
     close: "Close task board",
     empty:
       "No active tasks. Delegate work from the Assistant to see progress here.",
+    failedSection: "Failed tasks",
     loading: "Loading active tasks…",
     title: "Task Board",
   },
@@ -28,6 +29,7 @@ export const uiStrings = {
     copy: "Copy",
     copyFailed: "Copy failed",
     download: "Download .md",
+    openWebsitePreview: "Open website preview",
     title: "Deliverable",
   },
   dialogue: {
@@ -41,6 +43,8 @@ export const uiStrings = {
   workplace: {
     bannerCompleted: (staffName: string, title: string) =>
       `✨ ${staffName} completed: ${title}`,
+    bannerFailed: (staffName: string, title: string) =>
+      `⚠ ${staffName} failed: ${title}`,
     hireJoined: (name: string) => `✨ ${name} joined the team!`,
     activeTasksGreeting: (count: number, baseGreeting: string) => {
       const taskLabel = count === 1 ? "1 task" : `${count} tasks`;
@@ -72,7 +76,11 @@ export const uiStrings = {
   completion: {
     greeting: (staffName: string, title: string) =>
       `${staffName} just finished "${title}"!`,
+    greetingWithPreview: (staffName: string, title: string) =>
+      `${staffName} just finished "${title}"! The website preview is ready — open the link to review it.`,
+    openWebsitePreview: "Open website preview",
     viewResult: "View result",
+    viewDetails: "View details",
     delegateMore: "Delegate more",
     close: "Close",
   },

@@ -17,6 +17,7 @@ const EMOTE_ICON = {
   idea: "lightbulb-on",
   done: "check",
   notify: "warning-box",
+  failed: "warning-box",
 } as const;
 
 const EMOTE_LABEL = {
@@ -24,12 +25,14 @@ const EMOTE_LABEL = {
   idea: "Got an idea",
   done: "Done",
   notify: "Task ready",
+  failed: "Task failed",
 } as const;
 
 const STATUS_DOT: Record<WorkspaceDesk["state"], string> = {
   idle: "bg-leaf",
   working: "bg-sun",
   done: "bg-success",
+  failed: "bg-pixel-alert",
   empty: "bg-ink-muted",
   offline: "bg-ink-muted",
 };
@@ -37,6 +40,7 @@ const STATUS_DOT: Record<WorkspaceDesk["state"], string> = {
 interface WorkspaceAgentProps {
   anchor: FloorAnchor;
   desk: WorkspaceDesk;
+  layout?: "floor" | "desk";
   motionEnabled?: boolean;
   onSelect: (desk: WorkspaceDesk) => void;
   onStaffArrived?: (staffId: string) => void;
@@ -44,51 +48,16 @@ interface WorkspaceAgentProps {
   walkOriginAnchor?: FloorAnchor;
 }
 
-/**
- * A seated/standing agent avatar with a status dot and a head emote bubble.
- * Positioned absolutely by `anchor` with distance-based walk transitions.
- */
-export function WorkspaceAgent({
-  anchor,
-  desk,
-  motionEnabled = true,
-  onStaffArrived,
-  onSelect,
-  variant,
-  walkOriginAnchor,
-}: WorkspaceAgentProps) {
-  const emote = desk.emote;
-  const handleArrived = useCallback(() => {
-    if (desk.staffId && desk.location === "roaming") {
-      onStaffArrived?.(desk.staffId);
-    }
-  }, [desk.location, desk.staffId, onStaffArrived]);
+interface WorkspaceAgentFigureProps {
+  desk: WorkspaceDesk;
+  variant: number;
+}
 
-  const { displayAnchor, durationMs, isWalking, onMoveTransitionEnd } =
-    useAgentWalk(anchor, motionEnabled, undefined, {
-      onArrived: handleArrived,
-      walkOriginAnchor,
-    });
+function WorkspaceAgentFigure({ desk, variant }: WorkspaceAgentFigureProps) {
+  const emote = desk.emote;
 
   return (
-    <button
-      aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
-      className={cn(
-        "group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
-        isWalking && "will-change-[left,top]"
-      )}
-      onClick={() => onSelect(desk)}
-      onTransitionEnd={onMoveTransitionEnd}
-      style={{
-        left: `${displayAnchor.left}%`,
-        top: `${displayAnchor.top}%`,
-        zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 10,
-        transitionDuration: motionEnabled ? `${durationMs}ms` : "0ms",
-        transitionProperty: "left, top",
-        transitionTimingFunction: "linear",
-      }}
-      type="button"
-    >
+    <>
       {emote ? (
         <span
           className={cn(
@@ -109,18 +78,7 @@ export function WorkspaceAgent({
         </span>
       ) : null}
 
-      <span
-        className={cn(
-          "relative transition-transform group-hover:scale-110",
-          isWalking && "agent-walk-bob"
-        )}
-      >
-        {isWalking ? (
-          <span
-            aria-hidden
-            className="agent-walk-shadow pointer-events-none absolute -bottom-1 left-1/2 h-1.5 w-8 -translate-x-1/2 rounded-full bg-black/25"
-          />
-        ) : null}
+      <span className="relative transition-transform group-hover:scale-110">
         {desk.avatarSprite ? (
           <StaffAvatar
             size={WORKSPACE_AGENT_SPRITE_SIZE}
@@ -145,6 +103,82 @@ export function WorkspaceAgent({
 
       <span className="max-w-[88px] truncate border border-wood bg-panel/85 px-1.5 font-[family-name:var(--font-pixel)] text-[8px] text-ink uppercase tracking-wide">
         {desk.label}
+      </span>
+    </>
+  );
+}
+
+/**
+ * A seated/standing agent avatar with a status dot and a head emote bubble.
+ * Floor layout uses absolute anchors; desk layout nests under the workstation sprite.
+ */
+export function WorkspaceAgent({
+  anchor,
+  desk,
+  layout = "floor",
+  motionEnabled = true,
+  onStaffArrived,
+  onSelect,
+  variant,
+  walkOriginAnchor,
+}: WorkspaceAgentProps) {
+  const handleArrived = useCallback(() => {
+    if (desk.staffId && desk.location === "roaming") {
+      onStaffArrived?.(desk.staffId);
+    }
+  }, [desk.location, desk.staffId, onStaffArrived]);
+
+  const { displayAnchor, durationMs, isWalking, onMoveTransitionEnd } =
+    useAgentWalk(anchor, motionEnabled && layout === "floor", undefined, {
+      onArrived: handleArrived,
+      walkOriginAnchor,
+    });
+
+  if (layout === "desk") {
+    return (
+      <button
+        aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
+        className="group relative z-10 mt-1 flex flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
+        onClick={() => onSelect(desk)}
+        type="button"
+      >
+        <WorkspaceAgentFigure desk={desk} variant={variant} />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
+      className={cn(
+        "group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
+        isWalking && "will-change-[left,top]"
+      )}
+      onClick={() => onSelect(desk)}
+      onTransitionEnd={onMoveTransitionEnd}
+      style={{
+        left: `${displayAnchor.left}%`,
+        top: `${displayAnchor.top}%`,
+        zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 10,
+        transitionDuration: motionEnabled ? `${durationMs}ms` : "0ms",
+        transitionProperty: "left, top",
+        transitionTimingFunction: "linear",
+      }}
+      type="button"
+    >
+      <span
+        className={cn(
+          "relative flex flex-col items-center gap-0.5",
+          isWalking && "agent-walk-bob"
+        )}
+      >
+        {isWalking ? (
+          <span
+            aria-hidden
+            className="agent-walk-shadow pointer-events-none absolute -bottom-1 left-1/2 h-1.5 w-8 -translate-x-1/2 rounded-full bg-black/25"
+          />
+        ) : null}
+        <WorkspaceAgentFigure desk={desk} variant={variant} />
       </span>
     </button>
   );

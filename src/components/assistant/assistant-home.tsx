@@ -39,6 +39,19 @@ export function AssistantHome({
     }
 
     const handler = (event: KeyboardEvent) => {
+      const target = event.target;
+
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "BUTTON" ||
+          target.tagName === "A" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
       if (event.key === "Enter") {
         setDialogueOpen(true);
       }

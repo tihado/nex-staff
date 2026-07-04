@@ -36,11 +36,11 @@ export function PixelDialogueBox({
 
         <PixelPanel className="min-w-0 flex-1">
           <div className="relative px-4 pt-6 pb-3">
-            <div className="absolute top-0 left-4 -translate-y-full bg-nameplate-bg px-3 py-1 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] text-text-primary">
+            <div className="absolute top-0 left-4 -translate-y-full border-2 border-wood-dark bg-nameplate-bg px-3 py-1 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] text-sun [text-shadow:1px_1px_0_#5c3a1a]">
               ▼ {speakerName}
             </div>
 
-            <div className="min-h-[4.5rem] font-[family-name:var(--font-body)] text-[length:var(--font-size-dialogue)] text-text-primary leading-[var(--line-height-dialogue)]">
+            <div className="min-h-[4.5rem] font-[family-name:var(--font-pixel)] text-[11px] text-text-primary leading-[1.9] tracking-tight">
               {children}
             </div>
 

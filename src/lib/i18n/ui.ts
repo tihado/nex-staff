@@ -28,4 +28,7 @@ export const uiStrings = {
     download: "Tải .md",
     title: "Kết quả",
   },
+  dialogue: {
+    advance: "▼ Tiếp tục",
+  },
 } as const;

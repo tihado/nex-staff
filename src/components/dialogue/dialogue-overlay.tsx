@@ -11,6 +11,7 @@ import {
   fetchAssistantChatHistory,
   getOrCreateDialogueChatId,
 } from "@/lib/chat/assistant-session";
+import { uiStrings } from "@/lib/i18n/ui";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import {
@@ -150,6 +151,46 @@ function DialogueOverlayPanel({
     : engine.state;
 
   const isThinking = hireFlow.phase === "submitting" || engine.isThinking;
+  const isAnimating = !useScriptedUi && engine.isStreaming;
+  const useTypewriter =
+    !(useScriptedUi || isAnimating || isThinking) &&
+    Boolean(displayText.trim());
+
+  const [typewriterComplete, setTypewriterComplete] = useState(!useTypewriter);
+  const [hasAdvanced, setHasAdvanced] = useState(!useTypewriter);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset advance state when the NPC line changes
+  useEffect(() => {
+    setTypewriterComplete(!useTypewriter);
+    setHasAdvanced(!useTypewriter);
+  }, [displayText, useTypewriter]);
+
+  const waitingAdvance =
+    useTypewriter && typewriterComplete && !hasAdvanced && !isThinking;
+
+  const handleAdvance = useCallback(() => {
+    setHasAdvanced(true);
+  }, []);
+
+  useEffect(() => {
+    if (!waitingAdvance) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+
+      event.preventDefault();
+      handleAdvance();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleAdvance, waitingAdvance]);
+
+  const canShowPlayerUi = hasAdvanced || !useTypewriter;
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
@@ -185,26 +226,29 @@ function DialogueOverlayPanel({
     displayText
   );
 
-  const showInput = state === "player-input";
-  const showChoices = state === "player-choice";
+  const showInput = state === "player-input" && canShowPlayerUi;
+  const showChoices = state === "player-choice" && canShowPlayerUi;
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
 
   return (
     <DialogueOverlayPanelView
+      advanceLabel={uiStrings.dialogue.advance}
       avatarSprite={avatarSprite}
       choices={choices}
       displayText={displayText}
       inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}
-      isAnimating={!useScriptedUi && engine.isStreaming}
+      isAnimating={isAnimating}
       isPanel={layout === "panel"}
       isThinking={isThinking}
       log={engine.log}
       logOpen={logOpen}
+      onAdvance={handleAdvance}
       onClose={onClose}
       onCloseLog={() => setLogOpen(false)}
       onOpenLog={() => setLogOpen(true)}
       onSelectChoice={handleSelectChoice}
       onSubmitInput={handleSubmitInput}
+      onTypewriterComplete={() => setTypewriterComplete(true)}
       playerName={PLAYER_NAME}
       portraitIcon={portraitIcon}
       scrollRef={scrollRef}
@@ -213,6 +257,8 @@ function DialogueOverlayPanel({
       showNpcBox={showNpcBox}
       speakerId={speakerId}
       speakerName={speakerName}
+      useTypewriter={useTypewriter}
+      waitingAdvance={waitingAdvance}
     />
   );
 }

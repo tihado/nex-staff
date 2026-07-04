@@ -1,7 +1,12 @@
 "use client";
 
 import { type RefObject, useRef } from "react";
-import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
+import {
+  PixelAdvancePrompt,
+  PixelButton,
+  PixelDialogueBox,
+  PixelIcon,
+} from "@/components/pixel";
 import type { DialogueLine } from "@/hooks/use-dialogue-engine";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { DialogueChoice } from "@/lib/dialogue/types";
@@ -11,8 +16,10 @@ import { DialogueInput } from "./dialogue-input";
 import { DialogueLog } from "./dialogue-log";
 import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
+import { TypewriterText } from "./typewriter-text";
 
 interface DialogueOverlayPanelViewProps {
+  advanceLabel: string;
   avatarSprite?: string;
   choices: DialogueChoice[];
   displayText: string;
@@ -22,11 +29,13 @@ interface DialogueOverlayPanelViewProps {
   isThinking: boolean;
   log: DialogueLine[];
   logOpen: boolean;
+  onAdvance: () => void;
   onClose: () => void;
   onCloseLog: () => void;
   onOpenLog: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmitInput: (payload: { text: string }) => void;
+  onTypewriterComplete: () => void;
   playerName: string;
   portraitIcon?: string;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -35,9 +44,38 @@ interface DialogueOverlayPanelViewProps {
   showNpcBox: boolean;
   speakerId: string;
   speakerName: string;
+  useTypewriter: boolean;
+  waitingAdvance: boolean;
+}
+
+function renderNpcDialogueBody({
+  displayText,
+  isAnimating,
+  isThinking,
+  onTypewriterComplete,
+  useTypewriter,
+}: {
+  displayText: string;
+  isAnimating: boolean;
+  isThinking: boolean;
+  onTypewriterComplete: () => void;
+  useTypewriter: boolean;
+}) {
+  if (isThinking) {
+    return <span className="advance-indicator text-pixel-text-muted">…</span>;
+  }
+
+  if (useTypewriter) {
+    return (
+      <TypewriterText onComplete={onTypewriterComplete} text={displayText} />
+    );
+  }
+
+  return <DialogueMarkdown content={displayText} isAnimating={isAnimating} />;
 }
 
 export function DialogueOverlayPanelView({
+  advanceLabel,
   speakerName,
   speakerId,
   portraitIcon,
@@ -58,8 +96,12 @@ export function DialogueOverlayPanelView({
   onCloseLog,
   logOpen,
   log,
+  onAdvance,
   onSelectChoice,
   onSubmitInput,
+  onTypewriterComplete,
+  useTypewriter,
+  waitingAdvance,
 }: DialogueOverlayPanelViewProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -119,22 +161,31 @@ export function DialogueOverlayPanelView({
                 speakerId={speakerId}
               />
 
-              <div className="min-w-0 flex-1">
+              <div className="relative min-w-0 flex-1">
                 <PixelDialogueBox
                   scrollRef={scrollRef}
                   speakerName={speakerName}
                 >
-                  {isThinking ? (
-                    <span className="advance-indicator text-pixel-text-muted">
-                      …
-                    </span>
-                  ) : (
-                    <DialogueMarkdown
-                      content={displayText}
-                      isAnimating={isAnimating}
-                    />
-                  )}
+                  {renderNpcDialogueBody({
+                    displayText,
+                    isAnimating,
+                    isThinking,
+                    onTypewriterComplete,
+                    useTypewriter,
+                  })}
                 </PixelDialogueBox>
+                <PixelAdvancePrompt
+                  label={advanceLabel}
+                  visible={waitingAdvance}
+                />
+                {waitingAdvance ? (
+                  <button
+                    aria-label={advanceLabel}
+                    className="absolute inset-0 z-10 cursor-pointer border-0 bg-transparent p-0"
+                    onClick={onAdvance}
+                    type="button"
+                  />
+                ) : null}
               </div>
             </div>
           ) : null}

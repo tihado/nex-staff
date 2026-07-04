@@ -161,6 +161,7 @@ export const taskStatusEnum = pgEnum("task_status", [
 export interface TaskMetadata {
   acceptanceCriteria?: string;
   dependsOn?: string[];
+  documentIds?: string[];
   error?: string;
   parentGroupId?: string;
   parentTaskId?: string;

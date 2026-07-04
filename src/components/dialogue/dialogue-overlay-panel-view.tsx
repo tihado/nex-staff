@@ -11,6 +11,7 @@ import { DialogueInput } from "./dialogue-input";
 import { DialogueLog } from "./dialogue-log";
 import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
+import { DialogueThinkingIndicator } from "./dialogue-thinking-indicator";
 import { VoiceControl } from "./voice-control";
 
 interface DialogueChoiceVoiceProps {
@@ -66,7 +67,6 @@ interface DialogueOverlayPanelViewProps {
   inputDisabled: boolean;
   isAnimating: boolean;
   isPanel: boolean;
-  isThinking: boolean;
   log: DialogueLine[];
   logOpen: boolean;
   onClose: () => void;
@@ -81,6 +81,7 @@ interface DialogueOverlayPanelViewProps {
   showChoices: boolean;
   showInput: boolean;
   showNpcBox: boolean;
+  showThinkingIndicator: boolean;
   speakerId: string;
   speakerName: string;
   voiceLocale?: string;
@@ -93,7 +94,7 @@ function EmbeddedOppositeDialogue({
   displayText,
   inputDisabled,
   isAnimating,
-  isThinking,
+  showThinkingIndicator,
   playerName,
   portraitIcon,
   scrollRef,
@@ -109,7 +110,7 @@ function EmbeddedOppositeDialogue({
   displayText: string;
   inputDisabled: boolean;
   isAnimating: boolean;
-  isThinking: boolean;
+  showThinkingIndicator: boolean;
   playerName: string;
   portraitIcon?: string;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -128,6 +129,7 @@ function EmbeddedOppositeDialogue({
             <DialoguePortrait
               avatarSprite={avatarSprite}
               compact
+              emotion={showThinkingIndicator ? "think" : "neutral"}
               icon={portraitIcon}
               speakerId={speakerId}
             />
@@ -141,10 +143,8 @@ function EmbeddedOppositeDialogue({
               scrollRef={scrollRef}
               speakerName={speakerName}
             >
-              {isThinking ? (
-                <span className="advance-indicator text-pixel-text-muted">
-                  …
-                </span>
+              {showThinkingIndicator ? (
+                <DialogueThinkingIndicator />
               ) : (
                 <DialogueMarkdown
                   content={displayText}
@@ -241,7 +241,7 @@ function StandardDialogueContent({
   inputDisabled,
   isAnimating,
   isPanel,
-  isThinking,
+  showThinkingIndicator,
   onSelectChoice,
   onSubmitInput,
   playerName,
@@ -263,7 +263,7 @@ function StandardDialogueContent({
   inputDisabled: boolean;
   isAnimating: boolean;
   isPanel: boolean;
-  isThinking: boolean;
+  showThinkingIndicator: boolean;
   onSelectChoice: (choiceId: string) => void;
   onSubmitInput: (payload: { text: string }) => void;
   playerName: string;
@@ -296,16 +296,15 @@ function StandardDialogueContent({
           <div className="flex items-start gap-2 sm:gap-3">
             <DialoguePortrait
               avatarSprite={avatarSprite}
+              emotion={showThinkingIndicator ? "think" : "neutral"}
               icon={portraitIcon}
               speakerId={speakerId}
             />
 
             <div className="min-w-0 flex-1">
               <PixelDialogueBox scrollRef={scrollRef} speakerName={speakerName}>
-                {isThinking ? (
-                  <span className="advance-indicator text-pixel-text-muted">
-                    …
-                  </span>
+                {showThinkingIndicator ? (
+                  <DialogueThinkingIndicator />
                 ) : (
                   <DialogueMarkdown
                     content={displayText}
@@ -359,7 +358,7 @@ export function DialogueOverlayPanelView({
   chatError,
   chatId,
   embedded = false,
-  isThinking,
+  showThinkingIndicator,
   isAnimating,
   showNpcBox,
   showInput,
@@ -432,13 +431,13 @@ export function DialogueOverlayPanelView({
           displayText={displayText}
           inputDisabled={inputDisabled}
           isAnimating={isAnimating}
-          isThinking={isThinking}
           onSubmitInput={onSubmitInput}
           playerName={playerName}
           portraitIcon={portraitIcon}
           scrollRef={scrollRef}
           showInput={showInput}
           showNpcBox={showNpcBox}
+          showThinkingIndicator={showThinkingIndicator}
           speakerId={speakerId}
           speakerName={speakerName}
           voiceLocale={voiceLocale}
@@ -455,7 +454,6 @@ export function DialogueOverlayPanelView({
             inputDisabled={inputDisabled}
             isAnimating={isAnimating}
             isPanel={isPanel}
-            isThinking={isThinking}
             onSelectChoice={onSelectChoice}
             onSubmitInput={onSubmitInput}
             playerName={playerName}
@@ -464,6 +462,7 @@ export function DialogueOverlayPanelView({
             showChoices={showChoices}
             showInput={showInput}
             showNpcBox={showNpcBox}
+            showThinkingIndicator={showThinkingIndicator}
             speakerId={speakerId}
             speakerName={speakerName}
             voiceLocale={voiceLocale}

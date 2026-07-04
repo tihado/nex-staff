@@ -86,31 +86,6 @@ interface DeliverablePreviewState {
   websitePreviewUrl?: string | null;
 }
 
-function buildReceptionGreeting(
-  baseGreeting: string,
-  pendingCompletions: PendingTaskCompletion[],
-  activeTasks: TaskSummary[]
-): string {
-  if (pendingCompletions.length > 0) {
-    const latest = pendingCompletions[0];
-    return uiStrings.workplace.pendingCompletionGreeting(
-      latest.staffName,
-      latest.title,
-      baseGreeting
-    );
-  }
-
-  const runningCount = activeTasks.filter(
-    (task) => task.status === "running" || task.status === "pending"
-  ).length;
-
-  if (runningCount > 0) {
-    return uiStrings.workplace.activeTasksGreeting(runningCount, baseGreeting);
-  }
-
-  return baseGreeting;
-}
-
 function notificationTopClass(hasPriorNotification: boolean): string {
   return cn(
     "pointer-events-auto absolute left-1/2 z-[45] w-[min(92vw,420px)] -translate-x-1/2",
@@ -426,7 +401,7 @@ export function WorkplaceHome({
       speakerName: assistantName,
       speakerRole: "Coordinator",
       portraitIcon: "android",
-      greeting: buildReceptionGreeting(greeting, pendingCompletions, tasks),
+      greeting,
       hireContext: { mode: "assistant" },
     });
   };

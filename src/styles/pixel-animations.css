@@ -63,6 +63,32 @@
   animation: hire-sparkle-rise 2s ease-out forwards;
 }
 
+@keyframes dialogue-thinking-dot {
+  0%,
+  20% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 1;
+  }
+  60%,
+  100% {
+    opacity: 0.15;
+  }
+}
+
+.dialogue-thinking-dot {
+  animation: dialogue-thinking-dot 1.2s step-end infinite;
+}
+
+.dialogue-thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dialogue-thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-cursor-blink,
   .pixel-advance-indicator {
@@ -77,6 +103,11 @@
   }
 
   .hire-sparkle-animate {
+    opacity: 1;
+    animation: none;
+  }
+
+  .dialogue-thinking-dot {
     opacity: 1;
     animation: none;
   }

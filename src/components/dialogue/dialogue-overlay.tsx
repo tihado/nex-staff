@@ -162,6 +162,11 @@ function DialogueOverlayPanel({
 
   const isThinking =
     hireFlow.phase === "submitting" || (!useScriptedUi && engine.isThinking);
+  const hasNpcReplyText = useScriptedUi
+    ? Boolean(hireFlow.scripted?.line?.trim())
+    : Boolean(engine.displayText.trim());
+  const showThinkingIndicator =
+    isThinking || (!useScriptedUi && engine.isBusy && !hasNpcReplyText);
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
@@ -312,7 +317,6 @@ function DialogueOverlayPanel({
       inputDisabled={inputDisabled}
       isAnimating={!useScriptedUi && engine.isStreaming}
       isPanel={layout === "panel"}
-      isThinking={isThinking}
       log={engine.log}
       logOpen={logOpen}
       onClose={handleClose}
@@ -327,6 +331,7 @@ function DialogueOverlayPanel({
       showChoices={showChoices}
       showInput={showInput}
       showNpcBox={showNpcBox}
+      showThinkingIndicator={showThinkingIndicator}
       speakerId={speakerId}
       speakerName={speakerName}
       voiceLocale={preferences.locale}

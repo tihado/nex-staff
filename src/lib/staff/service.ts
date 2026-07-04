@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
 import { staff, staffDocument, task } from "@/db/schema";
 import { getDocumentById } from "@/lib/documents/service";
@@ -162,7 +162,7 @@ export async function listStaff(
 ): Promise<StaffSummary[]> {
   const rows = await db.query.staff.findMany({
     where: eq(staff.userId, userId),
-    orderBy: desc(staff.hiredAt),
+    orderBy: asc(staff.hiredAt),
   });
 
   const activeTaskCounts = await getActiveTaskCountsByStaff(

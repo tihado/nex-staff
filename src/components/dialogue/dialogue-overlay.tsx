@@ -6,11 +6,16 @@ import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
 import { useDialogueEngine } from "@/hooks/use-dialogue-engine";
+import { useHireFlow } from "@/hooks/use-hire-flow";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import {
   fetchAssistantChatHistory,
   getOrCreateAssistantChatId,
 } from "@/lib/chat/assistant-session";
+import { extractHireStaffSuccessOutput } from "@/lib/dialogue/hire-choices";
+import { detectWriteIntent } from "@/lib/dialogue/hire-intent";
+import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
+import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import { ChoiceMenu } from "./choice-menu";
 import { DialogueInput } from "./dialogue-input";
@@ -18,12 +23,22 @@ import { DialogueLog } from "./dialogue-log";
 import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
 
+export interface HireDialogueContext {
+  deskId?: string;
+  mode: "scripted" | "assistant";
+  pendingTaskBrief?: string;
+}
+
 interface DialogueOverlayProps {
   avatarSprite?: string;
   chatId?: string;
   greeting: string;
+  hasWriterOnRoster?: boolean;
+  hireContext?: HireDialogueContext;
   layout?: "overlay" | "panel";
+  occupiedDeskSlotIds?: string[];
   onClose: () => void;
+  onStaffHired?: (result: HireStaffResult) => void;
   portraitIcon?: string;
   speakerId: string;
   speakerName: string;
@@ -85,7 +100,11 @@ function DialogueOverlayPanel({
   greeting,
   chatId,
   initialMessages,
+  hireContext,
+  hasWriterOnRoster = false,
+  occupiedDeskSlotIds = [],
   onClose,
+  onStaffHired,
   taskId,
   layout = "overlay",
 }: DialogueOverlayPanelProps) {
@@ -98,6 +117,12 @@ function DialogueOverlayPanel({
     transport,
   });
 
+  const hireFlow = useHireFlow({
+    occupiedDeskSlotIds,
+    onCancel: onClose,
+    onHired: onStaffHired,
+  });
+
   const engine = useDialogueEngine({
     chat,
     speakerId,
@@ -105,12 +130,142 @@ function DialogueOverlayPanel({
     speakerRole,
     portraitSprite: speakerId,
     greeting,
+    pendingTaskBrief:
+      hireFlow.draft.pendingTaskBrief ?? hireContext?.pendingTaskBrief,
   });
+
+  const startedDeskHireRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      hireContext?.mode !== "scripted" ||
+      !hireContext.deskId ||
+      startedDeskHireRef.current
+    ) {
+      return;
+    }
+
+    startedDeskHireRef.current = true;
+    hireFlow.startFromDesk(hireContext.deskId);
+  }, [hireContext?.deskId, hireContext?.mode, hireFlow.startFromDesk]);
+
+  const lastAssistant = useMemo(
+    () =>
+      chat.messages.filter((message) => message.role === "assistant").at(-1),
+    [chat.messages]
+  );
+
+  const assistantHireHandledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (hireContext?.mode === "scripted") {
+      return;
+    }
+
+    if (hireFlow.phase !== "idle") {
+      return;
+    }
+
+    const output = extractHireStaffSuccessOutput(lastAssistant);
+
+    if (!(output && lastAssistant)) {
+      return;
+    }
+
+    if (assistantHireHandledRef.current === lastAssistant.id) {
+      return;
+    }
+
+    assistantHireHandledRef.current = lastAssistant.id;
+
+    onStaffHired?.({
+      id: String(output.staffId ?? ""),
+      name: String(output.name ?? ""),
+      role: String(output.role ?? ""),
+      avatarSprite: String(output.avatarSprite ?? "default"),
+      assignedDeskSlotId: assignNewStaffToDesk(String(output.staffId ?? "")),
+      status: "idle",
+      useSandbox: Boolean(output.useSandbox),
+      hiredAt: new Date().toISOString(),
+      activeTasks: 0,
+    });
+  }, [hireContext?.mode, hireFlow.phase, lastAssistant, onStaffHired]);
+
+  const useScriptedUi =
+    hireContext?.mode === "scripted"
+      ? hireFlow.isScriptedActive
+      : hireFlow.isScriptedActive && hireFlow.phase !== "idle";
+
+  const displayText = useScriptedUi
+    ? (hireFlow.scripted?.line ?? greeting)
+    : engine.displayText;
+
+  const choices = useScriptedUi
+    ? (hireFlow.scripted?.choices ?? [])
+    : engine.choices;
+
+  const state = useScriptedUi
+    ? (hireFlow.scripted?.dialogueState ?? "npc-speaking")
+    : engine.state;
+
+  const isThinking = hireFlow.phase === "submitting" || engine.isThinking;
+
+  const handleSelectChoice = useCallback(
+    (choiceId: string) => {
+      if (
+        choiceId === "hire-delegate-now" &&
+        hireFlow.phase === "delegate_offer"
+      ) {
+        const delegateMessage = hireFlow.handleDelegateNow();
+
+        if (delegateMessage) {
+          hireFlow.reset();
+          engine.submitInput({ text: delegateMessage });
+        }
+
+        return;
+      }
+
+      if (useScriptedUi) {
+        hireFlow.handleScriptedChoice(choiceId);
+        return;
+      }
+
+      engine.selectChoice(choiceId);
+    },
+    [engine, hireFlow, useScriptedUi]
+  );
+
+  const handleSubmitInput = useCallback(
+    (payload: { text: string }) => {
+      if (useScriptedUi && hireFlow.phase === "gather_name") {
+        hireFlow.handleNameInput(payload.text);
+        return;
+      }
+
+      const writeIntent =
+        hireContext?.mode === "assistant" &&
+        hireFlow.phase === "idle" &&
+        !hasWriterOnRoster
+          ? detectWriteIntent(payload.text)
+          : null;
+
+      if (writeIntent) {
+        hireFlow.startFromTaskBrief(
+          writeIntent.brief,
+          writeIntent.suggestedName
+        );
+        return;
+      }
+
+      engine.submitInput(payload);
+    },
+    [engine, hasWriterOnRoster, hireContext?.mode, hireFlow, useScriptedUi]
+  );
 
   const [logOpen, setLogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const reducedMotion = usePrefersReducedMotion();
-  const { state, displayText, isThinking } = engine;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-scroll when streamed text grows
   useEffect(() => {
@@ -215,7 +370,7 @@ function DialogueOverlayPanel({
                   ) : (
                     <DialogueMarkdown
                       content={displayText}
-                      isAnimating={engine.isStreaming}
+                      isAnimating={!useScriptedUi && engine.isStreaming}
                     />
                   )}
                 </PixelDialogueBox>
@@ -238,8 +393,8 @@ function DialogueOverlayPanel({
 
               <div className="min-w-0 flex-1">
                 <DialogueInput
-                  disabled={engine.isBusy}
-                  onSubmit={engine.submitInput}
+                  disabled={engine.isBusy || hireFlow.phase === "submitting"}
+                  onSubmit={handleSubmitInput}
                   playerName={PLAYER_NAME}
                 />
               </div>
@@ -250,10 +405,7 @@ function DialogueOverlayPanel({
         {showChoices ? (
           <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
             <div className="w-full sm:max-w-sm">
-              <ChoiceMenu
-                choices={engine.choices}
-                onSelect={engine.selectChoice}
-              />
+              <ChoiceMenu choices={choices} onSelect={handleSelectChoice} />
             </div>
           </div>
         ) : null}
@@ -274,7 +426,11 @@ export function DialogueOverlay({
   avatarSprite,
   greeting,
   chatId: chatIdProp,
+  hireContext,
+  hasWriterOnRoster,
+  occupiedDeskSlotIds,
   onClose,
+  onStaffHired,
   taskId,
   layout = "overlay",
 }: DialogueOverlayProps) {
@@ -331,9 +487,13 @@ export function DialogueOverlay({
       avatarSprite={avatarSprite}
       chatId={chatId}
       greeting={greeting}
+      hasWriterOnRoster={hasWriterOnRoster}
+      hireContext={hireContext}
       initialMessages={initialMessages}
       layout={layout}
+      occupiedDeskSlotIds={occupiedDeskSlotIds}
       onClose={onClose}
+      onStaffHired={onStaffHired}
       portraitIcon={portraitIcon}
       speakerId={speakerId}
       speakerName={speakerName}

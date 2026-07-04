@@ -13,7 +13,10 @@ erDiagram
     staff ||--o{ task : assigned
     staff }o--o{ staff_document : accesses
     document ||--o{ staff_document : linked
+    task ||--o{ task_event : logs
+    task ||--o| task_preview : drafts
     task ||--o| deliverable : produces
+    user ||--o{ notification : receives
     document ||--o{ document_chunk : chunked
 
     user {
@@ -58,10 +61,40 @@ erDiagram
         text brief
         enum status
         string workflow_run_id
+        int progress_percent
+        text current_step
+        string last_event_type
+        timestamp last_event_at
         jsonb metadata
         timestamp started_at
         timestamp completed_at
         timestamp created_at
+    }
+
+    task_event {
+        uuid id PK
+        uuid task_id FK
+        string type
+        jsonb payload
+        timestamp created_at
+    }
+
+    task_preview {
+        uuid id PK
+        uuid task_id FK
+        text content
+        timestamp updated_at
+    }
+
+    notification {
+        uuid id PK
+        uuid user_id FK
+        uuid task_id FK
+        string type
+        enum status
+        jsonb payload
+        timestamp created_at
+        timestamp delivered_at
     }
 
     deliverable {
@@ -221,6 +254,10 @@ export const task = pgTable("task", {
   brief: text("brief").notNull(),
   status: taskStatusEnum("status").notNull().default("pending"),
   workflowRunId: text("workflow_run_id"),
+  progressPercent: integer("progress_percent").default(0),
+  currentStep: text("current_step"),
+  lastEventType: text("last_event_type"),
+  lastEventAt: timestamp("last_event_at"),
   metadata: jsonb("metadata").$type<TaskMetadata>().default({}),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
@@ -232,6 +269,62 @@ interface TaskMetadata {
   parentTaskId?: string;
   error?: string;
 }
+```
+
+### `task_event`
+
+Append-only progress log cho task observability.
+
+```typescript
+export const taskEvent = pgTable("task_event", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  taskId: uuid("task_id")
+    .notNull()
+    .references(() => task.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  payload: jsonb("payload").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
+### `task_preview`
+
+Draft output tạm — cập nhật khi agent stream text, trước khi finalize deliverable.
+
+```typescript
+export const taskPreview = pgTable("task_preview", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  taskId: uuid("task_id")
+    .notNull()
+    .references(() => task.id, { onDelete: "cascade" })
+    .unique(),
+  content: text("content").notNull().default(""),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+```
+
+### `notification`
+
+Queue thông báo cho Assistant và UI — track đã báo user chưa.
+
+```typescript
+export const notificationStatusEnum = pgEnum("notification_status", [
+  "pending",
+  "delivered",
+]);
+
+export const notification = pgTable("notification", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  taskId: uuid("task_id").references(() => task.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  status: notificationStatusEnum("status").notNull().default("pending"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deliveredAt: timestamp("delivered_at"),
+});
 ```
 
 ### `deliverable`
@@ -379,6 +472,8 @@ export const message = pgTable("message", {
 | `task_staff_status`    | task           | `(staff_id, status)`         | Staff workload           |
 | `task_user_status`     | task           | `(user_id, status)`          | User task list           |
 | `task_workflow_run`    | task           | `(workflow_run_id)`          | Workflow status lookup   |
+| `task_event_task`      | task_event     | `(task_id, created_at)`      | Event timeline           |
+| `notification_user`    | notification   | `(user_id, status)`          | Pending notifications  |
 | `document_user`        | document       | `(user_id)`                  | User documents           |
 | `chunk_document`       | document_chunk | `(document_id, chunk_index)` | Chunk retrieval          |
 | `chunk_embedding_hnsw` | document_chunk | `embedding` (HNSW)           | Vector similarity search |

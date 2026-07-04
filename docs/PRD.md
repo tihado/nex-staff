@@ -40,7 +40,9 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 | US-02 | Là user, tôi upload tài liệu (PDF, MD, URL) và Assistant lưu trữ + tra cứu được       | Upload qua chat; file lưu Blob; `search_documents` trả kết quả có citation          |
 | US-03 | Là user, tôi nói "tôi cần ai đó viết blog" và Assistant đề xuất hire Content Writer   | Assistant nhận diện intent; đề xuất role cụ thể nếu chưa có staff phù hợp           |
 | US-04 | Là user, tôi xác nhận hire và Assistant hỏi thêm yêu cầu, skills, tone                | Hire flow qua chat (không form); tối thiểu 2-3 câu hỏi clarify trước khi tạo staff  |
-| US-05 | Là user, tôi giao việc cho Assistant và nó delegate cho agent phù hợp                 | Task được tạo; `workflow_run_id` assigned; user nhận confirmation ngay              |
+| US-05 | Là user, tôi giao việc cho Assistant và nó delegate cho agent phù hợp                 | Task được tạo; progress track qua `task_event`; user có thể hỏi tiến độ bất cứ lúc nào |
+| US-10 | Là user, tôi hỏi "Alex làm đến đâu rồi?" và Assistant trả lời được tiến độ cụ thể     | `check_task_status` trả progressPercent, currentStep, preview excerpt                  |
+| US-11 | Là user, tôi được thông báo ngay khi staff hoàn thành việc                            | SSE + notification queue; desk `!` emote; Assistant cutscene khi có pending notification |
 | US-06 | Là user, tôi tiếp tục chat trong khi agent đang làm việc nền                          | Assistant response không block; user có thể gửi message mới ngay                    |
 | US-07 | Là user, tôi nhận thông báo khi agent hoàn thành công việc                            | SSE trigger cutscene: staff NPC walk-in + dialogue "đã xong" + choice [Xem kết quả] |
 | US-08 | Là user, tôi xem lại lịch sử công việc và deliverables của từng nhân viên             | Task Board trên workspace; click desk xem history; Archive Room cho documents        |
@@ -69,7 +71,10 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 | `hire_staff`        | Tạo staff profile mới trong DB              |
 | `delegate_task`     | Tạo task + `start(staffTaskWorkflow)`       |
 | `list_staff`        | Trả về roster staff của user                |
-| `check_task_status` | Poll task status theo ID                    |
+| `check_task_status` | Status + progress + preview của một task    |
+| `list_active_tasks` | Tasks đang chạy + vừa xong chưa báo         |
+| `get_task_events`   | Event log chi tiết                          |
+| `get_task_preview`  | Draft output tạm                            |
 | `get_deliverable`   | Fetch completed work                        |
 
 ### Evaluation Strategy

@@ -99,6 +99,9 @@ export function createAssistant(userId: string) {
       web_research: webResearchTool,
       list_staff: listStaffTool,
       check_task_status: checkTaskStatusTool,
+      list_active_tasks: listActiveTasksTool,
+      get_task_events: getTaskEventsTool,
+      get_task_preview: getTaskPreviewTool,
       get_deliverable: getDeliverableTool,
     },
   });
@@ -125,8 +128,9 @@ Mỗi delegated task = một Vercel Workflow run chứa `DurableAgent`.
 **Responsibilities:**
 
 - Execute task brief với staff-specific instructions, skills, tools
-- Optional Vercel Sandbox cho file/shell operations
-- Save deliverable; notify user via SSE
+- **Report progress** qua `reportProgress` sau mỗi workflow/agent step
+- Append draft text vào `task_preview` khi agent stream
+- Save deliverable; enqueue `notification` + SSE khi xong
 
 **Implementation pattern:**
 
@@ -156,10 +160,23 @@ export async function staffTaskWorkflow(taskId: string) {
   const result = await agent.stream({
     messages: [{ role: "user", content: task.brief }],
     maxSteps: 20,
+    onStepFinish: async ({ step, toolCalls, text }) => {
+      await reportProgress(taskId, {
+        type: "agent.step_completed",
+        label: summarizeStep(toolCalls, text),
+        progressPercent: Math.round((step / 20) * 90),
+      });
+      if (text) await appendTaskPreview(taskId, text);
+    },
   });
 
-  await saveDeliverable(taskId, result);
-  await notifyUser(taskId);
+  const deliverableId = await saveDeliverable(taskId, result);
+  await reportProgress(taskId, {
+    type: "workflow.completed",
+    progressPercent: 100,
+    payload: { deliverableId },
+  });
+  await enqueueNotification(taskId, "task.completed");
 }
 
 async function loadTask(taskId: string) {

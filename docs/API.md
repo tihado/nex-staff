@@ -114,9 +114,11 @@ Called by `hire_staff` tool or directly.
 | Method | Path                     | Description               |
 | ------ | ------------------------ | ------------------------- |
 | `POST` | `/api/tasks`             | Create + dispatch task    |
-| `GET`  | `/api/tasks`             | List tasks                |
-| `GET`  | `/api/tasks/[id]`        | Task detail + deliverable |
-| `POST` | `/api/tasks/[id]/cancel` | Cancel running task       |
+| `GET`  | `/api/tasks`               | List tasks (includes progress)        |
+| `GET`  | `/api/tasks/[id]`          | Task detail + deliverable + progress  |
+| `GET`  | `/api/tasks/[id]/events`   | Task event timeline (paginated)       |
+| `GET`  | `/api/tasks/[id]/preview`  | Draft preview text                    |
+| `POST` | `/api/tasks/[id]/cancel`   | Cancel running task                   |
 
 #### `GET /api/tasks`
 
@@ -135,6 +137,9 @@ Called by `hire_staff` tool or directly.
       "id": "uuid",
       "brief": "Viết blog về AI agents",
       "status": "running",
+      "progressPercent": 45,
+      "currentStep": "Đang viết phần mở đầu...",
+      "lastEventAt": "2026-07-04T10:08:30Z",
       "staff": { "id": "uuid", "name": "Alex", "role": "Content Writer" },
       "workflowRunId": "wrun_xxx",
       "startedAt": "2026-07-04T10:05:00Z",
@@ -227,8 +232,9 @@ Processing pipeline (async):
 
 | Method | Path                         | Description                     |
 | ------ | ---------------------------- | ------------------------------- |
-| `GET`  | `/api/notifications`         | SSE stream for real-time events |
-| `GET`  | `/api/notifications/pending` | Poll pending notifications      |
+| `GET`    | `/api/notifications`         | SSE stream for real-time events       |
+| `GET`    | `/api/notifications/pending` | Pending notifications (Assistant poll) |
+| `PATCH`  | `/api/notifications/[id]`    | Mark notification as delivered        |
 
 #### `GET /api/notifications`
 
@@ -342,12 +348,54 @@ Trả về roster staff.
 
 ### `check_task_status`
 
-Poll task status.
+Snapshot đầy đủ: status, progress, current step, recent events, preview excerpt.
 
 ```typescript
 {
   name: "check_task_status",
-  description: "Check the status of a delegated task",
+  description: "Check status, progress, and partial results of a delegated task",
+  inputSchema: z.object({
+    taskId: z.string(),
+  }),
+  // Returns: status, progressPercent, currentStep, recentEvents[], hasPreview, previewExcerpt
+}
+```
+
+### `list_active_tasks`
+
+Tasks đang chạy + vừa hoàn thành chưa thông báo.
+
+```typescript
+{
+  name: "list_active_tasks",
+  description: "List all running tasks and recently completed tasks awaiting notification",
+  inputSchema: z.object({}),
+}
+```
+
+### `get_task_events`
+
+Nhật ký chi tiết từng bước (paginated).
+
+```typescript
+{
+  name: "get_task_events",
+  description: "Get detailed event log for a task",
+  inputSchema: z.object({
+    taskId: z.string(),
+    limit: z.number().default(20),
+  }),
+}
+```
+
+### `get_task_preview`
+
+Draft output tạm thời.
+
+```typescript
+{
+  name: "get_task_preview",
+  description: "Get partial/draft output from a running task",
   inputSchema: z.object({
     taskId: z.string(),
   }),
@@ -377,9 +425,10 @@ Client connects via `GET /api/notifications` (EventSource).
 | Event            | Payload                                     | Trigger                           |
 | ---------------- | ------------------------------------------- | --------------------------------- |
 | `message.delta`  | `{ text: string }`                          | Assistant streaming (via useChat) |
-| `task.started`   | `{ taskId, staffName, staffRole }`          | Task dispatched to workflow       |
-| `task.completed` | `{ taskId, deliverableId, title, preview }` | Workflow finished successfully    |
-| `task.failed`    | `{ taskId, error }`                         | Workflow or agent error           |
+| `task.started`    | `{ taskId, staffName, staffRole }`                    | Task dispatched to workflow        |
+| `task.progress`   | `{ taskId, progressPercent, currentStep, preview? }`  | Mỗi `reportProgress` step          |
+| `task.completed`  | `{ taskId, deliverableId, title, preview }`           | Workflow finished successfully     |
+| `task.failed`     | `{ taskId, error }`                                   | Workflow or agent error            |
 | `staff.hired`    | `{ staffId, name, role, avatarSprite }`     | New staff created                 |
 | `document.ready` | `{ documentId, filename }`                  | Document processing complete      |
 

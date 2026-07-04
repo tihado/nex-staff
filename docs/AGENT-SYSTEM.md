@@ -219,9 +219,12 @@ const { providerReference } = await uploadSkill({
 | `delegate_task`     | Start workflow       |
 | `search_documents`  | RAG across user docs |
 | `web_research`      | Internet search      |
-| `list_staff`        | Roster query         |
-| `check_task_status` | Task poll            |
-| `get_deliverable`   | Fetch result         |
+| `list_staff`        | Roster query                                       |
+| `check_task_status` | Trạng thái + tiến độ + kết quả tạm của một task   |
+| `list_active_tasks` | Tasks đang chạy + vừa xong chưa thông báo        |
+| `get_task_events`   | Nhật ký chi tiết từng bước                         |
+| `get_task_preview`  | Draft output tạm thời                              |
+| `get_deliverable`   | Fetch result                                       |
 
 **Staff tools** (per-staff, from DB + sandbox):
 
@@ -275,6 +278,296 @@ Staff access documents qua:
 
 ---
 
+## Task Observability — Theo dõi tiến độ & thông báo
+
+Sau khi `delegate_task`, Assistant **không block** nhưng vẫn có thể (và nên) biết staff đang làm đến đâu, trạng thái hiện tại, kết quả tạm, và **khi nào xong** để thông báo user.
+
+### Vấn đề cần giải quyết
+
+| Nhu cầu | Ai cần | Cách đáp ứng |
+|---------|--------|--------------|
+| Task đang chạy hay đã xong? | Assistant + User | `task.status` + SSE |
+| Đang ở bước nào? | Assistant + User | `task_event` log + `currentStep` |
+| Có kết quả tạm chưa? | Assistant + User | `task_preview` + events `agent.text_delta` |
+| Khi nào xong để báo user? | Assistant | `notification` queue + SSE `task.completed` |
+| User hỏi "Alex làm đến đâu?" | Assistant | Tool `check_task_status` / `get_task_events` |
+
+### Kiến trúc tổng quan
+
+```mermaid
+flowchart TB
+    subgraph workflow [staffTaskWorkflow]
+        Agent[DurableAgent]
+        Report[reportProgress step]
+    end
+
+    subgraph storage [Storage]
+        Task[(task)]
+        Events[(task_event)]
+        Preview[(task_preview)]
+        Notif[(notification)]
+    end
+
+    subgraph consumers [Consumers]
+        SSE[SSE to UI]
+        Assistant[Assistant tools]
+        Workspace[Task Board / Desk state]
+    end
+
+    Agent -->|mỗi bước| Report
+    Report --> Events
+    Report --> Task
+    Report --> Preview
+    Report --> SSE
+    Agent -->|hoàn thành| Notif
+    Notif --> Assistant
+    Notif --> SSE
+    Events --> Assistant
+    Task --> Workspace
+```
+
+### Task Event Log (`task_event`)
+
+Append-only log — mỗi bước trong workflow/agent ghi một event.
+
+| Event type | Khi nào | Payload ví dụ |
+|------------|---------|---------------|
+| `workflow.started` | Workflow bắt đầu | `{ workflowRunId }` |
+| `sandbox.created` | Sandbox spin-up xong | `{ durationMs }` |
+| `agent.step_started` | DurableAgent bắt đầu step N | `{ step, maxSteps, label }` |
+| `agent.tool_called` | Staff gọi tool | `{ toolName, inputSummary }` |
+| `agent.tool_result` | Tool trả về | `{ toolName, resultSummary }` |
+| `agent.text_delta` | Có text output tạm | `{ chunk }` — append vào preview |
+| `agent.step_completed` | Step kết thúc | `{ step, durationMs }` |
+| `deliverable.saved` | Lưu kết quả cuối | `{ deliverableId, title }` |
+| `workflow.completed` | Thành công | `{ deliverableId }` |
+| `workflow.failed` | Lỗi | `{ error, step }` |
+
+```typescript
+interface TaskEvent {
+  id: string;
+  taskId: string;
+  type: TaskEventType;
+  payload: Record<string, unknown>;
+  createdAt: Date;
+}
+```
+
+### Progress trên `task` (denormalized)
+
+Cập nhật mỗi khi có event quan trọng — Assistant đọc nhanh không cần scan toàn bộ events.
+
+```typescript
+interface TaskProgress {
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  progressPercent: number;      // 0-100, ước lượng từ step/maxSteps
+  currentStep: string;          // "Đang research trên web..."
+  lastEventAt: Date;
+  lastEventType: TaskEventType;
+  workflowRunId: string;
+}
+```
+
+**Công thức `progressPercent`:** `Math.round((currentStep / maxSteps) * 100)` — cap 95% cho đến khi `workflow.completed`.
+
+### Workflow — ghi progress
+
+```typescript
+// lib/workflows/staff-task.ts
+export async function staffTaskWorkflow(taskId: string) {
+  "use workflow";
+
+  await reportProgress(taskId, {
+    type: "workflow.started",
+    label: "Bắt đầu công việc",
+    progressPercent: 0,
+  });
+
+  const task = await loadTask(taskId);
+  const staff = await loadStaff(task.staffId);
+
+  if (staff.useSandbox) {
+    await reportProgress(taskId, { type: "sandbox.creating", label: "Chuẩn bị workspace..." });
+    const sandbox = await createStaffSandbox(staff, task);
+    await reportProgress(taskId, { type: "sandbox.created", label: "Workspace sẵn sàng" });
+  }
+
+  const agent = new DurableAgent({ /* ... */ });
+
+  const result = await agent.stream({
+    messages: [{ role: "user", content: task.brief }],
+    maxSteps: 20,
+    onStepFinish: async ({ step, toolCalls, text }) => {
+      await reportProgress(taskId, {
+        type: "agent.step_completed",
+        label: summarizeStep(toolCalls, text),
+        progressPercent: Math.round((step / 20) * 90),
+        payload: { step, toolNames: toolCalls?.map(t => t.toolName) },
+      });
+      if (text) await appendTaskPreview(taskId, text);
+    },
+  });
+
+  const deliverableId = await saveDeliverable(taskId, result);
+  await reportProgress(taskId, {
+    type: "workflow.completed",
+    label: "Hoàn thành",
+    progressPercent: 100,
+    payload: { deliverableId },
+  });
+
+  await enqueueNotification(taskId, "task.completed");
+}
+
+async function reportProgress(taskId: string, event: ProgressInput) {
+  "use step";
+  await db.insert(taskEvents).values({ taskId, type: event.type, payload: event });
+  await db.update(tasks).set({
+    currentStep: event.label,
+    progressPercent: event.progressPercent,
+    lastEventAt: new Date(),
+    lastEventType: event.type,
+    status: event.type === "workflow.completed" ? "completed"
+          : event.type === "workflow.failed" ? "failed"
+          : "running",
+  }).where(eq(tasks.id, taskId));
+  await publishTaskSSE(taskId, event);
+}
+```
+
+### Assistant Tools — observability
+
+#### `check_task_status`
+
+Trả về snapshot đầy đủ cho Assistant trả lời user.
+
+```typescript
+// Response example
+{
+  taskId: "uuid",
+  staffName: "Alex",
+  staffRole: "Content Writer",
+  status: "running",
+  progressPercent: 45,
+  currentStep: "Đang viết phần mở đầu...",
+  startedAt: "2026-07-04T10:05:00Z",
+  lastEventAt: "2026-07-04T10:08:30Z",
+  recentEvents: [
+    { type: "agent.tool_called", label: "web_research", at: "..." },
+    { type: "agent.step_completed", label: "Research xong", at: "..." },
+  ],
+  hasPreview: true,
+  previewExcerpt: "AI agents are transforming how solo founders..."
+}
+```
+
+#### `list_active_tasks`
+
+Tất cả tasks chưa terminal (`pending`, `running`) + tasks `completed` trong 1h chưa notify.
+
+```typescript
+{
+  active: [
+    { taskId, staffName, status, progressPercent, currentStep },
+  ],
+  recentlyCompleted: [
+    { taskId, staffName, deliverableId, completedAt },
+  ],
+}
+```
+
+Assistant dùng khi user hỏi chung: "Mọi người đang làm gì?"
+
+#### `get_task_events`
+
+Full event log (paginated) — khi user muốn chi tiết.
+
+#### `get_task_preview`
+
+Draft output tạm thời — staff đã generate text nhưng chưa finalize deliverable.
+
+### Notification — Assistant biết khi task xong
+
+Hai kênh song song: **push cho UI** và **queue cho Assistant**.
+
+```mermaid
+sequenceDiagram
+    participant W as Workflow
+    participant DB as Database
+    participant SSE as SSE
+    participant UI as Workspace UI
+    participant A as Assistant
+
+    W->>DB: task.status = completed
+    W->>DB: insert notification (pending)
+    W->>SSE: task.completed
+    SSE->>UI: Desk ! emote + Task Board update
+
+    Note over A: Khi user mở dialogue hoặc hỏi
+    A->>DB: list_active_tasks / check pending notifications
+    A->>UI: Cutscene dialogue "Alex đã xong!"
+```
+
+**`notification` table:**
+
+```typescript
+interface Notification {
+  id: string;
+  userId: string;
+  type: "task.completed" | "task.failed" | "staff.hired";
+  taskId?: string;
+  payload: Record<string, unknown>;
+  status: "pending" | "delivered";  // delivered = Assistant đã báo user
+  createdAt: Date;
+  deliveredAt?: Date;
+}
+```
+
+**Luồng thông báo user:**
+
+1. Workflow xong → `notification` status `pending` + SSE `task.completed`
+2. **Workspace UI** ngay lập tức: desk `done` state, `!` emote, Task Board cập nhật
+3. **Assistant proactive** (một trong hai):
+   - **Option A (MVP):** Khi user click Reception hoặc gửi message tiếp, Assistant gọi `list_active_tasks`, thấy `recentlyCompleted` chưa `delivered` → cutscene dialogue
+   - **Option B (Phase 2):** SSE trigger dialogue overlay tự động nếu user đang trong app
+4. Sau khi Assistant thông báo → `notification.status = delivered`
+
+### Assistant behavior guidelines
+
+```markdown
+When a task is running:
+- If user asks about progress, use check_task_status or list_active_tasks
+- Summarize in plain language: "Alex đang viết phần mở đầu, khoảng 45% xong"
+- Offer to show preview if hasPreview is true
+
+When a task completes (pending notification):
+- Proactively mention it at the start of the next interaction
+- Trigger cutscene-style announcement with [Xem kết quả] choice
+- Mark notification as delivered after informing user
+
+Never block waiting for tasks — always use tools to check current state.
+```
+
+### UI reflection
+
+| UI element | Data source |
+|------------|-------------|
+| Desk `working` animation | `task.status === running` |
+| Desk `done` + `!` emote | `task.status === completed` + notification pending |
+| Task Board sticky note progress | `progressPercent`, `currentStep` |
+| Task Board note preview text | `task_preview` excerpt |
+
+### Polling vs Push
+
+| Layer | Mechanism |
+|-------|-----------|
+| Workspace UI | SSE `task.progress`, `task.completed` — real-time |
+| Assistant | Tools on-demand; `list_active_tasks` at conversation start |
+| Workflow → DB | `reportProgress` step sau mỗi agent step |
+| Fallback | `GET /api/tasks/[id]` nếu SSE disconnect |
+
+---
+
 ## Task Lifecycle
 
 ```
@@ -299,9 +592,10 @@ pending → running → completed | failed | cancelled
 
 | Event            | Channel            | Payload                              |
 | ---------------- | ------------------ | ------------------------------------ |
-| `task.started`   | SSE                | `{ taskId, staffName }`              |
-| `task.completed` | SSE + chat message | `{ taskId, deliverableId, preview }` |
-| `task.failed`    | SSE + chat message | `{ taskId, error }`                  |
+| `task.started`    | SSE                | `{ taskId, staffName }`                              |
+| `task.progress`   | SSE                | `{ taskId, progressPercent, currentStep, preview? }` |
+| `task.completed`  | SSE + notification | `{ taskId, deliverableId, preview }`                 |
+| `task.failed`     | SSE + notification | `{ taskId, error }`                                  |
 | `staff.hired`    | SSE                | `{ staffId, name, role }`            |
 
 ---

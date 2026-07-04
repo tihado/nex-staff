@@ -56,8 +56,10 @@
 - [ ] `DurableAgent` + `staffTaskWorkflow` (Vercel Workflow)
 - [ ] `delegate_task` tool — fire-and-forget
 - [ ] Vercel Sandbox cho staff với `useSandbox: true`
-- [ ] `task` + `deliverable` tables
-- [ ] SSE notifications (`task.completed`, `task.failed`, `staff.hired`)
+- [ ] Task observability: `task_event`, `task_preview`, `notification` tables
+- [ ] `reportProgress` trong staffTaskWorkflow + SSE `task.progress`
+- [ ] Assistant tools: `list_active_tasks`, `get_task_events`, `get_task_preview`
+- [ ] Enhanced `check_task_status` với progress + preview
 - [ ] Deliverable preview inline trong chat
 - [ ] Archive Room + Task Board overlays
 - [ ] 8-bit tilemap assets, desk sprites, archive shelves

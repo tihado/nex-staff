@@ -197,21 +197,20 @@ Overlay kiểu **game storage room** — kệ sách pixel, mỗi document = mộ
 
 ### Task Board (Bảng công việc)
 
-Bulletin board trên tường — sticky notes pixel cho mỗi active task.
+Bulletin board — sticky notes hiển thị **progress real-time** từ `task.progress` SSE.
 
 ```
 ╔═ TASK BOARD ═══════════════════════════════════════ [X] ═╗
 ║  ┌──────────────┐  ┌──────────────┐                       ║
-║  │ ▶ Viết blog  │  │ ◉ Research   │  ← running        ║
+║  │ ▶ Viết blog  │  │ ◉ Research   │                       ║
 ║  │ Alex         │  │ Sam          │                       ║
-║  │ ~5 min left  │  │ working...   │                       ║
+║  │ ████░░ 45%   │  │ ██░░░░ 30%   │  ← progress bar      ║
+║  │ Đang viết... │  │ Searching... │  ← currentStep       ║
 ║  └──────────────┘  └──────────────┘                       ║
-║  ┌──────────────┐                                         ║
-║  │ ✓ Phân tích  │  ← done, click view deliverable       ║
-║  │ Kim          │                                         ║
-║  └──────────────┘                                         ║
 ╚══════════════════════════════════════════════════════════╝
 ```
+
+Click sticky note → dialogue với staff đó hoặc preview overlay (`get_task_preview`).
 
 ### Workspace → Dialogue Transition
 

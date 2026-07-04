@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PixelButton, PixelIcon } from "@/components/pixel";
+import { DialogueMarkdown } from "./dialogue-markdown";
+
+const MARKDOWN_SYNTAX_PATTERN =
+  /(\*\*|__|`+|^#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s|\[.+\]\(.+\)|^>\s)/m;
+
+/** Show live preview only when markdown would render differently from plain text. */
+function hasMarkdownSyntax(text: string): boolean {
+  return MARKDOWN_SYNTAX_PATTERN.test(text);
+}
 
 interface DialogueInputProps {
   disabled?: boolean;
@@ -11,7 +20,7 @@ interface DialogueInputProps {
 
 /**
  * Free-text input embedded inside the dialogue box (state `player-input`).
- * No separate bottom input bar — this replaces it (docs/UI-UX.md anti-patterns).
+ * Supports Markdown — live preview appears only when markdown syntax is used.
  */
 export function DialogueInput({
   playerName,
@@ -36,6 +45,8 @@ export function DialogueInput({
     setValue("");
   };
 
+  const showPreview = value.trim().length > 0 && hasMarkdownSyntax(value);
+
   return (
     <div className="relative">
       <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
@@ -45,6 +56,16 @@ export function DialogueInput({
         <label className="sr-only" htmlFor="dialogue-input">
           Message {playerName}
         </label>
+
+        {showPreview ? (
+          <section
+            aria-label="Markdown preview"
+            className="mb-3 max-h-[min(24vh,10rem)] overflow-y-auto border-border-dialogue border-b-[2px] pb-3"
+          >
+            <DialogueMarkdown content={value} variant="user" />
+          </section>
+        ) : null}
+
         <textarea
           className="min-h-[4rem] w-full resize-none bg-transparent font-pixel text-[11px] text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted"
           disabled={disabled}

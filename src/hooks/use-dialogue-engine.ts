@@ -1,7 +1,7 @@
 "use client";
 
 import type { useChat } from "@ai-sdk/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 
 const MAX_LINE_LENGTH = 80;
@@ -12,7 +12,6 @@ export type DialogueEmotion = "neutral" | "happy" | "think" | "alert";
 export type DialogueState =
   | "idle"
   | "npc-speaking"
-  | "waiting-advance"
   | "player-choice"
   | "player-input";
 
@@ -43,15 +42,12 @@ export interface UseDialogueEngineOptions {
 }
 
 export interface DialogueEngine {
-  advance: () => void;
   choices: DialogueChoice[];
-  currentLine: DialogueLine | null;
+  displayText: string;
+  isStreaming: boolean;
   isThinking: boolean;
-  lineIndex: number;
   log: DialogueLine[];
-  markLineTyped: () => void;
   selectChoice: (choiceId: string) => void;
-  skipTypewriter: boolean;
   state: DialogueState;
   submitInput: (text: string) => void;
 }
@@ -175,7 +171,8 @@ export function useDialogueEngine(
   } = options;
   const { messages, status, sendMessage } = chat;
 
-  const isBusy = status === "submitted" || status === "streaming";
+  const isStreaming = status === "streaming";
+  const isBusy = status === "submitted" || isStreaming;
 
   const npcLine = useCallback(
     (text: string): DialogueLine => ({
@@ -188,28 +185,17 @@ export function useDialogueEngine(
     [speakerId, speakerName, speakerRole, portraitSprite]
   );
 
-  // Stable NPC lines that are safe to reveal. While a message is still
-  // streaming, its trailing (incomplete) segment is held back to avoid
-  // re-splitting text mid-typewriter.
-  const stableLines = useMemo(() => {
-    const lines: DialogueLine[] = [npcLine(greeting)];
-    const assistantMessages = messages.filter((m) => m.role === "assistant");
-    const lastAssistant = assistantMessages.at(-1);
+  const lastAssistant = useMemo(
+    () => messages.filter((message) => message.role === "assistant").at(-1),
+    [messages]
+  );
 
-    for (const message of assistantMessages) {
-      const segments = splitIntoLines(getMessageText(message));
-      const isStreamingThisMessage = isBusy && message === lastAssistant;
-      const committable = isStreamingThisMessage
-        ? segments.slice(0, -1)
-        : segments;
+  const lastAssistantText = useMemo(
+    () => (lastAssistant ? getMessageText(lastAssistant).trim() : ""),
+    [lastAssistant]
+  );
 
-      for (const segment of committable) {
-        lines.push(npcLine(segment));
-      }
-    }
-
-    return lines;
-  }, [messages, greeting, isBusy, npcLine]);
+  const displayText = lastAssistantText || greeting;
 
   const log = useMemo(() => {
     const entries: DialogueLine[] = [npcLine(greeting)];
@@ -233,64 +219,21 @@ export function useDialogueEngine(
     return entries;
   }, [messages, greeting, npcLine]);
 
-  const [revealIndex, setRevealIndex] = useState(0);
-  const [lineTyped, setLineTyped] = useState(false);
-  const [skipTypewriter, setSkipTypewriter] = useState(false);
-  const [inputMode, setInputMode] = useState(false);
+  const choices = useMemo(
+    () => (isBusy ? [] : extractChoices(lastAssistant)),
+    [lastAssistant, isBusy]
+  );
 
-  const choices = useMemo(() => {
-    const lastAssistant = messages.filter((m) => m.role === "assistant").at(-1);
-    return isBusy ? [] : extractChoices(lastAssistant);
-  }, [messages, isBusy]);
-
-  const hasUnrevealed = revealIndex < stableLines.length;
-  const currentLine = hasUnrevealed ? (stableLines[revealIndex] ?? null) : null;
-
-  // When new lines stream in after the player opened the input, pull focus
-  // back to the NPC so the reply is spoken.
-  useEffect(() => {
-    if (hasUnrevealed && inputMode) {
-      setInputMode(false);
-    }
-  }, [hasUnrevealed, inputMode]);
-
-  const isThinking = isBusy && !hasUnrevealed && !inputMode;
+  const isThinking = status === "submitted";
 
   let state: DialogueState;
-  if (inputMode) {
-    state = "player-input";
-  } else if (hasUnrevealed) {
-    state = lineTyped ? "waiting-advance" : "npc-speaking";
+  if (isBusy) {
+    state = "npc-speaking";
   } else if (choices.length > 0) {
     state = "player-choice";
-  } else if (isBusy) {
-    state = "idle";
   } else {
     state = "player-input";
   }
-
-  const markLineTyped = useCallback(() => {
-    setLineTyped(true);
-    setSkipTypewriter(false);
-  }, []);
-
-  const goToNextLine = useCallback(() => {
-    setRevealIndex((index) => index + 1);
-    setLineTyped(false);
-    setSkipTypewriter(false);
-  }, []);
-
-  const advance = useCallback(() => {
-    if (!lineTyped && hasUnrevealed) {
-      // Fast-forward the typewriter for the current line.
-      setSkipTypewriter(true);
-      return;
-    }
-
-    if (hasUnrevealed) {
-      goToNextLine();
-    }
-  }, [lineTyped, hasUnrevealed, goToNextLine]);
 
   const send = useCallback(
     (text: string) => {
@@ -300,7 +243,6 @@ export function useDialogueEngine(
         return;
       }
 
-      setInputMode(false);
       sendMessage({ text: trimmed });
     },
     [sendMessage]
@@ -319,15 +261,12 @@ export function useDialogueEngine(
 
   return {
     state,
-    currentLine,
-    lineIndex: revealIndex,
-    choices,
+    displayText,
+    isStreaming,
     isThinking,
+    choices,
     log,
-    skipTypewriter,
-    advance,
     selectChoice,
     submitInput: send,
-    markLineTyped,
   };
 }

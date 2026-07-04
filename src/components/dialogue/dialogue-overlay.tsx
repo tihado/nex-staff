@@ -162,8 +162,11 @@ function DialogueOverlayPanel({
 
   const isThinking =
     hireFlow.phase === "submitting" || (!useScriptedUi && engine.isThinking);
+  const hasNpcReplyText = useScriptedUi
+    ? Boolean(hireFlow.scripted?.line?.trim())
+    : Boolean(engine.displayText.trim());
   const showThinkingIndicator =
-    isThinking || (!useScriptedUi && engine.isBusy && !displayText.trim());
+    isThinking || (!useScriptedUi && engine.isBusy && !hasNpcReplyText);
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {

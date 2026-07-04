@@ -10,7 +10,7 @@ function isWorkflowOrAuthApi(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isWorkflowOrAuthApi(pathname)) {

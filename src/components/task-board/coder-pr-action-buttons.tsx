@@ -97,6 +97,10 @@ export function CoderPrActionButtons({
       {showPreview ? (
         <PixelButton
           onClick={() => {
+            if (!websitePreviewUrl) {
+              return;
+            }
+
             window.open(websitePreviewUrl, "_blank", "noopener,noreferrer");
           }}
           type="button"

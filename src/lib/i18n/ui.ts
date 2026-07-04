@@ -48,9 +48,22 @@ export const uiStrings = {
       baseGreeting: string
     ) =>
       `${staffName} just finished "${title}". Want to see the result?\n\n${baseGreeting}`,
-    hireDeskGreeting: "Who do you want to hire for this desk?",
-    staffGreeting: (name: string) =>
-      `Hi boss! I'm ${name}. What can I help with?`,
+    emptyDeskGreeting:
+      "This desk is open. Tell me who to hire and what they should work on — I'll handle the rest.",
+  },
+  staffStatus: {
+    checkpoints: "Checkpoints",
+    close: "Close staff status",
+    idle: "No active task right now. Chat with the Assistant to delegate work.",
+    loading: "Loading task status…",
+    noOutput: "No output yet. Check back once the task finishes.",
+    offline: "This agent is currently offline.",
+    output: "Output",
+    progress: "Progress",
+    refresh: "Refresh",
+    starting: "Starting…",
+    talkToAssistant: "Talk to Assistant",
+    title: "Agent status",
   },
   completion: {
     greeting: (staffName: string, title: string) =>

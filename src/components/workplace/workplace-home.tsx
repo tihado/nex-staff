@@ -14,6 +14,7 @@ import { PixelButton, PixelHUD, PixelNotification } from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { HireSparkle } from "@/components/workplace/hire-sparkle";
+import { StaffStatusOverlay } from "@/components/workplace/staff-status-overlay";
 import {
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
@@ -24,8 +25,9 @@ import { uiStrings } from "@/lib/i18n/ui";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
-import type { TaskDetail } from "@/lib/tasks/types";
+import type { TaskDetail, TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
+import { findStaffTask } from "@/lib/workplace/staff-task";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
 
 interface WorkplaceHomeProps {
@@ -57,6 +59,11 @@ interface DeliverablePreviewState {
   title: string;
 }
 
+interface StaffStatusState {
+  desk: WorkspaceDesk;
+  task: TaskSummary | null;
+}
+
 function buildReceptionGreeting(
   baseGreeting: string,
   pendingCompletions: PendingTaskCompletion[]
@@ -76,7 +83,7 @@ function buildReceptionGreeting(
 /**
  * Workplace home (#8): a top-down pixel office floor. Agents work at desks,
  * walk to the pantry when done, and show status emotes. Clicking Reception or a
- * staff member opens the RPG dialogue; archive opens the document shelf overlay.
+ * staff member opens read-only status; Reception opens Assistant dialogue.
  */
 export function WorkplaceHome({
   assistantName,
@@ -102,6 +109,7 @@ export function WorkplaceHome({
     useState<PendingTaskCompletion | null>(null);
   const [deliverablePreview, setDeliverablePreview] =
     useState<DeliverablePreviewState | null>(null);
+  const [staffStatus, setStaffStatus] = useState<StaffStatusState | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [hireCelebration, setHireCelebration] =
@@ -114,7 +122,9 @@ export function WorkplaceHome({
 
   const hasOverlayLayer = dialogue !== null || taskBoardOpen || archiveOpen;
   const hasModalLayer =
-    completionCutscene !== null || deliverablePreview !== null;
+    completionCutscene !== null ||
+    deliverablePreview !== null ||
+    staffStatus !== null;
   const hasNotificationLayer = Boolean(
     banner || hireCelebration || actionError
   );
@@ -234,17 +244,14 @@ export function WorkplaceHome({
     });
   };
 
-  const openHireDialogue = (deskId: string) => {
+  const openHireDialogue = (_deskId: string) => {
     setDialogue({
       speakerId: "assistant",
       speakerName: assistantName,
       speakerRole: "Coordinator",
       portraitIcon: "android",
-      greeting: uiStrings.workplace.hireDeskGreeting,
-      hireContext: {
-        mode: "scripted",
-        deskId,
-      },
+      greeting: uiStrings.workplace.emptyDeskGreeting,
+      hireContext: { mode: "assistant" },
     });
   };
 
@@ -253,19 +260,15 @@ export function WorkplaceHome({
       return;
     }
 
-    if (desk.state === "done" && desk.pendingTaskId) {
-      openCompletionCutscene(desk.pendingTaskId);
-      return;
-    }
-
-    setDialogue({
-      speakerId: desk.staffId,
-      speakerName: desk.label,
-      speakerRole: desk.role,
-      portraitIcon: "human",
-      avatarSprite: desk.avatarSprite,
-      greeting: uiStrings.workplace.staffGreeting(desk.label),
+    setStaffStatus({
+      desk,
+      task: findStaffTask(desk, tasks),
     });
+  };
+
+  const openAssistantFromStaffStatus = () => {
+    setStaffStatus(null);
+    openReception();
   };
 
   const handleStaffHired = useCallback(
@@ -486,6 +489,18 @@ export function WorkplaceHome({
                 handleCloseDeliverablePreview();
               }}
               title={deliverablePreview.title}
+            />
+          ) : null}
+
+          {staffStatus ? (
+            <StaffStatusOverlay
+              desk={staffStatus.desk}
+              onClose={() => setStaffStatus(null)}
+              onOpenAssistant={openAssistantFromStaffStatus}
+              onViewDeliverable={(taskId) => {
+                openDeliverablePreview(taskId);
+              }}
+              task={staffStatus.task}
             />
           ) : null}
         </OverlayStack.Layer>

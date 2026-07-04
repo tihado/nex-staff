@@ -72,7 +72,7 @@ export function WorkspaceAgent({
 
   return (
     <button
-      aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
+      aria-label={`View ${desk.label} status${desk.role ? ` (${desk.role})` : ""}`}
       className={cn(
         "group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
         isWalking && "will-change-[left,top]"

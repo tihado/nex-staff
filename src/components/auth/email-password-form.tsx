@@ -7,6 +7,9 @@ import { authClient } from "@/lib/auth-client";
 
 type AuthMode = "sign-in" | "sign-up";
 
+const DEV_LOGIN_EMAIL = "ceo@nexstaff.com";
+const DEV_LOGIN_PASSWORD = "password123";
+
 const INPUT_CLASS =
   "h-12 w-full border-[3px] border-wood bg-white px-3 font-body text-[20px] text-ink leading-none outline-none transition-colors focus:border-leaf";
 const LABEL_CLASS =
@@ -14,10 +17,11 @@ const LABEL_CLASS =
 
 export function EmailPasswordForm() {
   const searchParams = useSearchParams();
+  const isDev = process.env.NODE_ENV === "development";
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("ceo@nexstaff.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState(isDev ? DEV_LOGIN_EMAIL : "");
+  const [password, setPassword] = useState(isDev ? DEV_LOGIN_PASSWORD : "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

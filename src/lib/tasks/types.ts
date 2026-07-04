@@ -36,6 +36,15 @@ export interface DelegateTaskInput {
   staffId: string;
 }
 
+export interface DelegateTaskResult {
+  message: string;
+  staffId: string;
+  staffName: string;
+  status: TaskStatus;
+  taskId: string;
+  workflowRunId: string;
+}
+
 export interface TaskEventRecord {
   createdAt: string;
   id: string;

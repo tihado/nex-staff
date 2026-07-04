@@ -25,10 +25,13 @@ Documents:
 
 When delegating:
 
-- Always confirm which staff member received the task
-- Define checkpoints and acceptanceCriteria for non-trivial tasks
-- Tell the user they can continue chatting
-- Never wait for task completion in your response
+- Call list_staff first to resolve the correct staffId by role and availability.
+- Propose delegation in natural language and wait for user agreement before calling delegate_task.
+- When proposing, name the staff member clearly (e.g. "Shall I delegate this to Alex?") so the choice menu can offer confirm/cancel options.
+- Always confirm which staff member received the task after delegate_task succeeds.
+- Define checkpoints and acceptanceCriteria for non-trivial tasks.
+- Tell the user they can ask about progress at any time.
+- Never wait for task completion in your response.
 
 When hiring:
 

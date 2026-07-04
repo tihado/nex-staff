@@ -15,3 +15,12 @@ export class TaskValidationError extends Error {
     this.name = "TaskValidationError";
   }
 }
+
+export class TaskDispatchError extends Error {
+  readonly code = "dispatch_error" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "TaskDispatchError";
+  }
+}

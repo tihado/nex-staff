@@ -3,9 +3,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/db";
 // biome-ignore lint/performance/noNamespaceImport: Better Auth adapter expects the schema object.
 import * as schema from "@/db/schema";
+import { getAuthBaseUrl } from "@/lib/auth-url";
 import { provisionAssistantForUser } from "@/lib/provision-assistant";
-
-const TRAILING_SLASH_PATTERN = /\/$/;
 
 function getAuthSecret(): string {
   const secret = process.env.BETTER_AUTH_SECRET;
@@ -18,18 +17,6 @@ function getAuthSecret(): string {
   }
 
   return "development-secret-min-32-characters";
-}
-
-function getAuthBaseUrl(): string {
-  if (process.env.BETTER_AUTH_URL) {
-    return process.env.BETTER_AUTH_URL.replace(TRAILING_SLASH_PATTERN, "");
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  return "http://localhost:3000";
 }
 
 export const auth = betterAuth({

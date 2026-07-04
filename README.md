@@ -107,7 +107,7 @@ Set these environment variables on Vercel:
 
 - `DATABASE_URL`
 - `BETTER_AUTH_SECRET`
-- `BETTER_AUTH_URL` (production URL)
+- `BETTER_AUTH_URL` (optional on Vercel — auto-detected from `VERCEL_URL`)
 - `BLOB_READ_WRITE_TOKEN`
 - `GOOGLE_GENERATIVE_AI_API_KEY`
 

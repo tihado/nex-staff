@@ -7,6 +7,7 @@ import {
   ASSISTANT_MAX_STEPS,
   DEFAULT_ASSISTANT_CONFIG,
 } from "@/lib/assistant-defaults";
+import { documentTools } from "@/lib/tools/documents";
 
 export interface AssistantRuntimeContext extends Record<string, unknown> {
   assistantId: string;
@@ -18,7 +19,14 @@ export interface CreateAssistantOptions {
   chatId?: string;
 }
 
-type AssistantTools = Record<string, never>;
+type AssistantTools = typeof documentTools;
+
+function buildDocumentToolsContext(userId: string) {
+  return {
+    list_documents: { userId },
+    create_document: { userId },
+  } as const;
+}
 
 /**
  * Load the user's Assistant from DB and return a configured `ToolLoopAgent`.
@@ -44,14 +52,18 @@ export async function createAssistant(
     chatId: options.chatId,
   };
 
+  const toolsContext = buildDocumentToolsContext(userId);
+
   return new ToolLoopAgent<never, AssistantTools, AssistantRuntimeContext>({
     model: getGeminiModel(modelId),
     instructions: assistantRow.instructions,
-    tools: {},
+    tools: documentTools,
+    toolsContext,
     stopWhen: isStepCount(ASSISTANT_MAX_STEPS),
     prepareCall: async (call) => ({
       ...call,
       runtimeContext,
+      toolsContext,
     }),
   });
 }

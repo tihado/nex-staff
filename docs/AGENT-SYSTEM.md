@@ -178,6 +178,116 @@ Không match → đề xuất hire với role phù hợp nhất.
 
 ---
 
+## Supervision & Multi-worker Control
+
+Assistant không chỉ **delegate** mà còn **giám sát** worker: kiểm tra checkpoint, đánh giá deliverable, và điều phối nhiều worker song song.
+
+### Hub-and-spoke (đã có)
+
+| Thành phần | Chức năng |
+|------------|-----------|
+| 1 Assistant per user | Coordinator duy nhất — user không nói trực tiếp với worker |
+| N Staff per user | Specialist workers chạy async trong workflow riêng |
+| `delegate_task` | Fire-and-forget — nhiều staff chạy **song song** |
+| `list_active_tasks` | Assistant thấy tất cả task đang chạy cùng lúc |
+| `list_staff` | Roster + status idle/working |
+| Notification queue | Assistant biết task xong để báo user |
+| Retry policy (max 3) | Xử lý worker fail |
+
+### Task queue semantics
+
+Khi staff đang `working`, task mới được **queue** thay vì reject.
+
+| Rule | Giá trị |
+|------|---------|
+| Queue order | **FIFO** per staff |
+| Concurrency per staff | **1 running** + tối đa **3 pending** (default) |
+| Cross-staff parallelism | **Unlimited** (bounded bởi Vercel Workflow concurrency) |
+| Queue full | Assistant thông báo user; đề xuất staff khác hoặc chờ |
+
+Assistant tool **`list_queued_tasks`** — backlog per staff (pending tasks chưa start workflow).
+
+### Supervisor Loop
+
+Assistant verify worker **trong suốt task lifecycle**, không chỉ khi complete:
+
+```mermaid
+sequenceDiagram
+    participant A as Assistant
+    participant W as Staff Workflow
+    participant DB as task_event
+
+    A->>A: delegate_task + checkpoints + acceptance_criteria
+    W->>DB: checkpoint.reached / reportProgress
+    A->>DB: check_task_status / verify_checkpoint
+    alt checkpoint failed
+        A->>A: revise_task hoặc re-delegate
+    end
+    W->>DB: workflow.completed
+    A->>A: review_deliverable
+    alt quality below threshold
+        A->>W: request_revision via revise_task
+    end
+```
+
+**Khi delegate**, Assistant (hoặc pre-processing) set:
+
+- `metadata.acceptanceCriteria` — rubric ngắn để `review_deliverable` chấm output
+- `checkpoints[]` — milestones planned (xem § Task Checkpoints)
+
+**Assistant tools giám sát:**
+
+| Tool | Mục đích |
+|------|----------|
+| `verify_checkpoint` | So checkpoint status vs plan; trả pass/fail + evidence |
+| `review_deliverable` | LLM chấm deliverable vs `acceptanceCriteria` |
+| `revise_task` | Gửi feedback cho worker (workflow signal) hoặc spawn task mới |
+| `list_queued_tasks` | Xem backlog pending per staff |
+
+Chi tiết tool schemas: [API.md](API.md).
+
+### Multi-task orchestration
+
+Khi một user request cần **nhiều worker**:
+
+1. Assistant **decompose** brief → tạo `task_group` (`metadata.parentGroupId`)
+2. Delegate parallel (ví dụ Researcher + Writer) hoặc sequential với dependency
+3. Task phụ thuộc: `metadata.dependsOn: [taskId]` — workflow chỉ start khi dependency `completed` **và** Assistant `verify_checkpoint` pass
+4. Assistant dùng `list_active_tasks` + filter `parentGroupId` để báo cáo tổng thể cho user
+
+Ví dụ: "Research thị trường X rồi viết blog"
+
+```
+Group: blog-about-market-X
+├── Task 1: Researcher — research + citations     (no deps)
+└── Task 2: Writer — viết blog                      (dependsOn: Task 1)
+```
+
+Assistant behavior:
+- Start Task 1 ngay
+- Poll Task 1 checkpoints; khi research verified → start Task 2
+- Báo user progress theo group: "Research 100%, Writer đang draft 30%"
+
+### Assistant behavior — supervision
+
+```markdown
+When delegating multi-step work:
+- Decompose into task_group with explicit dependencies
+- Set acceptanceCriteria on each task brief
+- Define checkpoints before starting workflow
+
+While tasks run:
+- Periodically check list_active_tasks (especially on user message)
+- verify_checkpoint when worker reports checkpoint.reached
+- If checkpoint failed, use revise_task with specific feedback
+
+When task completes:
+- Always run review_deliverable before notifying user
+- If score below threshold, offer revision (revise_task) before presenting to user
+```
+
+---
+
 ## Skills & Tools Model
 
 ### Skills
@@ -225,6 +335,10 @@ const { providerReference } = await uploadSkill({
 | `get_task_events`   | Nhật ký chi tiết từng bước                         |
 | `get_task_preview`  | Draft output tạm thời                              |
 | `get_deliverable`   | Fetch result                                       |
+| `verify_checkpoint` | Verify planned checkpoint vs evidence              |
+| `review_deliverable`| Chấm deliverable vs acceptanceCriteria             |
+| `revise_task`       | Gửi feedback / spawn revision task                 |
+| `list_queued_tasks` | Pending backlog per staff                          |
 
 **Staff tools** (per-staff, from DB + sandbox):
 
@@ -339,6 +453,10 @@ Append-only log — mỗi bước trong workflow/agent ghi một event.
 | `agent.tool_result` | Tool trả về | `{ toolName, resultSummary }` |
 | `agent.text_delta` | Có text output tạm | `{ chunk }` — append vào preview |
 | `agent.step_completed` | Step kết thúc | `{ step, durationMs }` |
+| `checkpoint.reached` | Worker báo đạt milestone | `{ checkpointId, label, evidence }` |
+| `checkpoint.verified` | Assistant verify pass | `{ checkpointId, score, reasoning }` |
+| `checkpoint.failed` | Worker hoặc verify fail | `{ checkpointId, reason }` |
+| `worker.query_response` | Phase 2: trả lời query_worker | `{ question, answer }` |
 | `deliverable.saved` | Lưu kết quả cuối | `{ deliverableId, title }` |
 | `workflow.completed` | Thành công | `{ deliverableId }` |
 | `workflow.failed` | Lỗi | `{ error, step }` |
@@ -568,6 +686,124 @@ Never block waiting for tasks — always use tools to check current state.
 
 ---
 
+## Task Checkpoints
+
+Progress **planned** — Assistant tạo checkpoint khi lên kế hoạch (trong `delegate_task`), thay vì chỉ reactive theo `agent.step_completed`.
+
+### So sánh với step progress (đã có)
+
+| Mechanism | Ai định nghĩa | Khi nào update | Dùng cho |
+|-----------|---------------|----------------|----------|
+| **Step progress** | Workflow (`maxSteps`) | Mỗi `agent.step_completed` | UI progress bar ước lượng |
+| **Planned checkpoints** | Assistant khi delegate | Worker báo `checkpoint.reached` → Assistant `verify_checkpoint` | Quality gate, meaningful milestones |
+
+Cả hai chạy song song; `progressPercent` ưu tiên checkpoint khi có (xem công thức bên dưới).
+
+### Khi nào tạo checkpoint
+
+Trong `delegate_task`, Assistant sinh `checkpoints[]` từ brief:
+
+```typescript
+interface TaskCheckpoint {
+  id: string;
+  label: string;           // "Hoàn thành research 3 nguồn"
+  criteria: string;        // Rubric ngắn để verify
+  order: number;
+  status: "pending" | "reached" | "verified" | "failed";
+  reachedAt?: Date;
+  verifiedAt?: Date;
+  evidence?: string;       // excerpt từ preview hoặc tool output
+}
+```
+
+**Ví dụ** brief "viết blog về AI agents":
+
+| Order | Label | Criteria |
+|-------|-------|----------|
+| 1 | Research sources | ≥ 3 nguồn có citation |
+| 2 | Outline | Có outline với ≥ 4 sections |
+| 3 | Draft | ≥ 800 words |
+| 4 | Final deliverable | Saved to deliverable table |
+
+### Worker báo cáo checkpoint
+
+Staff workflow gọi tool **`report_checkpoint`** (worker-side) hoặc `reportProgress` với event type:
+
+| Event | Khi nào |
+|-------|---------|
+| `checkpoint.reached` | Worker tự đánh dấu đạt milestone |
+| `checkpoint.failed` | Worker không đạt sau N attempts |
+
+Worker instructions template (append vào staff system prompt):
+
+```markdown
+Before moving to the next phase of work:
+1. Call report_checkpoint with checkpointId and evidence (quote from your output or tool results)
+2. Wait for verification before proceeding to dependent checkpoints
+3. If checkpoint fails, revise your approach based on feedback
+```
+
+### Assistant verify checkpoint
+
+**`verify_checkpoint(checkpointId)`** — đọc evidence + criteria, LLM judge pass/fail:
+
+```typescript
+// Response example
+{
+  checkpointId: "cp-1",
+  status: "verified",  // or "failed"
+  score: 8,
+  reasoning: "Found 4 cited sources, meets ≥3 requirement",
+  evidence: "Sources: [1] arxiv..., [2] blog..., ..."
+}
+```
+
+Luồng:
+1. Worker → `checkpoint.reached` event
+2. Assistant (proactive hoặc on user ask) → `verify_checkpoint`
+3. Pass → status `verified`; Fail → `revise_task` hoặc notify user
+
+### progressPercent — công thức mới
+
+Khi task có checkpoints:
+
+```
+progressPercent = Math.round((verifiedCheckpoints / totalCheckpoints) * 100)
+```
+
+Cap 95% cho đến `workflow.completed` (giữ behavior cũ).
+
+Khi **không** có checkpoints — fallback công thức cũ:
+
+```
+progressPercent = Math.round((currentStep / maxSteps) * 90)
+```
+
+### Dynamic query — MVP vs Phase 2
+
+| Mechanism | Phase | Mô tả |
+|-----------|-------|-------|
+| **DB polling** | MVP (Phase 1) | `check_task_status`, `get_task_events`, `get_task_preview` — Assistant đọc DB state |
+| **Workflow signal** `query_worker` | Phase 2 | Assistant gửi câu hỏi → worker workflow nhận signal → trả lời qua `task_event` type `worker.query_response` |
+
+**Lưu ý:** MVP "dynamic query" = Assistant query **DB**, không RPC trực tiếp tới agent in-memory. Đủ cho hầu hết case (progress, preview, events).
+
+Phase 2 `query_worker` — khi worker stuck hoặc cần clarification mid-task:
+
+```mermaid
+sequenceDiagram
+    participant A as Assistant
+    participant W as Staff Workflow
+    participant DB as task_event
+
+    A->>W: workflow signal query_worker
+    Note over W: Agent processes question in next step
+    W->>DB: worker.query_response event
+    A->>DB: get_task_events / check_task_status
+```
+
+---
+
 ## Task Lifecycle
 
 ```
@@ -612,10 +848,12 @@ Your responsibilities:
 3. Hire specialized staff when needed
 4. Delegate tasks to the right staff member
 5. Keep the user informed about task progress
+6. Verify checkpoints and review deliverables before presenting results to user
 
 When delegating:
 
 - Always confirm which staff member received the task
+- Define checkpoints and acceptanceCriteria for non-trivial tasks
 - Tell the user they can continue chatting
 - Never wait for task completion in your response
 
@@ -635,3 +873,4 @@ You have access to the user's staff roster and documents. Use tools proactively.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Runtime implementation
 - [DATA-MODEL.md](DATA-MODEL.md) — Database tables
 - [API.md](API.md) — Tool schemas, endpoints
+- [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests

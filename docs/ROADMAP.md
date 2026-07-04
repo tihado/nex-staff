@@ -6,6 +6,7 @@
 | ----- | ---------- | -------- | ------------------------------- |
 | 0     | Foundation | 2 tuần   | Auth, chat, basic assistant     |
 | 1     | MVP        | 3-4 tuần | Hire, delegate, async, 8-bit UI |
+| 1.5   | Supervision| 1-2 tuần | Checkpoints, verify, multi-worker orchestration |
 | 2     | v1.0       | 3 tuần   | RAG, task history, polish       |
 | 3     | v1.5       | TBD      | Custom staff, MCP, HarnessAgent |
 | 4     | v2.0       | TBD      | Team, marketplace, billing      |
@@ -65,6 +66,7 @@
 - [ ] 8-bit tilemap assets, desk sprites, archive shelves
 - [ ] Staff roster overlay (`/staff`)
 - [ ] Typing indicator pixel animation
+- [ ] Eval harness MVP: routing runner + 5 deliverable scenarios (see [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md))
 
 ### Exit Criteria
 
@@ -80,6 +82,35 @@
 | 2    | Workflow + DurableAgent + delegate        |
 | 3    | Sandbox integration, notifications        |
 | 4    | 8-bit UI, polish, testing                 |
+
+---
+
+## Phase 1.5 — Supervision (1-2 tuần)
+
+**Mục tiêu:** Assistant giám sát worker qua planned checkpoints; multi-worker orchestration; eval integration.
+
+### Deliverables
+
+- [ ] `task_checkpoint` table + checkpoint events trong `task_event`
+- [ ] `delegate_task` extended: `checkpoints[]`, `acceptanceCriteria`, `parentGroupId`, `dependsOn`
+- [ ] Worker tool `report_checkpoint` trong staffTaskWorkflow
+- [ ] Assistant tools: `verify_checkpoint`, `review_deliverable`, `revise_task`, `list_queued_tasks`
+- [ ] Task queue semantics: FIFO per staff, 1 running + 3 pending
+- [ ] Multi-task orchestration: task groups + dependency gating
+- [ ] `progressPercent` từ verified checkpoints (fallback step-based)
+- [ ] SSE `task.checkpoint` event
+- [ ] Eval harness: checkpoint pass rate metric
+
+### Exit Criteria
+
+- Assistant delegate blog task với 4 checkpoints → verify từng checkpoint → review deliverable trước khi báo user
+- Multi-worker flow: Researcher → Writer dependency chain hoạt động end-to-end
+- Checkpoint pass rate ≥ 85% trên eval scenarios
+
+### Không làm trong Phase 1.5
+
+- Workflow signal `query_worker` (Phase 2)
+- Per-staff quality dashboard (Phase 2)
 
 ---
 
@@ -99,6 +130,9 @@
 - [ ] Workflow status polling endpoint
 - [ ] Chat persistence (`chat_event` event sourcing)
 - [ ] Chat sidebar (list conversations)
+- [ ] Workflow signal `query_worker` — Assistant dynamic query tới worker đang chạy
+- [ ] Regression eval golden tasks (see [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md))
+- [ ] Per-staff quality metrics dashboard
 
 ### Exit Criteria
 
@@ -177,6 +211,7 @@ Chỉ proceed nếu:
 | 0     | Login → first chat          | < 30s                 |
 | 1     | Hire → first deliverable    | < 10 min              |
 | 1     | Delegation routing accuracy | ≥ 90%                 |
+| 1.5   | Checkpoint pass rate        | ≥ 85%                 |
 | 2     | RAG citation accuracy       | ≥ 85%                 |
 | 2     | Task completion rate        | ≥ 80%                 |
 | 3     | Custom staff adoption       | ≥ 30% of active users |
@@ -201,4 +236,6 @@ Chỉ proceed nếu:
 
 - [PRD.md](PRD.md) — Requirements và success criteria
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technical implementation
+- [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Supervision, checkpoints, multi-worker
+- [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests
 - [UI-UX.md](UI-UX.md) — Design phases

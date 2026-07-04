@@ -47,6 +47,8 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 | US-07 | Là user, tôi nhận thông báo khi agent hoàn thành công việc                            | SSE trigger cutscene: staff NPC walk-in + dialogue "đã xong" + choice [Xem kết quả] |
 | US-08 | Là user, tôi xem lại lịch sử công việc và deliverables của từng nhân viên             | Task Board trên workspace; click desk xem history; Archive Room cho documents        |
 | US-09 | Là user, tôi khám phá workspace và thấy staff đang làm gì                               | Top-down office view; desk states idle/working/done; click zone để tương tác         |
+| US-12 | Là user, tôi được Assistant báo tiến độ theo milestone có ý nghĩa (không chỉ %)         | Assistant tạo checkpoints khi delegate; verify qua `verify_checkpoint`; progress theo checkpoint |
+| US-13 | Là user, tôi giao việc phức tạp cần nhiều staff và Assistant điều phối                 | Multi-worker task_group; dependency chain; Assistant báo cáo tổng thể qua `list_active_tasks` |
 
 ### Non-Goals (MVP)
 
@@ -76,13 +78,20 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 | `get_task_events`   | Event log chi tiết                          |
 | `get_task_preview`  | Draft output tạm                            |
 | `get_deliverable`   | Fetch completed work                        |
+| `verify_checkpoint` | Verify planned checkpoint vs evidence       |
+| `review_deliverable`| Chấm deliverable vs acceptanceCriteria      |
+| `revise_task`       | Gửi feedback / spawn revision task          |
+| `list_queued_tasks` | Pending backlog per staff                   |
 
 ### Evaluation Strategy
 
 - **Benchmark**: 20 kịch bản hire + delegate (5 hire mới, 10 delegate existing, 5 edge cases)
 - **Routing accuracy**: ≥ 90% delegate đúng staff hoặc đề xuất hire phù hợp
 - **Deliverable quality**: Human eval trên 10 deliverables — ≥ 7/10 usable without major edits
+- **Checkpoint pass rate**: ≥ 85% checkpoints verified on first attempt (Phase 1.5)
 - **Latency**: Assistant first token < 1s; task notification < 30s sau workflow complete
+
+Chi tiết metrics, test types, eval harness: [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md)
 
 ---
 
@@ -126,6 +135,7 @@ Chi tiết: [ARCHITECTURE.md](ARCHITECTURE.md)
 | -------- | --------------------------------------- | --------- |
 | Phase 0  | Foundation: auth, chat, basic assistant | 2 tuần    |
 | Phase 1  | MVP: hire, delegate, async, 8-bit UI    | 3-4 tuần  |
+| Phase 1.5| Supervision: checkpoints, multi-worker  | 1-2 tuần  |
 | Phase 2  | v1.0: RAG, task history, slash commands | 3 tuần    |
 | Phase 3+ | Custom staff, MCP, HarnessAgent         | Tương lai |
 

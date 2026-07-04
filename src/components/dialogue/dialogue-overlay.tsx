@@ -2,10 +2,15 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
 import { useDialogueEngine } from "@/hooks/use-dialogue-engine";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
+import {
+  fetchAssistantChatHistory,
+  getOrCreateAssistantChatId,
+} from "@/lib/chat/assistant-session";
 import { cn } from "@/lib/utils";
 import { ChoiceMenu } from "./choice-menu";
 import { DialogueInput } from "./dialogue-input";
@@ -41,21 +46,31 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-export function DialogueOverlay({
+interface DialogueOverlayPanelProps extends DialogueOverlayProps {
+  chatId: string;
+  initialMessages: AssistantUIMessage[];
+}
+
+function DialogueOverlayPanel({
   speakerId,
   speakerName,
   speakerRole,
   portraitIcon,
   greeting,
   chatId,
+  initialMessages,
   onClose,
-}: DialogueOverlayProps) {
-  const generatedId = useMemo(() => crypto.randomUUID(), []);
-  const id = chatId ?? generatedId;
+}: DialogueOverlayPanelProps) {
+  const transport = useMemo(
+    () => new DefaultChatTransport({ api: "/api/chat" }),
+    []
+  );
 
   const chat = useChat<AssistantUIMessage>({
-    id,
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    id: chatId,
+    messages: initialMessages,
+    generateId: () => crypto.randomUUID(),
+    transport,
   });
 
   const engine = useDialogueEngine({
@@ -202,5 +217,71 @@ export function DialogueOverlay({
         <DialogueLog lines={engine.log} onClose={() => setLogOpen(false)} />
       ) : null}
     </div>
+  );
+}
+
+export function DialogueOverlay({
+  speakerId,
+  speakerName,
+  speakerRole,
+  portraitIcon,
+  greeting,
+  chatId: chatIdProp,
+  onClose,
+}: DialogueOverlayProps) {
+  const [chatId, setChatId] = useState<string | null>(chatIdProp ?? null);
+  const [initialMessages, setInitialMessages] = useState<
+    AssistantUIMessage[] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSession() {
+      const id = chatIdProp ?? getOrCreateAssistantChatId();
+      const messages = await fetchAssistantChatHistory(id);
+
+      if (cancelled) {
+        return;
+      }
+
+      setInitialMessages(messages);
+      setChatId(id);
+    }
+
+    loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chatIdProp]);
+
+  if (!chatId || initialMessages === null) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label={`Loading dialogue with ${speakerName}`}
+        className="fixed inset-0 z-20 flex items-center justify-center bg-black/50"
+        role="dialog"
+      >
+        <div className="flex items-center gap-2 border-[3px] border-wood bg-panel px-4 py-3 font-pixel text-[10px] text-ink uppercase tracking-widest">
+          <Loader2 className="size-4 animate-spin" />
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <DialogueOverlayPanel
+      chatId={chatId}
+      greeting={greeting}
+      initialMessages={initialMessages}
+      onClose={onClose}
+      portraitIcon={portraitIcon}
+      speakerId={speakerId}
+      speakerName={speakerName}
+      speakerRole={speakerRole}
+    />
   );
 }

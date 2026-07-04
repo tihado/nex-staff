@@ -6,13 +6,15 @@ import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
+import {
+  fetchAssistantChatHistory,
+  getOrCreateAssistantChatId,
+} from "@/lib/chat/assistant-session";
 import { uploadDocument } from "@/lib/documents/upload-client";
 import { cn } from "@/lib/utils";
 import { FileAttachmentChip } from "./file-attachment-chip";
 import { MessageMarkdown } from "./message-markdown";
 import { PendingAttachmentChip } from "./pending-attachment-chip";
-
-const ASSISTANT_CHAT_STORAGE_KEY = "nex-staff-assistant-chat-id";
 
 interface AssistantChatProps {
   assistantName: string;
@@ -41,18 +43,6 @@ function hasMessageContent(message: AssistantUIMessage): boolean {
   const hasText = getMessageText(message).trim().length > 0;
   const hasFiles = getMessageFileParts(message).length > 0;
   return hasText || hasFiles;
-}
-
-function getOrCreateChatId(): string {
-  const existingId = sessionStorage.getItem(ASSISTANT_CHAT_STORAGE_KEY);
-
-  if (existingId) {
-    return existingId;
-  }
-
-  const chatId = crypto.randomUUID();
-  sessionStorage.setItem(ASSISTANT_CHAT_STORAGE_KEY, chatId);
-  return chatId;
 }
 
 function ChatMessage({ message }: { message: AssistantUIMessage }) {
@@ -88,24 +78,6 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
       </div>
     </div>
   );
-}
-
-async function fetchChatHistory(chatId: string): Promise<AssistantUIMessage[]> {
-  try {
-    const response = await fetch(`/api/chats/${chatId}`);
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = (await response.json()) as {
-      messages?: AssistantUIMessage[];
-    };
-
-    return data.messages ?? [];
-  } catch {
-    return [];
-  }
 }
 
 function AssistantChatPanel({
@@ -227,10 +199,12 @@ function AssistantChatPanel({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-          <div className="rounded-2xl border border-border border-dashed bg-muted/40 px-4 py-3 text-muted-foreground text-sm">
-            <p className="font-medium text-foreground">{assistantName}</p>
-            <p className="mt-1 leading-6">{greeting}</p>
-          </div>
+          {messages.length === 0 ? (
+            <div className="rounded-2xl border border-border border-dashed bg-muted/40 px-4 py-3 text-muted-foreground text-sm">
+              <p className="font-medium text-foreground">{assistantName}</p>
+              <p className="mt-1 leading-6">{greeting}</p>
+            </div>
+          ) : null}
 
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
@@ -359,8 +333,8 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
     let cancelled = false;
 
     async function loadChatHistory() {
-      const id = getOrCreateChatId();
-      const messages = await fetchChatHistory(id);
+      const id = getOrCreateAssistantChatId();
+      const messages = await fetchAssistantChatHistory(id);
 
       if (cancelled) {
         return;

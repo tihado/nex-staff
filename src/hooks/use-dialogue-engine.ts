@@ -204,10 +204,11 @@ export function useDialogueEngine(
     [lastAssistant]
   );
 
-  const displayText = lastAssistantText || greeting;
+  const isFirstVisit = messages.length === 0;
+  const displayText = lastAssistantText || (isFirstVisit ? greeting : "");
 
   const log = useMemo(() => {
-    const entries: DialogueLine[] = [npcLine(greeting)];
+    const entries: DialogueLine[] = isFirstVisit ? [npcLine(greeting)] : [];
 
     for (const message of messages) {
       const text = getMessageText(message).trim();
@@ -226,7 +227,7 @@ export function useDialogueEngine(
     }
 
     return entries;
-  }, [messages, greeting, npcLine]);
+  }, [messages, greeting, isFirstVisit, npcLine]);
 
   const choices = useMemo(
     () => (isBusy ? [] : extractChoices(lastAssistant)),

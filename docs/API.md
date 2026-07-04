@@ -530,6 +530,53 @@ useEffect(() => {
 
 ---
 
+## Voice (planned)
+
+> **Status:** Not implemented. Spec for Phase 2 — see [VOICE-CHAT.md](VOICE-CHAT.md).
+
+| Method | Path                      | Description              |
+| ------ | ------------------------- | ------------------------ |
+| `POST` | `/api/voice/transcribe`   | Speech-to-text (audio → text) |
+| `POST` | `/api/voice/speak`        | Text-to-speech (text → audio) |
+
+Voice endpoints are **adapters** — they do not replace `POST /api/chat`. Client flow: transcribe → user confirms text → existing chat stream → optional speak on NPC lines.
+
+#### `POST /api/voice/transcribe`
+
+**Request:** `multipart/form-data`
+
+| Field    | Type   | Description              |
+| -------- | ------ | ------------------------ |
+| `audio`  | file   | WebM/Opus or WAV, max 60s |
+| `chatId` | uuid   | Optional audit context   |
+| `locale` | string | Optional, e.g. `vi`    |
+
+**Response:**
+
+```json
+{
+  "text": "Viết blog về AI agents",
+  "durationMs": 3200,
+  "locale": "vi"
+}
+```
+
+#### `POST /api/voice/speak`
+
+**Request:**
+
+```json
+{
+  "text": "Đã giao cho Alex.",
+  "speakerId": "assistant",
+  "locale": "vi"
+}
+```
+
+**Response:** `audio/mpeg` body, or JSON with `audioBase64` (V1 TBD at implementation).
+
+---
+
 ## Error Responses
 
 Standard error format:
@@ -557,6 +604,7 @@ Standard error format:
 ## Tài liệu liên quan
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Implementation details
+- [VOICE-CHAT.md](VOICE-CHAT.md) — Voice STT/TTS plan
 - [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Tool behavior and delegation
 - [DATA-MODEL.md](DATA-MODEL.md) — Database tables
 - [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests

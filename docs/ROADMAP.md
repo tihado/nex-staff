@@ -130,6 +130,7 @@
 - [ ] Workflow status polling endpoint
 - [ ] Chat persistence (`chat_event` event sourcing)
 - [ ] Chat sidebar (list conversations)
+- [ ] **Voice V1:** push-to-talk STT + optional NPC TTS readback in dialogue (see [VOICE-CHAT.md](VOICE-CHAT.md))
 - [ ] Workflow signal `query_worker` — Assistant dynamic query tới worker đang chạy
 - [ ] Regression eval golden tasks (see [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md))
 - [ ] Per-staff quality metrics dashboard
@@ -154,6 +155,7 @@
 - [ ] `HarnessAgent` cho coding staff (Claude Code / Codex trong Sandbox)
 - [ ] Staff "level up" — học từ user feedback, cập nhật instructions
 - [ ] Chiptune sound effects (hire, complete, notification)
+- [ ] **Voice V2:** streaming STT, sentence-chunk TTS, mic SFX, user voice prefs (see [VOICE-CHAT.md](VOICE-CHAT.md))
 - [ ] `create_document` tool — lưu output thành company doc
 - [ ] Provider skill uploads (`uploadSkill` API)
 
@@ -238,4 +240,5 @@ Chỉ proceed nếu:
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technical implementation
 - [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Supervision, checkpoints, multi-worker
 - [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests
+- [VOICE-CHAT.md](VOICE-CHAT.md) — Voice input/output plan for RPG dialogue
 - [UI-UX.md](UI-UX.md) — Design phases

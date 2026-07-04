@@ -18,6 +18,7 @@ Nex Staff build trực tiếp trên **AI SDK 7** — không dùng Eve, không d�
 | Sandbox           | `@ai-sdk/sandbox-vercel` — `createVercelSandbox()`    |
 | Durability        | Vercel Workflow (`workflow`, `@ai-sdk/workflow`)      |
 | Model provider    | Google Gemini (`@ai-sdk/google`)                |
+| Voice (planned)   | Gemini / Google STT + TTS via `/api/voice/*`    |
 | Database          | Neon Postgres + Drizzle ORM + pgvector                |
 | Auth              | Better Auth (Google OAuth)                            |
 | File storage      | Vercel Blob                                           |
@@ -31,6 +32,7 @@ flowchart TB
     subgraph client [Client]
         Workspace[Workspace Floor]
         DialogueOverlay[Dialogue Overlay]
+        VoiceLayer[Voice STT/TTS]
         ArchiveRoom[Archive Room]
     end
 
@@ -57,6 +59,7 @@ flowchart TB
 
     Workspace --> API
     DialogueOverlay --> API
+    VoiceLayer --> API
     API --> AssistantAgent
     AssistantAgent --> PG
     AssistantAgent --> HireService
@@ -285,6 +288,7 @@ nex-staff/
 │   │   ├── staff/                 # Staff management
 │   │   ├── tasks/                 # Task management
 │   │   ├── documents/             # Document upload/RAG
+│   │   ├── voice/                 # STT + TTS (planned — see VOICE-CHAT.md)
 │   │   ├── notifications/         # SSE notifications
 │   │   └── workflows/[runId]/     # Workflow status poll
 │   ├── (chat)/
@@ -292,13 +296,18 @@ nex-staff/
 │   └── layout.tsx
 ├── components/
 │   ├── workspace/                 # WorkspaceFloor, Desk, Player, Archive...
-│   ├── dialogue/                  # DialogueBox, ChoiceMenu, Portrait...
+│   ├── dialogue/                  # DialogueBox, ChoiceMenu, Portrait, VoiceControl...
 │   ├── staff/                     # StaffCard, StaffRoster...
 │   └── ui/                        # shadcn + pixel overrides
+├── hooks/
+│   ├── use-dialogue-engine.ts
+│   ├── use-voice-input.ts         # (planned)
+│   └── use-voice-output.ts        # (planned)
 ├── lib/
 │   ├── agents/
 │   │   ├── assistant.ts           # ToolLoopAgent factory
 │   │   └── staff-tools.ts         # Staff tool builders
+│   ├── voice/                     # STT/TTS adapters (planned)
 │   ├── workflows/
 │   │   └── staff-task.ts          # staffTaskWorkflow
 │   ├── tools/                     # Assistant tool definitions

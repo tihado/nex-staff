@@ -49,6 +49,7 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 | US-09 | Là user, tôi khám phá workspace và thấy staff đang làm gì                               | Top-down office view; desk states idle/working/done; click zone để tương tác         |
 | US-12 | Là user, tôi được Assistant báo tiến độ theo milestone có ý nghĩa (không chỉ %)         | Assistant tạo checkpoints khi delegate; verify qua `verify_checkpoint`; progress theo checkpoint |
 | US-13 | Là user, tôi giao việc phức tạp cần nhiều staff và Assistant điều phối                 | Multi-worker task_group; dependency chain; Assistant báo cáo tổng thể qua `list_active_tasks` |
+| US-14 | Là user, tôi nói chuyện với Assistant bằng giọng nói trong dialogue overlay           | Push-to-talk STT → text message; optional NPC TTS; transcript trong chat log — [VOICE-CHAT.md](VOICE-CHAT.md) |
 
 ### Non-Goals (MVP)
 
@@ -56,7 +57,7 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 - Marketplace agent công khai
 - Billing / subscription
 - Mobile native app
-- Voice interface
+- ~~Voice interface~~ → deferred to Phase 2+ ([VOICE-CHAT.md](VOICE-CHAT.md))
 - Rate limiting / usage quotas (deferred — ship without, add when scaling)
 
 ---

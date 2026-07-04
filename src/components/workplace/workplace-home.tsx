@@ -66,7 +66,11 @@ function buildReceptionGreeting(
   }
 
   const latest = pendingCompletions[0];
-  return `${latest.staffName} vừa hoàn thành "${latest.title}". Bạn muốn xem kết quả không?\n\n${baseGreeting}`;
+  return uiStrings.workplace.pendingCompletionGreeting(
+    latest.staffName,
+    latest.title,
+    baseGreeting
+  );
 }
 
 /**
@@ -236,7 +240,7 @@ export function WorkplaceHome({
       speakerName: assistantName,
       speakerRole: "Coordinator",
       portraitIcon: "android",
-      greeting: "Muốn hire ai cho bàn này?",
+      greeting: uiStrings.workplace.hireDeskGreeting,
       hireContext: {
         mode: "scripted",
         deskId,
@@ -260,7 +264,7 @@ export function WorkplaceHome({
       speakerRole: desk.role,
       portraitIcon: "human",
       avatarSprite: desk.avatarSprite,
-      greeting: `Chào boss! Tôi là ${desk.label}. Cần hỗ trợ gì không?`,
+      greeting: uiStrings.workplace.staffGreeting(desk.label),
     });
   };
 
@@ -384,7 +388,10 @@ export function WorkplaceHome({
               >
                 <PixelNotification
                   autoDismissMs={0}
-                  message={`✨ ${banner.staffName} hoàn thành: ${banner.title}`}
+                  message={uiStrings.workplace.bannerCompleted(
+                    banner.staffName,
+                    banner.title
+                  )}
                   title={uiStrings.questComplete}
                 />
               </button>
@@ -394,7 +401,7 @@ export function WorkplaceHome({
           {hireCelebration ? (
             <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
               <PixelNotification
-                message={`✨ ${hireCelebration.name} đã gia nhập đội!`}
+                message={uiStrings.workplace.hireJoined(hireCelebration.name)}
                 onDismiss={() => setHireCelebration(null)}
                 title={uiStrings.newHire}
               />

@@ -14,6 +14,7 @@ import { PixelButton, PixelHUD, PixelNotification } from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { HireSparkle } from "@/components/workplace/hire-sparkle";
+import { StaffStatusOverlay } from "@/components/workplace/staff-status-overlay";
 import {
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
@@ -52,6 +53,11 @@ interface ActiveDialogue {
 interface HireCelebration {
   deskSlotId: string;
   name: string;
+}
+
+interface StaffStatusState {
+  desk: WorkspaceDesk;
+  task: TaskSummary | null;
 }
 
 interface DeliverablePreviewState {
@@ -205,6 +211,7 @@ export function WorkplaceHome({
     tasks,
   } = useWorkspaceState();
   const [dialogue, setDialogue] = useState<ActiveDialogue | null>(null);
+  const [staffStatus, setStaffStatus] = useState<StaffStatusState | null>(null);
   const [completionCutscene, setCompletionCutscene] =
     useState<PendingTaskCompletion | null>(null);
   const [deliverablePreview, setDeliverablePreview] =
@@ -221,7 +228,9 @@ export function WorkplaceHome({
 
   const hasOverlayLayer = dialogue !== null || taskBoardOpen || archiveOpen;
   const hasModalLayer =
-    completionCutscene !== null || deliverablePreview !== null;
+    completionCutscene !== null ||
+    deliverablePreview !== null ||
+    staffStatus !== null;
   const hasNotificationLayer = Boolean(
     banner || failureBanner || hireCelebration || actionError
   );
@@ -365,14 +374,15 @@ export function WorkplaceHome({
       return;
     }
 
-    setDialogue({
-      speakerId: desk.staffId,
-      speakerName: desk.label,
-      speakerRole: desk.role,
-      portraitIcon: "human",
-      avatarSprite: desk.avatarSprite,
-      greeting: `Hi boss! I'm ${desk.label}. What can I help with?`,
-    });
+    const staffTasks = tasks.filter((task) => task.staffId === desk.staffId);
+    const activeTask =
+      staffTasks.find(
+        (task) => task.status === "running" || task.status === "pending"
+      ) ??
+      staffTasks.find((task) => task.status === "failed") ??
+      null;
+
+    setStaffStatus({ desk, task: activeTask });
   };
 
   const handleStaffHired = useCallback(
@@ -550,6 +560,22 @@ export function WorkplaceHome({
         </OverlayStack.Layer>
 
         <OverlayStack.Layer active={hasModalLayer} id="modal">
+          {staffStatus ? (
+            <StaffStatusOverlay
+              desk={staffStatus.desk}
+              onClose={() => setStaffStatus(null)}
+              onOpenAssistant={() => {
+                setStaffStatus(null);
+                openReception();
+              }}
+              onViewDeliverable={(taskId) => {
+                setStaffStatus(null);
+                openDeliverablePreview(taskId);
+              }}
+              task={staffStatus.task}
+            />
+          ) : null}
+
           {completionCutscene ? (
             <CompletionCutsceneOverlay
               assistantName={assistantName}

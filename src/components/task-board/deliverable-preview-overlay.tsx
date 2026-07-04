@@ -112,7 +112,7 @@ export function DeliverablePreviewOverlay({
             {copyButtonLabel(copyState)}
           </PixelButton>
           <PixelButton onClick={handleDownload} type="button">
-            Download
+            Download .md
           </PixelButton>
           <PixelButton onClick={onClose} type="button">
             Close

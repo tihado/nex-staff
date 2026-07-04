@@ -3,8 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDialogueEngine } from "@/hooks/use-dialogue-engine";
 import { useHireFlow } from "@/hooks/use-hire-flow";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
@@ -12,16 +11,17 @@ import {
   fetchAssistantChatHistory,
   getOrCreateAssistantChatId,
 } from "@/lib/chat/assistant-session";
-import { extractHireStaffSuccessOutput } from "@/lib/dialogue/hire-choices";
-import { detectWriteIntent } from "@/lib/dialogue/hire-intent";
-import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
-import { ChoiceMenu } from "./choice-menu";
-import { DialogueInput } from "./dialogue-input";
-import { DialogueLog } from "./dialogue-log";
-import { DialogueMarkdown } from "./dialogue-markdown";
-import { DialoguePortrait } from "./dialogue-portrait";
+import {
+  handleDialogueChoiceSelection,
+  handleDialogueInputSubmission,
+  resolveScriptedUi,
+  useAssistantHireSuccessEffect,
+  useDialoguePanelChrome,
+  useScriptedDeskHireEffect,
+} from "./dialogue-overlay-logic";
+import { DialogueOverlayPanelView } from "./dialogue-overlay-panel-view";
 
 export interface HireDialogueContext {
   deskId?: string;
@@ -39,6 +39,7 @@ interface DialogueOverlayProps {
   occupiedDeskSlotIds?: string[];
   onClose: () => void;
   onStaffHired?: (result: HireStaffResult) => void;
+  onViewDeliverable?: (taskId: string) => void;
   portraitIcon?: string;
   speakerId: string;
   speakerName: string;
@@ -70,22 +71,6 @@ function createAssistantTransport(taskId?: string) {
 
 const PLAYER_NAME = "Boss (you)";
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(query.matches);
-
-    const handler = (event: MediaQueryListEvent) => setReduced(event.matches);
-    query.addEventListener("change", handler);
-
-    return () => query.removeEventListener("change", handler);
-  }, []);
-
-  return reduced;
-}
-
 interface DialogueOverlayPanelProps extends DialogueOverlayProps {
   chatId: string;
   initialMessages: AssistantUIMessage[];
@@ -105,6 +90,7 @@ function DialogueOverlayPanel({
   occupiedDeskSlotIds = [],
   onClose,
   onStaffHired,
+  onViewDeliverable,
   taskId,
   layout = "overlay",
 }: DialogueOverlayPanelProps) {
@@ -134,20 +120,7 @@ function DialogueOverlayPanel({
       hireFlow.draft.pendingTaskBrief ?? hireContext?.pendingTaskBrief,
   });
 
-  const startedDeskHireRef = useRef(false);
-
-  useEffect(() => {
-    if (
-      hireContext?.mode !== "scripted" ||
-      !hireContext.deskId ||
-      startedDeskHireRef.current
-    ) {
-      return;
-    }
-
-    startedDeskHireRef.current = true;
-    hireFlow.startFromDesk(hireContext.deskId);
-  }, [hireContext?.deskId, hireContext?.mode, hireFlow.startFromDesk]);
+  useScriptedDeskHireEffect(hireContext, hireFlow.startFromDesk);
 
   const lastAssistant = useMemo(
     () =>
@@ -155,46 +128,14 @@ function DialogueOverlayPanel({
     [chat.messages]
   );
 
-  const assistantHireHandledRef = useRef<string | null>(null);
+  useAssistantHireSuccessEffect(
+    hireContext,
+    hireFlow,
+    lastAssistant,
+    onStaffHired
+  );
 
-  useEffect(() => {
-    if (hireContext?.mode === "scripted") {
-      return;
-    }
-
-    if (hireFlow.phase !== "idle") {
-      return;
-    }
-
-    const output = extractHireStaffSuccessOutput(lastAssistant);
-
-    if (!(output && lastAssistant)) {
-      return;
-    }
-
-    if (assistantHireHandledRef.current === lastAssistant.id) {
-      return;
-    }
-
-    assistantHireHandledRef.current = lastAssistant.id;
-
-    onStaffHired?.({
-      id: String(output.staffId ?? ""),
-      name: String(output.name ?? ""),
-      role: String(output.role ?? ""),
-      avatarSprite: String(output.avatarSprite ?? "default"),
-      assignedDeskSlotId: assignNewStaffToDesk(String(output.staffId ?? "")),
-      status: "idle",
-      useSandbox: Boolean(output.useSandbox),
-      hiredAt: new Date().toISOString(),
-      activeTasks: 0,
-    });
-  }, [hireContext?.mode, hireFlow.phase, lastAssistant, onStaffHired]);
-
-  const useScriptedUi =
-    hireContext?.mode === "scripted"
-      ? hireFlow.isScriptedActive
-      : hireFlow.isScriptedActive && hireFlow.phase !== "idle";
+  const useScriptedUi = resolveScriptedUi(hireContext, hireFlow);
 
   const displayText = useScriptedUi
     ? (hireFlow.scripted?.line ?? greeting)
@@ -212,209 +153,67 @@ function DialogueOverlayPanel({
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
-      if (
-        choiceId === "hire-delegate-now" &&
-        hireFlow.phase === "delegate_offer"
-      ) {
-        const delegateMessage = hireFlow.handleDelegateNow();
-
-        if (delegateMessage) {
-          hireFlow.reset();
-          engine.submitInput({ text: delegateMessage });
-        }
-
-        return;
-      }
-
-      if (useScriptedUi) {
-        hireFlow.handleScriptedChoice(choiceId);
-        return;
-      }
-
-      engine.selectChoice(choiceId);
+      handleDialogueChoiceSelection({
+        choiceId,
+        engine,
+        hireFlow,
+        lastAssistant,
+        onViewDeliverable,
+        taskId,
+        useScriptedUi,
+      });
     },
-    [engine, hireFlow, useScriptedUi]
+    [engine, hireFlow, lastAssistant, onViewDeliverable, taskId, useScriptedUi]
   );
 
   const handleSubmitInput = useCallback(
     (payload: { text: string }) => {
-      if (useScriptedUi && hireFlow.phase === "gather_name") {
-        hireFlow.handleNameInput(payload.text);
-        return;
-      }
-
-      const writeIntent =
-        hireContext?.mode === "assistant" &&
-        hireFlow.phase === "idle" &&
-        !hasWriterOnRoster
-          ? detectWriteIntent(payload.text)
-          : null;
-
-      if (writeIntent) {
-        hireFlow.startFromTaskBrief(
-          writeIntent.brief,
-          writeIntent.suggestedName
-        );
-        return;
-      }
-
-      engine.submitInput(payload);
+      handleDialogueInputSubmission({
+        payload,
+        useScriptedUi,
+        hireFlow,
+        hireContext,
+        hasWriterOnRoster,
+        engine,
+      });
     },
-    [engine, hasWriterOnRoster, hireContext?.mode, hireFlow, useScriptedUi]
+    [engine, hasWriterOnRoster, hireContext, hireFlow, useScriptedUi]
   );
 
-  const [logOpen, setLogOpen] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const reducedMotion = usePrefersReducedMotion();
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: re-scroll when streamed text grows
-  useEffect(() => {
-    const node = scrollRef.current;
-
-    if (!node) {
-      return;
-    }
-
-    node.scrollTo({
-      top: node.scrollHeight,
-      behavior: reducedMotion ? "instant" : "smooth",
-    });
-  }, [displayText, reducedMotion]);
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-
-        if (logOpen) {
-          setLogOpen(false);
-        } else {
-          onClose();
-        }
-      }
-    },
-    [logOpen, onClose]
+  const { logOpen, scrollRef, setLogOpen } = useDialoguePanelChrome(
+    onClose,
+    displayText
   );
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
 
   const showInput = state === "player-input";
   const showChoices = state === "player-choice";
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
-  const isPanel = layout === "panel";
 
   return (
-    <div
-      aria-label={`Dialogue with ${speakerName}`}
-      className={cn(
-        "flex flex-col",
-        isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
-      )}
-      role="dialog"
-    >
-      {isPanel ? null : (
-        <button
-          aria-label="Close dialogue"
-          className="absolute inset-0 cursor-default bg-black/50"
-          onClick={onClose}
-          tabIndex={-1}
-          type="button"
-        />
-      )}
-
-      <div
-        className={cn(
-          "z-10 flex gap-2",
-          isPanel
-            ? "shrink-0 justify-end border-wood border-b-2 bg-panel/80 p-2"
-            : "absolute top-3 right-3"
-        )}
-      >
-        <PixelButton onClick={() => setLogOpen(true)}>
-          <span className="flex items-center gap-1">
-            <PixelIcon name="list" size={12} /> Log
-          </span>
-        </PixelButton>
-        <PixelButton aria-label="Close (Esc)" onClick={onClose}>
-          <PixelIcon name="close" size={12} />
-        </PixelButton>
-      </div>
-
-      <div
-        className={cn(
-          "relative flex min-h-0 flex-col gap-3 p-4 sm:p-6",
-          isPanel ? "flex-1 justify-end" : "mt-auto"
-        )}
-      >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
-          {showNpcBox ? (
-            <div className="flex items-end gap-3 sm:gap-4">
-              <DialoguePortrait
-                avatarSprite={avatarSprite}
-                icon={portraitIcon}
-                speakerId={speakerId}
-              />
-
-              <div className="min-w-0 flex-1">
-                <PixelDialogueBox
-                  scrollRef={scrollRef}
-                  speakerName={speakerName}
-                >
-                  {isThinking ? (
-                    <span className="advance-indicator text-pixel-text-muted">
-                      …
-                    </span>
-                  ) : (
-                    <DialogueMarkdown
-                      content={displayText}
-                      isAnimating={!useScriptedUi && engine.isStreaming}
-                    />
-                  )}
-                </PixelDialogueBox>
-              </div>
-            </div>
-          ) : null}
-
-          {showInput ? (
-            <div
-              className={cn(
-                "flex items-end gap-3 sm:gap-4",
-                showNpcBox && "flex-row-reverse"
-              )}
-            >
-              <DialoguePortrait
-                className="bg-panel text-leaf-dark"
-                icon="human"
-                speakerId="boss"
-              />
-
-              <div className="min-w-0 flex-1">
-                <DialogueInput
-                  disabled={engine.isBusy || hireFlow.phase === "submitting"}
-                  onSubmit={handleSubmitInput}
-                  playerName={PLAYER_NAME}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {showChoices ? (
-          <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
-            <div className="w-full sm:max-w-sm">
-              <ChoiceMenu choices={choices} onSelect={handleSelectChoice} />
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      {logOpen ? (
-        <DialogueLog lines={engine.log} onClose={() => setLogOpen(false)} />
-      ) : null}
-    </div>
+    <DialogueOverlayPanelView
+      avatarSprite={avatarSprite}
+      choices={choices}
+      displayText={displayText}
+      inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}
+      isAnimating={!useScriptedUi && engine.isStreaming}
+      isPanel={layout === "panel"}
+      isThinking={isThinking}
+      log={engine.log}
+      logOpen={logOpen}
+      onClose={onClose}
+      onCloseLog={() => setLogOpen(false)}
+      onOpenLog={() => setLogOpen(true)}
+      onSelectChoice={handleSelectChoice}
+      onSubmitInput={handleSubmitInput}
+      playerName={PLAYER_NAME}
+      portraitIcon={portraitIcon}
+      scrollRef={scrollRef}
+      showChoices={showChoices}
+      showInput={showInput}
+      showNpcBox={showNpcBox}
+      speakerId={speakerId}
+      speakerName={speakerName}
+    />
   );
 }
 
@@ -431,6 +230,7 @@ export function DialogueOverlay({
   occupiedDeskSlotIds,
   onClose,
   onStaffHired,
+  onViewDeliverable,
   taskId,
   layout = "overlay",
 }: DialogueOverlayProps) {
@@ -494,6 +294,7 @@ export function DialogueOverlay({
       occupiedDeskSlotIds={occupiedDeskSlotIds}
       onClose={onClose}
       onStaffHired={onStaffHired}
+      onViewDeliverable={onViewDeliverable}
       portraitIcon={portraitIcon}
       speakerId={speakerId}
       speakerName={speakerName}

@@ -33,7 +33,8 @@ export interface WorkspaceDesk {
   id: string;
   label: string;
   location: AgentLocation;
-  /** Progress of the active/most-recent task, 0-100. */
+  /** Task awaiting user review — set when desk state is `done`. */
+  pendingTaskId?: string | null;
   progress: number;
   role?: string;
   staffId?: string;

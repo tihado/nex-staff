@@ -4,7 +4,7 @@ import { Fragment, type ReactNode } from "react";
 import { PixelIcon } from "@/components/pixel";
 import { cn } from "@/lib/utils";
 import { depthZ } from "./iso-projection";
-import { PixelRug, PixelWoodSign } from "./office-sprites";
+import { PixelBlackboard, PixelRug, PixelWoodSign } from "./office-sprites";
 import {
   PixelBarCounterIso,
   PixelBookshelfIso,
@@ -227,23 +227,25 @@ export function WorkspaceFloor({
         {/* Task Board zone — top-right of work area, clear of back-wall shelves */}
         <button
           aria-label="Open the task board"
-          className="group absolute top-3 z-[100] flex flex-col items-center gap-1 rounded-sm border-2 border-transparent border-dashed bg-black/15 p-2 hover:border-wood hover:bg-black/25 focus-visible:outline-2 focus-visible:outline-pixel-accent"
+          className="group absolute top-3 z-[100] flex flex-col items-center rounded-sm border-2 border-transparent border-dashed p-2 hover:border-wood hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-pixel-accent"
           onClick={() => onSelectZone("taskboard")}
           style={{ left: "36%" }}
           type="button"
         >
-          <span className="relative">
-            <PixelIcon className="text-panel" name="clipboard" size={36} />
+          <span className="relative inline-flex flex-col items-center">
+            <PixelBlackboard size={80} />
+            <div className="absolute -bottom-1 left-1/2 z-10 -translate-x-1/2">
+              <PixelWoodSign label="Task Board" />
+            </div>
             {hasDoneDesk ? (
               <span
                 aria-hidden
-                className="absolute -top-1 -right-1 flex size-5 animate-bounce items-center justify-center rounded-full border-2 border-wood bg-alert font-[family-name:var(--font-pixel)] text-[10px] text-white"
+                className="absolute -top-1 -right-1 z-20 flex size-5 animate-bounce items-center justify-center rounded-full border-2 border-wood bg-alert font-[family-name:var(--font-pixel)] text-[10px] text-white"
               >
                 !
               </span>
             ) : null}
           </span>
-          <PixelWoodSign label="Task Board" />
         </button>
 
         {/* Desk furniture layer */}

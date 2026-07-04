@@ -12,7 +12,8 @@ export type TaskEventType =
   | "agent.step_completed"
   | "deliverable.saved"
   | "workflow.completed"
-  | "workflow.failed";
+  | "workflow.failed"
+  | "workflow.cancelled";
 
 export interface ProgressInput {
   label?: string;

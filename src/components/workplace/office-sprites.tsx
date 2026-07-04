@@ -25,6 +25,65 @@ export function PixelWoodSign({ label, className }: PixelWoodSignProps) {
   );
 }
 
+const BOARD_FRAME = "#6E4A22";
+const BOARD_FRAME_LIGHT = "#9A6634";
+const BOARD_SURFACE = "#141414";
+const BOARD_CHALK = "#E8ECEF";
+
+/** Wall-mounted blackboard with a wood frame and chalk tray. */
+export function PixelBlackboard({ className, size = 72 }: SpriteProps) {
+  const height = (size * 30) / 32;
+
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[3px_4px_0_rgba(0,0,0,0.45)]",
+        className
+      )}
+      height={height}
+      shapeRendering="crispEdges"
+      viewBox="0 0 32 30"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Task board</title>
+      <rect fill={BOARD_FRAME} height="28" width="32" x="0" y="0" />
+      <rect fill={BOARD_FRAME_LIGHT} height="2" width="32" x="0" y="0" />
+      <rect fill={BOARD_SURFACE} height="22" width="28" x="2" y="2" />
+      <rect fill="#222" height="1" width="24" x="4" y="6" />
+      <rect
+        fill={BOARD_CHALK}
+        height="1"
+        opacity="0.55"
+        width="10"
+        x="5"
+        y="10"
+      />
+      <rect
+        fill={BOARD_CHALK}
+        height="1"
+        opacity="0.4"
+        width="14"
+        x="5"
+        y="13"
+      />
+      <rect
+        fill={BOARD_CHALK}
+        height="1"
+        opacity="0.35"
+        width="8"
+        x="5"
+        y="16"
+      />
+      <rect fill={BOARD_FRAME} height="4" width="32" x="0" y="24" />
+      <rect fill="#D9CBB2" height="2" width="20" x="6" y="25" />
+      <rect fill="#fff" height="1" opacity="0.35" width="3" x="8" y="25" />
+      <rect fill="#fff" height="1" opacity="0.35" width="3" x="14" y="25" />
+    </svg>
+  );
+}
+
 const DESK_TOP = "#9C6B3B";
 const DESK_EDGE = "#6E4A22";
 const DESK_SHADOW = "#573417";

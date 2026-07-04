@@ -4,10 +4,16 @@ import { cn } from "@/lib/utils";
 interface PixelPanelProps {
   children: ReactNode;
   className?: string;
+  contentClassName?: string;
   title?: string;
 }
 
-export function PixelPanel({ children, className, title }: PixelPanelProps) {
+export function PixelPanel({
+  children,
+  className,
+  contentClassName,
+  title,
+}: PixelPanelProps) {
   return (
     <section
       className={cn(
@@ -20,7 +26,7 @@ export function PixelPanel({ children, className, title }: PixelPanelProps) {
           {title}
         </header>
       ) : null}
-      <div className={cn(title && "pt-4")}>{children}</div>
+      <div className={cn(title && "pt-4", contentClassName)}>{children}</div>
     </section>
   );
 }

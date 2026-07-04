@@ -192,6 +192,7 @@ function DialogueOverlayPanel({
   return (
     <DialogueOverlayPanelView
       avatarSprite={avatarSprite}
+      chatError={chat.error?.message ?? null}
       choices={choices}
       displayText={displayText}
       inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}

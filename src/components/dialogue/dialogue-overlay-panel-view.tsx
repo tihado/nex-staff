@@ -196,8 +196,8 @@ function StandardDialogueContent({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain",
-        isPanel ? "p-2 sm:p-3" : "mt-auto p-4 sm:p-6"
+        "flex min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain",
+        isPanel ? "min-h-0 flex-1 p-2 sm:p-3" : "mt-auto p-4 sm:p-6"
       )}
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">

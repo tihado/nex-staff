@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
-import { PixelButton, PixelIcon } from "@/components/pixel";
+import { PixelButton, PixelIcon, PixelNotification } from "@/components/pixel";
+import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
+import { useWorkspaceTasks } from "@/hooks/use-workspace-tasks";
+import type { TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import {
   PixelAssistant,
@@ -34,6 +37,37 @@ export function WorkplaceHome({
   viewerLabel,
 }: WorkplaceHomeProps) {
   const [dialogueOpen, setDialogueOpen] = useState(false);
+  const [taskBoardOpen, setTaskBoardOpen] = useState(false);
+  const {
+    acknowledgeCompletedDesks,
+    banner,
+    deskStates,
+    dismissBanner,
+    error: tasksError,
+    loading: tasksLoading,
+    reload: reloadTasks,
+    tasks,
+  } = useWorkspaceTasks(true);
+
+  const hasDoneDesk = deskStates.some((desk) => desk.state === "done");
+
+  useEffect(() => {
+    if (taskBoardOpen) {
+      reloadTasks().catch(() => {
+        /* ignore refresh errors */
+      });
+    }
+  }, [taskBoardOpen, reloadTasks]);
+
+  const handleTaskSelect = (_task: TaskSummary) => {
+    setTaskBoardOpen(false);
+    setDialogueOpen(true);
+  };
+
+  const openTaskBoard = () => {
+    acknowledgeCompletedDesks();
+    setTaskBoardOpen(true);
+  };
 
   useEffect(() => {
     if (dialogueOpen) {
@@ -128,23 +162,41 @@ export function WorkplaceHome({
             name="sparkles"
             size={18}
           />
-          {/* Archive & Task Board zones */}
-          <div className="absolute top-28 left-6 flex flex-col items-center gap-1 sm:left-16">
+        </div>
+
+        {/* Clickable zones — above reception hit area (z-[1]) */}
+        <div className="pointer-events-none absolute inset-0 z-[2]">
+          <div className="pointer-events-auto absolute top-28 left-6 flex flex-col items-center gap-1 sm:left-16">
             <PixelIcon className="text-ink" name="archive" size={44} />
             <span className="rounded-none border-2 border-wood bg-panel px-1 font-pixel text-[8px] text-ink uppercase">
               Archive
             </span>
           </div>
-          <div className="absolute top-28 right-6 flex flex-col items-center gap-1 sm:right-16">
-            <PixelIcon className="text-ink" name="clipboard" size={44} />
+          <button
+            aria-label="Open task board"
+            className="pointer-events-auto absolute top-28 right-6 flex cursor-pointer flex-col items-center gap-1 transition-transform hover:scale-105 sm:right-16"
+            onClick={openTaskBoard}
+            type="button"
+          >
+            <span className="relative">
+              <PixelIcon className="text-ink" name="clipboard" size={44} />
+              {hasDoneDesk ? (
+                <span
+                  aria-hidden
+                  className="absolute -top-1 -right-1 flex size-5 animate-bounce items-center justify-center rounded-full border-2 border-wood bg-alert font-pixel text-[10px] text-white"
+                >
+                  !
+                </span>
+              ) : null}
+            </span>
             <span className="rounded-none border-2 border-wood bg-panel px-1 font-pixel text-[8px] text-ink uppercase">
               Task Board
             </span>
-          </div>
+          </button>
         </div>
 
         {/* Reception NPC */}
-        <div className="relative z-[1] flex flex-1 flex-col items-center justify-center gap-4 px-6">
+        <div className="pointer-events-none relative z-[1] flex flex-1 flex-col items-center justify-center gap-4 px-6">
           {/* Speech bubble */}
           <div className="relative border-[3px] border-wood bg-panel px-4 py-2 shadow-[3px_3px_0_0_rgba(122,74,36,0.35)]">
             <span className="font-body text-[20px] text-ink leading-none">
@@ -156,7 +208,7 @@ export function WorkplaceHome({
           {/* Assistant sprite */}
           <button
             aria-label={`Talk to ${assistantName}`}
-            className="group flex flex-col items-center gap-2"
+            className="group pointer-events-auto flex flex-col items-center gap-2"
             onClick={() => setDialogueOpen(true)}
             type="button"
           >
@@ -170,7 +222,7 @@ export function WorkplaceHome({
             </span>
           </button>
 
-          <div className="flex flex-col items-center gap-2">
+          <div className="pointer-events-auto flex flex-col items-center gap-2">
             <PixelButton onClick={() => setDialogueOpen(true)}>
               {"\u25B6"} {assistantName}
             </PixelButton>
@@ -206,6 +258,26 @@ export function WorkplaceHome({
         {/* Grassy ground */}
         <PixelGround height={190} />
       </main>
+
+      {banner ? (
+        <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
+          <PixelNotification
+            message={`${banner.title} is ready to review.`}
+            onDismiss={dismissBanner}
+            title="Task complete"
+          />
+        </div>
+      ) : null}
+
+      {taskBoardOpen ? (
+        <TaskBoardOverlay
+          error={tasksError}
+          loading={tasksLoading}
+          onClose={() => setTaskBoardOpen(false)}
+          onSelectTask={handleTaskSelect}
+          tasks={tasks}
+        />
+      ) : null}
 
       {dialogueOpen ? (
         <DialogueOverlay

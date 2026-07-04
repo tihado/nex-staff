@@ -2,10 +2,9 @@
 
 import { PixelButton } from "@/components/pixel/pixel-button";
 import { useWorkplaceAudio } from "@/components/workplace/workplace-audio-provider";
-import { getWorkplaceAudioEngine } from "@/lib/audio/workplace-audio-engine";
 
 export function WorkplaceAudioToggle() {
-  const { enabled, setEnabled } = useWorkplaceAudio();
+  const { enabled, enableFromUserGesture, setEnabled } = useWorkplaceAudio();
 
   const handleToggle = () => {
     if (enabled) {
@@ -13,9 +12,7 @@ export function WorkplaceAudioToggle() {
       return;
     }
 
-    // play() must run in the same user-gesture turn as the click.
-    getWorkplaceAudioEngine().primeBackgroundMusicFromGesture();
-    setEnabled(true);
+    enableFromUserGesture();
   };
 
   return (

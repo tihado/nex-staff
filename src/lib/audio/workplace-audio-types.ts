@@ -13,6 +13,7 @@ export interface PlayCueOptions {
 
 export interface WorkplaceAudioContextValue {
   enabled: boolean;
+  enableFromUserGesture: () => void;
   playCue: (cue: WorkplaceAudioCue, options?: PlayCueOptions) => void;
   setEnabled: (enabled: boolean) => void;
   stopVocal: () => void;

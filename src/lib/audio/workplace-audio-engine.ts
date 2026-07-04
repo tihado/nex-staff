@@ -119,6 +119,24 @@ function defaultVolumeForCue(isFootstep: boolean, isCat: boolean): number {
   return 0.5;
 }
 
+function clampVolume(volume: number): number {
+  return Math.min(1, Math.max(0, volume));
+}
+
+/** Single shared element — survives HMR and prevents duplicate loops. */
+let sharedMusicElement: HTMLAudioElement | null = null;
+let musicPlayPromise: Promise<void> | null = null;
+
+function getSharedMusicElement(): HTMLAudioElement {
+  if (!sharedMusicElement) {
+    sharedMusicElement = new Audio(WORKPLACE_LOFI_MUSIC_URL);
+    sharedMusicElement.loop = true;
+    sharedMusicElement.preload = "auto";
+  }
+
+  return sharedMusicElement;
+}
+
 export class WorkplaceAudioEngine {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -126,7 +144,6 @@ export class WorkplaceAudioEngine {
   private loadPromise: Promise<void> | null = null;
   private activeFootsteps = 0;
   private activeVocal: AudioBufferSourceNode | null = null;
-  private musicElement: HTMLAudioElement | null = null;
   private musicFadeFrame: number | null = null;
   private sfxEnabled = false;
   private musicEnabled = false;
@@ -137,16 +154,10 @@ export class WorkplaceAudioEngine {
   }
 
   setMusicEnabled(enabled: boolean): void {
-    const wasEnabled = this.musicEnabled;
     this.musicEnabled = enabled;
 
     if (!enabled) {
       this.stopBackgroundMusic();
-      return;
-    }
-
-    if (!wasEnabled) {
-      this.startBackgroundMusic().catch(() => undefined);
     }
   }
 
@@ -179,38 +190,28 @@ export class WorkplaceAudioEngine {
     }
 
     await this.ensureBuffersLoaded();
-
-    if (this.musicEnabled) {
-      await this.startBackgroundMusic();
-    }
   }
 
-  /** Start music synchronously inside a click/key handler (keeps user activation). */
-  primeBackgroundMusicFromGesture(): void {
+  /** Call synchronously inside a click/key handler (keeps user activation). */
+  startMusicFromUserGesture(): void {
     if (typeof window === "undefined") {
       return;
     }
 
-    const element = this.getMusicElement();
-    element.volume = 0;
-
-    element
-      .play()
-      .then(() => {
-        this.fadeMusicVolumeTo(
-          WORKPLACE_LOFI_MUSIC_VOLUME,
-          WORKPLACE_LOFI_FADE_IN_SEC
-        );
-      })
-      .catch(() => undefined);
+    this.startMusicPlayback(true).catch(() => undefined);
   }
 
-  async startBackgroundMusic(): Promise<void> {
-    if (!this.musicEnabled || typeof window === "undefined") {
+  /** Resume after suppression lifts (audio context already unlocked). */
+  async resumeBackgroundMusic(): Promise<void> {
+    if (!(this.musicEnabled && typeof window !== "undefined")) {
       return;
     }
 
-    const element = this.getMusicElement();
+    await this.startMusicPlayback(false);
+  }
+
+  private async startMusicPlayback(fromGesture: boolean): Promise<void> {
+    const element = getSharedMusicElement();
 
     if (!element.paused) {
       if (element.volume < WORKPLACE_LOFI_MUSIC_VOLUME * 0.4) {
@@ -222,37 +223,67 @@ export class WorkplaceAudioEngine {
       return;
     }
 
-    element.volume = 0;
-
-    try {
-      await element.play();
-      this.fadeMusicVolumeTo(
-        WORKPLACE_LOFI_MUSIC_VOLUME,
-        WORKPLACE_LOFI_FADE_IN_SEC
-      );
-    } catch {
-      // Browser blocked playback until the next user gesture.
+    if (musicPlayPromise) {
+      await musicPlayPromise;
+      return;
     }
+
+    this.cancelMusicFade();
+    this.setMusicVolume(0);
+
+    const playPromise = element
+      .play()
+      .then(() => {
+        if (this.musicEnabled || fromGesture) {
+          this.fadeMusicVolumeTo(
+            WORKPLACE_LOFI_MUSIC_VOLUME,
+            WORKPLACE_LOFI_FADE_IN_SEC
+          );
+          return;
+        }
+
+        element.pause();
+        element.currentTime = 0;
+        this.setMusicVolume(0);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (musicPlayPromise === playPromise) {
+          musicPlayPromise = null;
+        }
+      });
+
+    musicPlayPromise = playPromise;
+    await playPromise;
+  }
+
+  private setMusicVolume(volume: number): void {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    getSharedMusicElement().volume = clampVolume(volume);
   }
 
   stopBackgroundMusic(): void {
     this.cancelMusicFade();
+    musicPlayPromise = null;
 
-    const element = this.musicElement;
+    const element = sharedMusicElement;
     if (!element || element.paused) {
       if (element) {
-        element.volume = 0;
+        this.setMusicVolume(0);
       }
       return;
     }
 
-    const startVolume = element.volume;
+    const startVolume = clampVolume(element.volume);
     const startedAt = performance.now();
     const durationMs = WORKPLACE_LOFI_FADE_OUT_SEC * 1000;
 
     const step = (now: number) => {
       const progress = Math.min(1, (now - startedAt) / durationMs);
-      element.volume = startVolume * (1 - progress);
+      this.setMusicVolume(startVolume * (1 - progress));
 
       if (progress < 1) {
         this.musicFadeFrame = requestAnimationFrame(step);
@@ -261,21 +292,11 @@ export class WorkplaceAudioEngine {
 
       element.pause();
       element.currentTime = 0;
-      element.volume = 0;
+      this.setMusicVolume(0);
       this.musicFadeFrame = null;
     };
 
     this.musicFadeFrame = requestAnimationFrame(step);
-  }
-
-  private getMusicElement(): HTMLAudioElement {
-    if (!this.musicElement) {
-      this.musicElement = new Audio(WORKPLACE_LOFI_MUSIC_URL);
-      this.musicElement.loop = true;
-      this.musicElement.preload = "auto";
-    }
-
-    return this.musicElement;
   }
 
   private cancelMusicFade(): void {
@@ -286,27 +307,30 @@ export class WorkplaceAudioEngine {
   }
 
   private fadeMusicVolumeTo(target: number, durationSec: number): void {
-    const element = this.musicElement;
+    const element = sharedMusicElement;
     if (!element) {
       return;
     }
 
     this.cancelMusicFade();
 
-    const startVolume = element.volume;
+    const startVolume = clampVolume(element.volume);
+    const targetVolume = clampVolume(target);
     const startedAt = performance.now();
     const durationMs = durationSec * 1000;
 
     const step = (now: number) => {
       const progress = Math.min(1, (now - startedAt) / durationMs);
-      element.volume = startVolume + (target - startVolume) * progress;
+      this.setMusicVolume(
+        startVolume + (targetVolume - startVolume) * progress
+      );
 
       if (progress < 1) {
         this.musicFadeFrame = requestAnimationFrame(step);
         return;
       }
 
-      element.volume = target;
+      this.setMusicVolume(targetVolume);
       this.musicFadeFrame = null;
     };
 

@@ -59,11 +59,11 @@ export function WorkplaceAudioProvider({
   }, [enabled, engine, musicSuppressed]);
 
   useEffect(() => {
-    if (!enabled || musicSuppressed || !unlocked) {
+    if (!(enabled && !musicSuppressed && unlocked)) {
       return;
     }
 
-    engine.startBackgroundMusic().catch(() => undefined);
+    engine.resumeBackgroundMusic().catch(() => undefined);
   }, [enabled, engine, musicSuppressed, unlocked]);
 
   const unlock = useCallback(async () => {
@@ -78,7 +78,7 @@ export function WorkplaceAudioProvider({
 
     const handleGesture = () => {
       if (enabled && !musicSuppressed) {
-        getWorkplaceAudioEngine().primeBackgroundMusicFromGesture();
+        engine.startMusicFromUserGesture();
       }
       unlock().catch(() => undefined);
     };
@@ -90,7 +90,27 @@ export function WorkplaceAudioProvider({
       window.removeEventListener("pointerdown", handleGesture);
       window.removeEventListener("keydown", handleGesture);
     };
-  }, [enabled, musicSuppressed, unlock, unlocked]);
+  }, [enabled, engine, musicSuppressed, unlock, unlocked]);
+
+  const enableFromUserGesture = useCallback(() => {
+    setEnabledState(true);
+    try {
+      localStorage.setItem(STORAGE_KEY, "true");
+    } catch {
+      // localStorage unavailable
+    }
+
+    engine.setSfxEnabled(!sfxSuppressed);
+    engine.setMusicEnabled(!musicSuppressed);
+
+    if (!musicSuppressed) {
+      engine.startMusicFromUserGesture();
+    }
+
+    engine.unlock().then(() => {
+      setUnlocked(engine.isUnlocked());
+    });
+  }, [engine, musicSuppressed, sfxSuppressed]);
 
   const setEnabled = useCallback(
     (next: boolean) => {
@@ -127,13 +147,22 @@ export function WorkplaceAudioProvider({
   const value = useMemo<WorkplaceAudioContextValue>(
     () => ({
       enabled,
+      enableFromUserGesture,
       setEnabled,
       unlocked,
       unlock,
       playCue,
       stopVocal,
     }),
-    [enabled, playCue, setEnabled, stopVocal, unlock, unlocked]
+    [
+      enabled,
+      enableFromUserGesture,
+      playCue,
+      setEnabled,
+      stopVocal,
+      unlock,
+      unlocked,
+    ]
   );
 
   return (

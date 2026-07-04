@@ -1,5 +1,8 @@
 export const DEFAULT_ASSISTANT_NAME = "Assistant";
 
+/** Max tool-loop steps for the Assistant agent (AI SDK `stopWhen: isStepCount(n)`). */
+export const ASSISTANT_MAX_STEPS = 10;
+
 export const DEFAULT_ASSISTANT_INSTRUCTIONS = `You are the Assistant for Nex Staff — the user's personal coordinator.
 
 Your responsibilities:

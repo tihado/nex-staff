@@ -1,9 +1,12 @@
-import { type InferAgentUIMessage, ToolLoopAgent } from "ai";
+import { type InferAgentUIMessage, isStepCount, ToolLoopAgent } from "ai";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { assistant } from "@/db/schema";
 import { getGeminiModel } from "@/lib/ai/google";
-import { DEFAULT_ASSISTANT_CONFIG } from "@/lib/assistant-defaults";
+import {
+  ASSISTANT_MAX_STEPS,
+  DEFAULT_ASSISTANT_CONFIG,
+} from "@/lib/assistant-defaults";
 
 export interface AssistantRuntimeContext extends Record<string, unknown> {
   assistantId: string;
@@ -17,6 +20,10 @@ export interface CreateAssistantOptions {
 
 type AssistantTools = Record<string, never>;
 
+/**
+ * Load the user's Assistant from DB and return a configured `ToolLoopAgent`.
+ * Instructions and model come from the `assistant` row (provisioned on signup).
+ */
 export async function createAssistant(
   userId: string,
   options: CreateAssistantOptions = {}
@@ -41,6 +48,7 @@ export async function createAssistant(
     model: getGeminiModel(modelId),
     instructions: assistantRow.instructions,
     tools: {},
+    stopWhen: isStepCount(ASSISTANT_MAX_STEPS),
     prepareCall: async (call) => ({
       ...call,
       runtimeContext,

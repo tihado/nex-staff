@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PixelButton, PixelIcon } from "@/components/pixel";
 import type { DialogueSubmitPayload } from "@/hooks/use-dialogue-engine";
+import { useVoiceInput } from "@/hooks/use-voice-input";
 import { uploadDocument } from "@/lib/documents/upload-client";
 import { cn } from "@/lib/utils";
 import { DialogueMarkdown } from "./dialogue-markdown";
+import { VoiceControl } from "./voice-control";
 
 const MARKDOWN_SYNTAX_PATTERN =
   /(\*\*|__|`+|^#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s|\[.+\]\(.+\)|^>\s)/m;
@@ -25,15 +27,50 @@ interface PendingFileAttachment {
 
 interface DialogueInputProps {
   align?: "left" | "right";
+  chatId?: string;
   compact?: boolean;
   disabled?: boolean;
   onSubmit: (payload: DialogueSubmitPayload) => void | Promise<void>;
   playerName: string;
+  voiceDisabled?: boolean;
+  voiceEnabled?: boolean;
+  voiceLocale?: string;
+}
+
+function DialogueInputNameplate({
+  align,
+  compact,
+  playerName,
+}: {
+  align: "left" | "right";
+  compact: boolean;
+  playerName: string;
+}) {
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          "mb-1.5 flex",
+          align === "right" ? "justify-end" : "justify-start"
+        )}
+      >
+        <div className="inline-flex items-center gap-1 border-2 border-border-dialogue bg-nameplate-bg px-2 py-0.5 font-pixel text-[8px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+          <PixelIcon name="chevron-down" size={10} /> {playerName}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+      <PixelIcon name="chevron-down" size={12} /> {playerName}
+    </div>
+  );
 }
 
 /**
  * Free-text input embedded inside the dialogue box (state `player-input`).
- * Supports Markdown preview and document attachments.
+ * Supports Markdown preview, document attachments, and toggle voice input.
  */
 export function DialogueInput({
   playerName,
@@ -41,22 +78,50 @@ export function DialogueInput({
   compact = false,
   align = "left",
   onSubmit,
+  chatId,
+  voiceEnabled = true,
+  voiceDisabled = false,
+  voiceLocale = "en",
 }: DialogueInputProps) {
   const [value, setValue] = useState("");
   const [pendingFiles, setPendingFiles] = useState<PendingFileAttachment[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const appendTranscript = useCallback((text: string) => {
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    setValue((current) =>
+      current.trim() ? `${current.trim()} ${trimmed}` : trimmed
+    );
+    setVoiceError(null);
+    textareaRef.current?.focus();
+  }, []);
+
+  const voiceInput = useVoiceInput({
+    chatId,
+    disabled: disabled || voiceDisabled || !voiceEnabled,
+    locale: voiceLocale,
+    onError: setVoiceError,
+    onTranscript: appendTranscript,
+  });
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
 
-  const isBusy = disabled || isUploading;
+  const isBusy = disabled || isUploading || voiceInput.state === "transcribing";
   const canSend =
     (value.trim().length > 0 || pendingFiles.length > 0) && !isBusy;
   const showPreview = value.trim().length > 0 && hasMarkdownSyntax(value);
+  const showVoice = voiceEnabled && voiceInput.isSupported;
 
   const removePendingFile = (id: string) => {
     setPendingFiles((current) => current.filter((item) => item.id !== id));
@@ -141,28 +206,33 @@ export function DialogueInput({
     });
   };
 
+  const handleVoiceToggle = () => {
+    setVoiceError(null);
+
+    if (voiceInput.state === "listening") {
+      voiceInput.stopListening();
+      return;
+    }
+
+    if (voiceInput.state === "idle") {
+      voiceInput.startListening().catch(() => {
+        // useVoiceInput surfaces errors via onError.
+      });
+    }
+  };
+
   return (
     <div className="relative">
-      {compact ? (
-        <div
-          className={cn(
-            "mb-1.5 flex",
-            align === "right" ? "justify-end" : "justify-start"
-          )}
-        >
-          <div className="inline-flex items-center gap-1 border-2 border-border-dialogue bg-nameplate-bg px-2 py-0.5 font-pixel text-[8px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
-            <PixelIcon name="chevron-down" size={10} /> {playerName}
-          </div>
-        </div>
-      ) : (
-        <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
-          <PixelIcon name="chevron-down" size={12} /> {playerName}
-        </div>
-      )}
+      <DialogueInputNameplate
+        align={align}
+        compact={compact}
+        playerName={playerName}
+      />
       <div
         className={cn(
           "pixel-frame bg-bg-dialogue pb-4",
-          compact ? "px-3 pt-2" : "px-5 pt-6"
+          compact ? "px-3 pt-2" : "px-5 pt-6",
+          voiceInput.state === "listening" && "ring-2 ring-sun-glow"
         )}
       >
         <input
@@ -215,6 +285,7 @@ export function DialogueInput({
         ) : null}
 
         <textarea
+          aria-describedby={voiceError ? "dialogue-voice-error" : undefined}
           className={cn(
             "w-full resize-none bg-transparent font-pixel text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50",
             compact ? "min-h-[2.5rem] text-[10px]" : "min-h-[4rem] text-[11px]"
@@ -228,17 +299,42 @@ export function DialogueInput({
               handleSubmit();
             }
           }}
-          placeholder="What do you want to say?..."
+          placeholder={
+            voiceInput.state === "listening"
+              ? "Listening..."
+              : "What do you want to say?..."
+          }
           ref={textareaRef}
           rows={2}
           value={value}
         />
 
+        <div aria-live="polite" className="sr-only">
+          {voiceInput.state === "transcribing" ? "Transcribing speech" : null}
+        </div>
+
         {uploadError ? (
           <p className="pt-2 font-pixel text-[9px] text-alert">{uploadError}</p>
         ) : null}
 
+        {voiceError ? (
+          <p
+            className="pt-2 font-pixel text-[9px] text-alert"
+            id="dialogue-voice-error"
+          >
+            {voiceError}
+          </p>
+        ) : null}
+
         <div className="flex items-center justify-end gap-2 pt-2">
+          {showVoice ? (
+            <VoiceControl
+              disabled={isBusy}
+              isSupported
+              onToggle={handleVoiceToggle}
+              state={voiceInput.state}
+            />
+          ) : null}
           <PixelButton
             aria-label="Attach document"
             className="px-2"

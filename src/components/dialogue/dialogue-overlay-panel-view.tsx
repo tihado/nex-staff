@@ -5,16 +5,62 @@ import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
 import type { DialogueLine } from "@/hooks/use-dialogue-engine";
 import type { DialogueChoice } from "@/lib/dialogue/types";
 import { cn } from "@/lib/utils";
+import type { VoiceInputState } from "@/lib/voice/types";
 import { ChoiceMenu } from "./choice-menu";
 import { DialogueInput } from "./dialogue-input";
 import { DialogueLog } from "./dialogue-log";
 import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
+import { VoiceControl } from "./voice-control";
+
+interface DialogueChoiceVoiceProps {
+  disabled?: boolean;
+  error?: string | null;
+  isSupported?: boolean;
+  onToggle: () => void;
+  state: VoiceInputState;
+}
+
+function DialogueChoiceVoiceSection({
+  choiceVoice,
+  choices,
+  onSelectChoice,
+}: {
+  choiceVoice?: DialogueChoiceVoiceProps;
+  choices: DialogueChoice[];
+  onSelectChoice: (choiceId: string) => void;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-end gap-2 pr-0 sm:pr-28">
+      {choiceVoice?.isSupported ? (
+        <div className="flex items-center gap-2">
+          <VoiceControl
+            disabled={choiceVoice.disabled}
+            isSupported
+            onToggle={choiceVoice.onToggle}
+            state={choiceVoice.state}
+          />
+          <span className="font-pixel text-[9px] text-ink-muted uppercase tracking-widest">
+            Tap to pick by voice
+          </span>
+        </div>
+      ) : null}
+      {choiceVoice?.error ? (
+        <p className="font-pixel text-[9px] text-alert">{choiceVoice.error}</p>
+      ) : null}
+      <div className="w-full sm:max-w-sm">
+        <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
+      </div>
+    </div>
+  );
+}
 
 interface DialogueOverlayPanelViewProps {
   avatarSprite?: string;
   chatError?: string | null;
+  chatId?: string;
   choices: DialogueChoice[];
+  choiceVoice?: DialogueChoiceVoiceProps;
   displayText: string;
   embedded?: boolean;
   inputDisabled: boolean;
@@ -28,6 +74,7 @@ interface DialogueOverlayPanelViewProps {
   onOpenLog: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmitInput: (payload: { text: string }) => void;
+  onToggleVoiceOutput?: () => void;
   playerName: string;
   portraitIcon?: string;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -36,10 +83,13 @@ interface DialogueOverlayPanelViewProps {
   showNpcBox: boolean;
   speakerId: string;
   speakerName: string;
+  voiceLocale?: string;
+  voiceOutputEnabled?: boolean;
 }
 
 function EmbeddedOppositeDialogue({
   avatarSprite,
+  chatId,
   displayText,
   inputDisabled,
   isAnimating,
@@ -51,9 +101,11 @@ function EmbeddedOppositeDialogue({
   showNpcBox,
   speakerId,
   speakerName,
+  voiceLocale,
   onSubmitInput,
 }: {
   avatarSprite?: string;
+  chatId?: string;
   displayText: string;
   inputDisabled: boolean;
   isAnimating: boolean;
@@ -65,6 +117,7 @@ function EmbeddedOppositeDialogue({
   showNpcBox: boolean;
   speakerId: string;
   speakerName: string;
+  voiceLocale?: string;
   onSubmitInput: (payload: { text: string }) => void;
 }) {
   return (
@@ -110,10 +163,13 @@ function EmbeddedOppositeDialogue({
           {showInput ? (
             <DialogueInput
               align="right"
+              chatId={chatId}
               compact
               disabled={inputDisabled}
               onSubmit={onSubmitInput}
               playerName={playerName}
+              voiceDisabled={inputDisabled}
+              voiceLocale={voiceLocale}
             />
           ) : null}
         </div>
@@ -136,9 +192,13 @@ function EmbeddedOppositeDialogue({
 function DialogueChromeButtons({
   onClose,
   onOpenLog,
+  onToggleVoiceOutput,
+  voiceOutputEnabled = false,
 }: {
   onClose: () => void;
   onOpenLog: () => void;
+  onToggleVoiceOutput?: () => void;
+  voiceOutputEnabled?: boolean;
 }) {
   return (
     <>
@@ -147,6 +207,23 @@ function DialogueChromeButtons({
           <PixelIcon name="list" size={12} /> Log
         </span>
       </PixelButton>
+      {onToggleVoiceOutput ? (
+        <PixelButton
+          aria-label={
+            voiceOutputEnabled
+              ? "Disable NPC voice readback"
+              : "Enable NPC voice readback"
+          }
+          aria-pressed={voiceOutputEnabled}
+          onClick={onToggleVoiceOutput}
+        >
+          <PixelIcon
+            label={voiceOutputEnabled ? "Voice on" : "Voice off"}
+            name={voiceOutputEnabled ? "volume-high" : "volume-off"}
+            size={12}
+          />
+        </PixelButton>
+      ) : null}
       <PixelButton aria-label="Close (Esc)" onClick={onClose}>
         <PixelIcon name="close" size={12} />
       </PixelButton>
@@ -157,6 +234,8 @@ function DialogueChromeButtons({
 function StandardDialogueContent({
   avatarSprite,
   chatError,
+  chatId,
+  choiceVoice,
   choices,
   displayText,
   inputDisabled,
@@ -173,9 +252,12 @@ function StandardDialogueContent({
   showNpcBox,
   speakerId,
   speakerName,
+  voiceLocale,
 }: {
   avatarSprite?: string;
   chatError?: string | null;
+  chatId?: string;
+  choiceVoice?: DialogueChoiceVoiceProps;
   choices: DialogueChoice[];
   displayText: string;
   inputDisabled: boolean;
@@ -192,6 +274,7 @@ function StandardDialogueContent({
   showNpcBox: boolean;
   speakerId: string;
   speakerName: string;
+  voiceLocale?: string;
 }) {
   return (
     <div
@@ -242,9 +325,12 @@ function StandardDialogueContent({
 
             <div className="min-w-0 flex-1">
               <DialogueInput
+                chatId={chatId}
                 disabled={inputDisabled}
                 onSubmit={onSubmitInput}
                 playerName={playerName}
+                voiceDisabled={inputDisabled}
+                voiceLocale={voiceLocale}
               />
             </div>
           </div>
@@ -252,11 +338,11 @@ function StandardDialogueContent({
       </div>
 
       {showChoices ? (
-        <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
-          <div className="w-full sm:max-w-sm">
-            <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
-          </div>
-        </div>
+        <DialogueChoiceVoiceSection
+          choices={choices}
+          choiceVoice={choiceVoice}
+          onSelectChoice={onSelectChoice}
+        />
       ) : null}
     </div>
   );
@@ -269,6 +355,7 @@ export function DialogueOverlayPanelView({
   avatarSprite,
   displayText,
   chatError,
+  chatId,
   embedded = false,
   isThinking,
   isAnimating,
@@ -287,6 +374,10 @@ export function DialogueOverlayPanelView({
   log,
   onSelectChoice,
   onSubmitInput,
+  voiceLocale,
+  voiceOutputEnabled = false,
+  onToggleVoiceOutput,
+  choiceVoice,
 }: DialogueOverlayPanelViewProps) {
   const useOppositeLayout = embedded && isPanel;
 
@@ -312,19 +403,30 @@ export function DialogueOverlayPanelView({
 
       {isPanel && !embedded ? (
         <div className="flex shrink-0 justify-end gap-2 border-wood border-b-2 bg-panel/80 p-2">
-          <DialogueChromeButtons onClose={onClose} onOpenLog={onOpenLog} />
+          <DialogueChromeButtons
+            onClose={onClose}
+            onOpenLog={onOpenLog}
+            onToggleVoiceOutput={onToggleVoiceOutput}
+            voiceOutputEnabled={voiceOutputEnabled}
+          />
         </div>
       ) : null}
 
       {isPanel ? null : (
         <div className="absolute top-3 right-3 z-10 flex gap-2">
-          <DialogueChromeButtons onClose={onClose} onOpenLog={onOpenLog} />
+          <DialogueChromeButtons
+            onClose={onClose}
+            onOpenLog={onOpenLog}
+            onToggleVoiceOutput={onToggleVoiceOutput}
+            voiceOutputEnabled={voiceOutputEnabled}
+          />
         </div>
       )}
 
       {useOppositeLayout ? (
         <EmbeddedOppositeDialogue
           avatarSprite={avatarSprite}
+          chatId={chatId}
           displayText={displayText}
           inputDisabled={inputDisabled}
           isAnimating={isAnimating}
@@ -337,12 +439,15 @@ export function DialogueOverlayPanelView({
           showNpcBox={showNpcBox}
           speakerId={speakerId}
           speakerName={speakerName}
+          voiceLocale={voiceLocale}
         />
       ) : (
         <StandardDialogueContent
           avatarSprite={avatarSprite}
           chatError={chatError}
+          chatId={chatId}
           choices={choices}
+          choiceVoice={choiceVoice}
           displayText={displayText}
           inputDisabled={inputDisabled}
           isAnimating={isAnimating}
@@ -358,11 +463,27 @@ export function DialogueOverlayPanelView({
           showNpcBox={showNpcBox}
           speakerId={speakerId}
           speakerName={speakerName}
+          voiceLocale={voiceLocale}
         />
       )}
 
       {useOppositeLayout && showChoices ? (
         <div className="shrink-0 border-wood border-t-2 p-2">
+          {choiceVoice?.isSupported ? (
+            <div className="mb-2 flex items-center justify-end gap-2">
+              <VoiceControl
+                disabled={choiceVoice.disabled}
+                isSupported
+                onToggle={choiceVoice.onToggle}
+                state={choiceVoice.state}
+              />
+            </div>
+          ) : null}
+          {choiceVoice?.error ? (
+            <p className="mb-2 text-right font-pixel text-[9px] text-alert">
+              {choiceVoice.error}
+            </p>
+          ) : null}
           <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
         </div>
       ) : null}

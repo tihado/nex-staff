@@ -3,9 +3,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDialogueEngine } from "@/hooks/use-dialogue-engine";
 import { useHireFlow } from "@/hooks/use-hire-flow";
+import { useVoiceInput } from "@/hooks/use-voice-input";
+import { useVoiceOutput } from "@/hooks/use-voice-output";
+import { useVoicePreferences } from "@/hooks/use-voice-preferences";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import {
   fetchAssistantChatHistory,
@@ -13,6 +16,7 @@ import {
 } from "@/lib/chat/assistant-session";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
+import { matchChoiceFromTranscript } from "@/lib/voice/match-choice";
 import {
   handleDialogueChoiceSelection,
   handleDialogueInputSubmission,
@@ -188,28 +192,129 @@ function DialogueOverlayPanel({
     !embedded
   );
 
+  const inputDisabled = engine.isBusy || hireFlow.phase === "submitting";
   const showInput = state === "player-input";
   const showChoices = state === "player-choice";
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
+
+  const { preferences, toggleOutput } = useVoicePreferences();
+  const [choiceVoiceError, setChoiceVoiceError] = useState<string | null>(null);
+  const lastSpokenTextRef = useRef<string>("");
+
+  const voiceOutput = useVoiceOutput({
+    enabled: preferences.outputEnabled && !useScriptedUi,
+    locale: preferences.locale,
+    speakerId,
+  });
+
+  const choiceVoiceInput = useVoiceInput({
+    chatId,
+    disabled: inputDisabled || !showChoices,
+    locale: preferences.locale,
+    onError: setChoiceVoiceError,
+    onTranscript: (text) => {
+      const matched = matchChoiceFromTranscript(text, choices);
+
+      if (matched) {
+        setChoiceVoiceError(null);
+        handleSelectChoice(matched.id);
+        return;
+      }
+
+      setChoiceVoiceError(
+        "Couldn't match a choice — try again or tap a button"
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (engine.isStreaming) {
+      lastSpokenTextRef.current = "";
+      voiceOutput.stopSpeaking();
+    }
+  }, [engine.isStreaming, voiceOutput.stopSpeaking]);
+
+  useEffect(() => {
+    if (useScriptedUi || isThinking || engine.isStreaming) {
+      return;
+    }
+
+    if (!(preferences.outputEnabled && displayText.trim())) {
+      return;
+    }
+
+    if (state !== "npc-speaking") {
+      return;
+    }
+
+    if (lastSpokenTextRef.current === displayText) {
+      return;
+    }
+
+    lastSpokenTextRef.current = displayText;
+    voiceOutput.speak(displayText).catch(() => {
+      // TTS failures are non-blocking.
+    });
+  }, [
+    displayText,
+    engine.isStreaming,
+    isThinking,
+    preferences.outputEnabled,
+    state,
+    useScriptedUi,
+    voiceOutput.speak,
+  ]);
+
+  const handleClose = useCallback(() => {
+    voiceOutput.stopSpeaking();
+    onClose();
+  }, [onClose, voiceOutput.stopSpeaking]);
 
   return (
     <DialogueOverlayPanelView
       avatarSprite={avatarSprite}
       chatError={chat.error?.message ?? null}
+      chatId={chatId}
       choices={choices}
+      choiceVoice={
+        showChoices && choiceVoiceInput.isSupported
+          ? {
+              disabled: inputDisabled,
+              error: choiceVoiceError,
+              isSupported: true,
+              onToggle: () => {
+                setChoiceVoiceError(null);
+
+                if (choiceVoiceInput.state === "listening") {
+                  choiceVoiceInput.stopListening();
+                  return;
+                }
+
+                if (choiceVoiceInput.state === "idle") {
+                  voiceOutput.stopSpeaking();
+                  choiceVoiceInput.startListening().catch(() => {
+                    // useVoiceInput surfaces errors via onError.
+                  });
+                }
+              },
+              state: choiceVoiceInput.state,
+            }
+          : undefined
+      }
       displayText={displayText}
       embedded={embedded}
-      inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}
+      inputDisabled={inputDisabled}
       isAnimating={!useScriptedUi && engine.isStreaming}
       isPanel={layout === "panel"}
       isThinking={isThinking}
       log={engine.log}
       logOpen={logOpen}
-      onClose={onClose}
+      onClose={handleClose}
       onCloseLog={() => setLogOpen(false)}
       onOpenLog={() => setLogOpen(true)}
       onSelectChoice={handleSelectChoice}
       onSubmitInput={handleSubmitInput}
+      onToggleVoiceOutput={toggleOutput}
       playerName={PLAYER_NAME}
       portraitIcon={portraitIcon}
       scrollRef={scrollRef}
@@ -218,6 +323,8 @@ function DialogueOverlayPanel({
       showNpcBox={showNpcBox}
       speakerId={speakerId}
       speakerName={speakerName}
+      voiceLocale={preferences.locale}
+      voiceOutputEnabled={preferences.outputEnabled}
     />
   );
 }

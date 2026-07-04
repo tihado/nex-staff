@@ -7,6 +7,7 @@ import {
   ASSISTANT_MAX_STEPS,
   DEFAULT_ASSISTANT_CONFIG,
 } from "@/lib/assistant-defaults";
+import { getTaskStatusForUser } from "@/lib/tasks/service";
 import { type AssistantTools, assistantTools } from "@/lib/tools/assistant";
 
 export interface AssistantRuntimeContext extends Record<string, unknown> {
@@ -17,6 +18,33 @@ export interface AssistantRuntimeContext extends Record<string, unknown> {
 
 export interface CreateAssistantOptions {
   chatId?: string;
+  taskId?: string;
+}
+
+async function buildTaskFocusInstructions(
+  userId: string,
+  taskId: string
+): Promise<string | null> {
+  const snapshot = await getTaskStatusForUser(userId, taskId);
+
+  if (!snapshot) {
+    return null;
+  }
+
+  const currentStep = snapshot.currentStep ?? "none";
+
+  return [
+    "--- Task focus ---",
+    `The user opened dialogue while reviewing task ${taskId}.`,
+    `Brief: ${snapshot.brief}`,
+    `Staff: ${snapshot.staffName}`,
+    `Status: ${snapshot.status}, progress: ${snapshot.progressPercent}%.`,
+    `Current step: ${currentStep}.`,
+    "Ask if they need anything related to this task.",
+    `Use check_task_status, get_task_events, or get_task_preview with taskId ${taskId} when helpful.`,
+    "Use stop_task when the user wants to cancel a running task (confirm first unless they were explicit).",
+    "Do not delegate a duplicate task unless they ask.",
+  ].join("\n");
 }
 
 type AssistantAgentTools = AssistantTools;
@@ -37,6 +65,8 @@ function buildToolsContext(userId: string, chatId?: string) {
     get_task_events: taskContext,
     get_task_preview: taskContext,
     get_deliverable: taskContext,
+    stop_task: taskContext,
+    steer_task: taskContext,
   } as const;
 }
 
@@ -57,6 +87,15 @@ export async function createAssistant(
   }
 
   const modelId = assistantRow.config?.model ?? DEFAULT_ASSISTANT_CONFIG.model;
+  let instructions = assistantRow.instructions;
+
+  if (options.taskId) {
+    const taskFocus = await buildTaskFocusInstructions(userId, options.taskId);
+
+    if (taskFocus) {
+      instructions = `${instructions}\n\n${taskFocus}`;
+    }
+  }
 
   const runtimeContext: AssistantRuntimeContext = {
     userId,
@@ -69,7 +108,7 @@ export async function createAssistant(
   return new ToolLoopAgent<never, AssistantAgentTools, AssistantRuntimeContext>(
     {
       model: getGeminiModel(modelId),
-      instructions: assistantRow.instructions,
+      instructions,
       tools: assistantTools,
       toolsContext,
       stopWhen: isStepCount(ASSISTANT_MAX_STEPS),

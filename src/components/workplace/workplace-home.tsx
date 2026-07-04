@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ArchiveRoomOverlay } from "@/components/archive-room/archive-room-overlay";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
 import { GameShell } from "@/components/layout";
 import { PixelHUD, PixelNotification } from "@/components/pixel";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { useWorkspaceState } from "@/hooks/use-workspace-state";
-import type { TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
 import type { WorkspaceDesk } from "./workspace-layout";
@@ -27,6 +27,7 @@ interface ActiveDialogue {
   speakerId: string;
   speakerName: string;
   speakerRole?: string;
+  taskId?: string;
 }
 
 interface ActiveZone {
@@ -34,12 +35,6 @@ interface ActiveZone {
   icon: string;
   title: string;
 }
-
-const ARCHIVE_ZONE: ActiveZone = {
-  title: "Archive Room",
-  description: "The archive opens in a later update (#9).",
-  icon: "archive",
-};
 
 const HIRE_ZONE: ActiveZone = {
   title: "Hire an agent",
@@ -50,7 +45,7 @@ const HIRE_ZONE: ActiveZone = {
 /**
  * Workplace home (#8): a top-down pixel office floor. Agents work at desks,
  * walk to the pantry when done, and show status emotes. Clicking Reception or a
- * staff member opens the RPG dialogue; archive opens a placeholder overlay.
+ * staff member opens the RPG dialogue; archive opens the document shelf overlay.
  */
 export function WorkplaceHome({
   assistantName,
@@ -69,8 +64,24 @@ export function WorkplaceHome({
   const [dialogue, setDialogue] = useState<ActiveDialogue | null>(null);
   const [zone, setZone] = useState<ActiveZone | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const overlayOpen = dialogue !== null || zone !== null || taskBoardOpen;
+  const overlayOpen =
+    dialogue !== null || zone !== null || taskBoardOpen || archiveOpen;
+
+  const staffOptions = useMemo(
+    () =>
+      desks
+        .filter((desk): desk is WorkspaceDesk & { staffId: string } =>
+          Boolean(desk.staffId)
+        )
+        .map((desk) => ({
+          id: desk.staffId,
+          name: desk.label,
+          role: desk.role,
+        })),
+    [desks]
+  );
 
   const hasDoneDesk = desks.some((desk) => desk.state === "done");
 
@@ -107,18 +118,13 @@ export function WorkplaceHome({
     });
   };
 
-  const handleTaskSelect = (_task: TaskSummary) => {
-    setTaskBoardOpen(false);
-    openReception();
-  };
-
   const handleSelectZone = (selected: WorkspaceZone) => {
     if (selected === "taskboard") {
       setTaskBoardOpen(true);
       return;
     }
 
-    setZone(ARCHIVE_ZONE);
+    setArchiveOpen(true);
   };
 
   return (
@@ -164,11 +170,18 @@ export function WorkplaceHome({
 
       {taskBoardOpen ? (
         <TaskBoardOverlay
+          assistantName={assistantName}
           error={tasksError}
           loading={tasksLoading}
           onClose={() => setTaskBoardOpen(false)}
-          onSelectTask={handleTaskSelect}
           tasks={tasks}
+        />
+      ) : null}
+
+      {archiveOpen ? (
+        <ArchiveRoomOverlay
+          onClose={() => setArchiveOpen(false)}
+          staffOptions={staffOptions}
         />
       ) : null}
 
@@ -181,6 +194,7 @@ export function WorkplaceHome({
           speakerId={dialogue.speakerId}
           speakerName={dialogue.speakerName}
           speakerRole={dialogue.speakerRole}
+          taskId={dialogue.taskId}
         />
       ) : null}
 

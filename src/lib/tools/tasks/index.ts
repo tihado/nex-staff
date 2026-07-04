@@ -11,6 +11,8 @@ import {
   delegateTaskTool,
   taskToolContextSchema,
 } from "@/lib/tools/tasks/delegate-task";
+import { steerTaskTool } from "@/lib/tools/tasks/steer-task";
+import { stopTaskTool } from "@/lib/tools/tasks/stop-task";
 
 export const checkTaskStatusTool = tool({
   description:
@@ -98,4 +100,6 @@ export const taskTools = {
   get_task_events: getTaskEventsTool,
   get_task_preview: getTaskPreviewTool,
   get_deliverable: getDeliverableTool,
+  stop_task: stopTaskTool,
+  steer_task: steerTaskTool,
 } as const;

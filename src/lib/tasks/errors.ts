@@ -24,3 +24,12 @@ export class TaskDispatchError extends Error {
     this.name = "TaskDispatchError";
   }
 }
+
+export class TaskCancelError extends Error {
+  readonly code = "cancel_error" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "TaskCancelError";
+  }
+}

@@ -22,11 +22,35 @@ interface DialogueOverlayProps {
   avatarSprite?: string;
   chatId?: string;
   greeting: string;
+  layout?: "overlay" | "panel";
   onClose: () => void;
   portraitIcon?: string;
   speakerId: string;
   speakerName: string;
   speakerRole?: string;
+  taskId?: string;
+}
+
+function createAssistantTransport(taskId?: string) {
+  return new DefaultChatTransport({
+    api: "/api/chat",
+    fetch: (url, init) => {
+      if (!(taskId && init?.body)) {
+        return fetch(url, init);
+      }
+
+      try {
+        const parsed = JSON.parse(String(init.body)) as Record<string, unknown>;
+
+        return fetch(url, {
+          ...init,
+          body: JSON.stringify({ ...parsed, taskId }),
+        });
+      } catch {
+        return fetch(url, init);
+      }
+    },
+  });
 }
 
 const PLAYER_NAME = "Boss (you)";
@@ -62,11 +86,10 @@ function DialogueOverlayPanel({
   chatId,
   initialMessages,
   onClose,
+  taskId,
+  layout = "overlay",
 }: DialogueOverlayPanelProps) {
-  const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/chat" }),
-    []
-  );
+  const transport = useMemo(() => createAssistantTransport(taskId), [taskId]);
 
   const chat = useChat<AssistantUIMessage>({
     id: chatId,
@@ -126,23 +149,35 @@ function DialogueOverlayPanel({
   const showInput = state === "player-input";
   const showChoices = state === "player-choice";
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
+  const isPanel = layout === "panel";
 
   return (
     <div
       aria-label={`Dialogue with ${speakerName}`}
-      className="fixed inset-0 z-20 flex flex-col"
+      className={cn(
+        "flex flex-col",
+        isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
+      )}
       role="dialog"
     >
-      {/* Backdrop dims the workspace 50% behind the dialogue. */}
-      <button
-        aria-label="Close dialogue"
-        className="absolute inset-0 cursor-default bg-black/50"
-        onClick={onClose}
-        tabIndex={-1}
-        type="button"
-      />
+      {isPanel ? null : (
+        <button
+          aria-label="Close dialogue"
+          className="absolute inset-0 cursor-default bg-black/50"
+          onClick={onClose}
+          tabIndex={-1}
+          type="button"
+        />
+      )}
 
-      <div className="absolute top-3 right-3 z-10 flex gap-2">
+      <div
+        className={cn(
+          "z-10 flex gap-2",
+          isPanel
+            ? "shrink-0 justify-end border-wood border-b-2 bg-panel/80 p-2"
+            : "absolute top-3 right-3"
+        )}
+      >
         <PixelButton onClick={() => setLogOpen(true)}>
           <span className="flex items-center gap-1">
             <PixelIcon name="list" size={12} /> Log
@@ -153,7 +188,12 @@ function DialogueOverlayPanel({
         </PixelButton>
       </div>
 
-      <div className="relative mt-auto flex flex-col gap-3 p-4 sm:p-6">
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-col gap-3 p-4 sm:p-6",
+          isPanel ? "flex-1 justify-end" : "mt-auto"
+        )}
+      >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
           {showNpcBox ? (
             <div className="flex items-end gap-3 sm:gap-4">
@@ -235,6 +275,8 @@ export function DialogueOverlay({
   greeting,
   chatId: chatIdProp,
   onClose,
+  taskId,
+  layout = "overlay",
 }: DialogueOverlayProps) {
   const [chatId, setChatId] = useState<string | null>(chatIdProp ?? null);
   const [initialMessages, setInitialMessages] = useState<
@@ -268,7 +310,12 @@ export function DialogueOverlay({
       <div
         aria-busy="true"
         aria-label={`Loading dialogue with ${speakerName}`}
-        className="fixed inset-0 z-20 flex items-center justify-center bg-black/50"
+        className={cn(
+          "flex items-center justify-center",
+          layout === "panel"
+            ? "min-h-0 flex-1 bg-bg-dialogue"
+            : "fixed inset-0 z-20 bg-black/50"
+        )}
         role="dialog"
       >
         <div className="flex items-center gap-2 border-[3px] border-wood bg-panel px-4 py-3 font-pixel text-[10px] text-ink uppercase tracking-widest">
@@ -285,11 +332,13 @@ export function DialogueOverlay({
       chatId={chatId}
       greeting={greeting}
       initialMessages={initialMessages}
+      layout={layout}
       onClose={onClose}
       portraitIcon={portraitIcon}
       speakerId={speakerId}
       speakerName={speakerName}
       speakerRole={speakerRole}
+      taskId={taskId}
     />
   );
 }

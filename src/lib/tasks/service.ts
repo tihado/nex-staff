@@ -20,6 +20,7 @@ import {
   TASK_START_STEP,
 } from "@/lib/tasks/constants";
 import {
+  TaskCancelError,
   TaskDispatchError,
   TaskNotFoundError,
   TaskValidationError,
@@ -76,6 +77,10 @@ function resolveTaskStatusFromEvent(
 
   if (eventType === "workflow.failed") {
     return "failed";
+  }
+
+  if (eventType === "workflow.cancelled") {
+    return "cancelled";
   }
 
   if (currentStatus === "pending") {
@@ -416,6 +421,62 @@ export async function markTaskFailed(
       completedAt: new Date(),
     })
     .where(eq(task.id, taskId));
+}
+
+const NON_CANCELLABLE_STATUSES = new Set<TaskStatus>([
+  "completed",
+  "failed",
+  "cancelled",
+]);
+
+export interface CancelTaskResult {
+  message: string;
+  status: "cancelled";
+  taskId: string;
+}
+
+export async function cancelTaskForUser(
+  userId: string,
+  taskId: string,
+  reason?: string
+): Promise<CancelTaskResult> {
+  const row = await getOwnedTaskRow(userId, taskId);
+
+  if (NON_CANCELLABLE_STATUSES.has(row.status)) {
+    throw new TaskCancelError(
+      `Task is already ${row.status} and cannot be stopped.`
+    );
+  }
+
+  const cancelReason = reason?.trim() || "Cancelled by user.";
+
+  await db.insert(taskEvent).values({
+    taskId,
+    type: "workflow.cancelled",
+    payload: {
+      label: "Cancelled by user",
+      reason: cancelReason,
+    },
+  });
+
+  await db
+    .update(task)
+    .set({
+      status: "cancelled",
+      currentStep: "Cancelled",
+      completedAt: new Date(),
+      lastEventType: "workflow.cancelled",
+      lastEventAt: new Date(),
+    })
+    .where(eq(task.id, taskId));
+
+  await releaseStaffIfIdle(row.staffId);
+
+  return {
+    taskId,
+    status: "cancelled",
+    message: `Task stopped. ${cancelReason}`,
+  };
 }
 
 export async function setStaffWorking(staffId: string): Promise<void> {

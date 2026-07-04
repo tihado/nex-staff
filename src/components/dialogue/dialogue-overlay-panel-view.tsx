@@ -1,8 +1,9 @@
 "use client";
 
-import type { RefObject } from "react";
+import { type RefObject, useRef } from "react";
 import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
 import type { DialogueLine } from "@/hooks/use-dialogue-engine";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { DialogueChoice } from "@/lib/dialogue/types";
 import { cn } from "@/lib/utils";
 import { ChoiceMenu } from "./choice-menu";
@@ -60,6 +61,10 @@ export function DialogueOverlayPanelView({
   onSelectChoice,
   onSubmitInput,
 }: DialogueOverlayPanelViewProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, { active: !isPanel });
+
   return (
     <div
       aria-label={`Dialogue with ${speakerName}`}
@@ -68,6 +73,7 @@ export function DialogueOverlayPanelView({
         "flex flex-col",
         isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
       )}
+      ref={dialogRef}
       role="dialog"
     >
       {isPanel ? null : (

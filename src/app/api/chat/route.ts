@@ -5,6 +5,10 @@ import {
   createAssistant,
 } from "@/lib/agents/assistant";
 import {
+  getStreamErrorMessage,
+  logAssistantError,
+} from "@/lib/assistant/errors";
+import {
   ChatAccessError,
   ensureAssistantChat,
   persistChatMessage,
@@ -37,7 +41,10 @@ export async function POST(req: Request) {
   const viewer = await getServerViewer();
 
   if (!viewer) {
-    return new Response("Unauthorized", { status: 401 });
+    return NextResponse.json(
+      { error: { code: "UNAUTHORIZED", message: "Authentication required" } },
+      { status: 401 }
+    );
   }
 
   let body: ChatRequestBody;
@@ -75,21 +82,42 @@ export async function POST(req: Request) {
   const lastUserMessage = getLastUserMessage(messages);
 
   if (lastUserMessage) {
-    await persistChatMessage(chatId, lastUserMessage);
+    try {
+      await persistChatMessage(chatId, lastUserMessage);
+    } catch (error) {
+      logAssistantError("persist-user-message", error);
+      return NextResponse.json(
+        {
+          error: { code: "INTERNAL_ERROR", message: "Failed to save message" },
+        },
+        { status: 500 }
+      );
+    }
   }
 
-  const agent = await createAssistant(viewer.id, { chatId });
+  let agent: Awaited<ReturnType<typeof createAssistant>>;
+
+  try {
+    agent = await createAssistant(viewer.id, { chatId });
+  } catch (error) {
+    logAssistantError("create-assistant", error);
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: "Assistant unavailable" } },
+      { status: 500 }
+    );
+  }
 
   return createAgentUIStreamResponse({
     agent,
     uiMessages: messages,
     originalMessages: messages,
     generateMessageId: () => crypto.randomUUID(),
+    onError: getStreamErrorMessage,
     onEnd: async ({ messages: persistedMessages }) => {
       try {
         await persistChatMessages(chatId, persistedMessages);
       } catch (error) {
-        console.error("Failed to persist assistant chat messages", error);
+        logAssistantError("persist-assistant-messages", error);
       }
     },
   });

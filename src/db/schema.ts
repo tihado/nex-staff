@@ -113,12 +113,18 @@ export const staffStatusEnum = pgEnum("staff_status", [
 ]);
 
 export interface Skill {
+  content?: string;
   description?: string;
   name: string;
 }
 
+export type StaffToolHandler = "http" | "rag" | "sandbox_bash" | "sandbox_file";
+
 export interface ToolDef {
+  config?: Record<string, unknown>;
   description?: string;
+  handler?: StaffToolHandler;
+  inputSchema?: Record<string, unknown>;
   name: string;
 }
 

@@ -315,7 +315,7 @@ export function WorkplaceHome({
         <PixelHUD subtitle={viewerLabel} title="Nex Staff — Workspace">
           <Link
             className="pixel-wood-btn inline-flex min-h-9 items-center justify-center px-4 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase no-underline"
-            href="/"
+            href="/reception"
           >
             ◀ Reception
           </Link>

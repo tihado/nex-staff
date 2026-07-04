@@ -1,0 +1,60 @@
+@keyframes pixel-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pixel-advance-prompt {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes pixel-slide-from-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pixel-cursor-blink,
+.pixel-advance-indicator {
+  animation: pixel-blink 1s step-end infinite;
+}
+
+.pixel-advance-indicator {
+  animation:
+    pixel-blink 1s step-end infinite,
+    pixel-advance-prompt 1s step-end infinite;
+}
+
+.pixel-notification-enter {
+  animation: pixel-slide-from-top 300ms step-end forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-cursor-blink,
+  .pixel-advance-indicator {
+    opacity: 1;
+    animation: none;
+  }
+
+  .pixel-notification-enter {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}

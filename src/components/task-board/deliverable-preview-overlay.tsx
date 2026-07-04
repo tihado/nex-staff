@@ -68,6 +68,18 @@ export function DeliverablePreviewOverlay({
     }
   }, [content]);
 
+  useEffect(() => {
+    if (copyState === "idle") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setCopyState("idle");
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
   const handleDownload = useCallback(() => {
     const blob = new Blob([content], { type: contentType });
     const url = URL.createObjectURL(blob);

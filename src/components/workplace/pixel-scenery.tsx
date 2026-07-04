@@ -642,3 +642,95 @@ export function PixelGround({ className, height = 190 }: PixelGroundProps) {
     </div>
   );
 }
+
+const OFFICE_WALL = "#E8ECF0";
+const OFFICE_WALL_SH = "#B8C0C8";
+const OFFICE_WALL_DK = "#8A9199";
+const OFFICE_WINDOW = "#4FB6EA";
+const OFFICE_WINDOW_HI = "#BFECFF";
+const OFFICE_DOOR = "#6E4A22";
+const OFFICE_GLASS = "#88D4F0";
+const ARROW_BODY = "#FFD23F";
+const ARROW_EDGE = "#E8A33D";
+
+/** Pixel office tower — entry point to the workplace floor. */
+export function PixelOfficeBuilding({ className, size = 160 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[4px_6px_0_rgba(0,0,0,0.35)]",
+        className
+      )}
+      height={(size * 56) / 40}
+      shapeRendering="crispEdges"
+      viewBox="0 0 40 56"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Office building</title>
+      {/* Foundation */}
+      <rect fill={OFFICE_WALL_DK} height="4" width="36" x="2" y="52" />
+      <rect fill="#6E4A22" height="2" width="36" x="2" y="50" />
+      {/* Main facade */}
+      <rect fill={OFFICE_WALL} height="44" width="32" x="4" y="6" />
+      <rect fill={OFFICE_WALL_SH} height="44" width="6" x="30" y="6" />
+      {/* Roof ledge + sign */}
+      <rect fill={OFFICE_WALL_DK} height="4" width="34" x="3" y="4" />
+      <rect fill="#C0392B" height="4" width="20" x="10" y="0" />
+      <rect fill="#FFF6DF" height="2" width="2" x="12" y="1" />
+      <rect fill="#FFF6DF" height="2" width="2" x="16" y="1" />
+      <rect fill="#FFF6DF" height="2" width="2" x="20" y="1" />
+      <rect fill="#FFF6DF" height="2" width="2" x="24" y="1" />
+      {/* Windows — row 1 */}
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="8" y="10" />
+      <rect fill={OFFICE_WINDOW_HI} height="2" width="2" x="9" y="11" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="17" y="10" />
+      <rect fill={OFFICE_WINDOW_HI} height="2" width="2" x="18" y="11" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="26" y="10" />
+      {/* Windows — row 2 */}
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="8" y="20" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="17" y="20" />
+      <rect fill={OFFICE_WINDOW_HI} height="2" width="2" x="18" y="21" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="26" y="20" />
+      {/* Windows — row 3 */}
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="8" y="30" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="17" y="30" />
+      <rect fill={OFFICE_WINDOW} height="5" width="5" x="26" y="30" />
+      {/* Entry awning */}
+      <rect fill="#7A4A24" height="3" width="14" x="13" y="38" />
+      <rect fill="#9C6B3B" height="2" width="12" x="14" y="38" />
+      {/* Glass doors */}
+      <rect fill={OFFICE_DOOR} height="12" width="12" x="14" y="40" />
+      <rect fill={OFFICE_GLASS} height="10" width="4" x="15" y="41" />
+      <rect fill={OFFICE_GLASS} height="10" width="4" x="21" y="41" />
+      <rect fill={OFFICE_WINDOW_HI} height="3" width="1" x="16" y="42" />
+      <rect fill={OFFICE_DOOR} height="12" width="1" x="19" y="40" />
+      {/* Steps */}
+      <rect fill={OFFICE_WALL_SH} height="2" width="16" x="12" y="50" />
+    </svg>
+  );
+}
+
+/** Bouncing arrow pointing at a building entry. */
+export function PixelEntryArrow({ className, size = 32 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn("sprite", className)}
+      height={(size * 20) / 16}
+      shapeRendering="crispEdges"
+      viewBox="0 0 16 20"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Enter</title>
+      <rect fill={ARROW_EDGE} height="4" width="10" x="3" y="0" />
+      <rect fill={ARROW_BODY} height="3" width="8" x="4" y="1" />
+      <rect fill={ARROW_EDGE} height="10" width="6" x="5" y="4" />
+      <rect fill={ARROW_BODY} height="8" width="4" x="6" y="5" />
+      <rect fill={ARROW_EDGE} height="4" width="12" x="2" y="14" />
+      <rect fill={ARROW_BODY} height="3" width="10" x="3" y="15" />
+    </svg>
+  );
+}

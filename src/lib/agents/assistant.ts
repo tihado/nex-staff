@@ -29,6 +29,10 @@ function buildToolsContext(userId: string) {
     list_staff: { userId },
     get_staff: { userId },
     update_staff: { userId },
+    check_task_status: { userId },
+    list_active_tasks: { userId },
+    get_task_events: { userId },
+    get_task_preview: { userId },
   } as const;
 }
 

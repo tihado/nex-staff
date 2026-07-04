@@ -1,6 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { pendingToolExecute } from "@/lib/tools/pending";
+import { checkTaskStatusTool } from "@/lib/tools/tasks/check-task-status";
+import { getTaskEventsTool } from "@/lib/tools/tasks/get-task-events";
+import { getTaskPreviewTool } from "@/lib/tools/tasks/get-task-preview";
+import { listActiveTasksTool } from "@/lib/tools/tasks/list-active-tasks";
 
 export const delegateTaskTool = tool({
   description:
@@ -20,39 +24,6 @@ export const delegateTaskTool = tool({
       .optional(),
     parentGroupId: z.string().uuid().optional(),
     dependsOn: z.array(z.string().uuid()).optional(),
-  }),
-  execute: pendingToolExecute,
-});
-
-export const checkTaskStatusTool = tool({
-  description:
-    "Check status, progress, and partial results of a delegated task",
-  inputSchema: z.object({
-    taskId: z.string().uuid(),
-  }),
-  execute: pendingToolExecute,
-});
-
-export const listActiveTasksTool = tool({
-  description:
-    "List all running tasks and recently completed tasks awaiting notification",
-  inputSchema: z.object({}),
-  execute: pendingToolExecute,
-});
-
-export const getTaskEventsTool = tool({
-  description: "Get detailed event log for a task",
-  inputSchema: z.object({
-    taskId: z.string().uuid(),
-    limit: z.number().int().positive().default(20),
-  }),
-  execute: pendingToolExecute,
-});
-
-export const getTaskPreviewTool = tool({
-  description: "Get partial/draft output from a running task",
-  inputSchema: z.object({
-    taskId: z.string().uuid(),
   }),
   execute: pendingToolExecute,
 });

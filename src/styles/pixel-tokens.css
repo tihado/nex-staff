@@ -11,18 +11,18 @@
   --font-size-nameplate: 10px;
   --line-height-dialogue: 1.5;
 
-  --bg-scene: #1a0f3d;
-  --bg-dialogue: #0f0829;
-  --border-dialogue: #f0f0f0;
-  --pixel-accent: #7ec8e3;
+  --bg-scene: #cdeefb;
+  --bg-dialogue: #fff6df;
+  --border-dialogue: #7a4a24;
+  --pixel-accent: #e8a33d;
   --highlight: #ffe66d;
   --success: #4ecdc4;
   --alert: #ff6b6b;
-  --text-primary: #f0f0f0;
-  --text-muted: #8888aa;
-  --nameplate-bg: #2d1b69;
-  --choice-bg: #1e3a5f;
-  --choice-hover: #7ec8e3;
+  --text-primary: #4a2e1a;
+  --text-muted: #9a6d43;
+  --nameplate-bg: #7a4a24;
+  --choice-bg: #edcf98;
+  --choice-hover: #ffd23f;
 
   --pixel-border-width: 4px;
   --pixel-shadow-color: rgba(0, 0, 0, 0.8);

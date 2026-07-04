@@ -1,6 +1,8 @@
-import { and, count, desc, eq, gte, inArray, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, lt, or } from "drizzle-orm";
+import { start } from "workflow/api";
 import { db } from "@/db";
 import {
+  chat,
   deliverable,
   notification,
   staff,
@@ -11,20 +13,37 @@ import {
 } from "@/db/schema";
 import { createNotification } from "@/lib/notifications/service";
 import {
+  DEFAULT_TASK_EVENTS_LIMIT,
+  DEFAULT_TASK_LIST_LIMIT,
   PREVIEW_EXCERPT_LENGTH,
   RECENTLY_COMPLETED_WINDOW_MS,
+  TASK_START_STEP,
 } from "@/lib/tasks/constants";
+import {
+  TaskDispatchError,
+  TaskNotFoundError,
+  TaskValidationError,
+} from "@/lib/tasks/errors";
 import { publishTaskProgress } from "@/lib/tasks/sse";
 import type {
   ActiveTaskSummary,
   DelegateTaskInput,
+  DelegateTaskResult,
   DeliverableRecord,
   ProgressInput,
   RecentlyCompletedTaskSummary,
+  TaskCompletedSsePayload,
+  TaskDetail,
   TaskEventRecord,
+  TaskFailedSsePayload,
+  TaskPreviewRecord,
+  TaskProgressSsePayload,
+  TaskStaffSummary,
   TaskStatus,
   TaskStatusSnapshot,
+  TaskSummary,
 } from "@/lib/tasks/types";
+import { staffTaskWorkflow } from "@/lib/workflows/staff-task";
 
 function toIsoString(value: Date): string {
   return value.toISOString();
@@ -97,6 +116,10 @@ export async function createDelegatedTask(
     metadata.documentIds = [...new Set(input.documentIds)];
   }
 
+  if (input.checkpoints && input.checkpoints.length > 0) {
+    metadata.checkpoints = input.checkpoints;
+  }
+
   const [row] = await db
     .insert(task)
     .values({
@@ -105,6 +128,8 @@ export async function createDelegatedTask(
       chatId: input.chatId,
       brief: input.brief,
       status: "pending",
+      progressPercent: 0,
+      currentStep: TASK_START_STEP,
       metadata,
     })
     .returning();
@@ -133,6 +158,83 @@ export async function markTaskRunning(
       startedAt: new Date(),
     })
     .where(eq(task.id, taskId));
+}
+
+async function assertChatBelongsToUser(
+  userId: string,
+  chatId: string | undefined
+): Promise<string | undefined> {
+  if (!chatId) {
+    return;
+  }
+
+  const existing = await db.query.chat.findFirst({
+    where: and(eq(chat.id, chatId), eq(chat.userId, userId)),
+    columns: { id: true },
+  });
+
+  if (!existing) {
+    throw new TaskValidationError("Chat not found.");
+  }
+
+  return chatId;
+}
+
+export async function delegateTask(
+  userId: string,
+  input: DelegateTaskInput
+): Promise<DelegateTaskResult> {
+  const chatId = await assertChatBelongsToUser(userId, input.chatId);
+
+  const staffRow = await db.query.staff.findFirst({
+    where: and(eq(staff.id, input.staffId), eq(staff.userId, userId)),
+  });
+
+  if (!staffRow) {
+    throw new TaskValidationError(
+      "Staff member not found. Use list_staff to see your team."
+    );
+  }
+
+  if (staffRow.status === "offline") {
+    throw new TaskValidationError(
+      `${staffRow.name} is currently offline and cannot receive tasks.`
+    );
+  }
+
+  // MVP: allow delegation while staff is already working (simple parallel queue).
+
+  const taskRow = await createDelegatedTask(userId, {
+    ...input,
+    chatId,
+  });
+
+  let workflowRunId: string;
+
+  try {
+    const run = await start(staffTaskWorkflow, [taskRow.id]);
+    workflowRunId = run.runId;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to start workflow.";
+
+    await markTaskFailed(taskRow.id, message);
+
+    throw new TaskDispatchError(
+      `Task was created but workflow failed to start: ${message}`
+    );
+  }
+
+  await markTaskRunning(taskRow.id, workflowRunId);
+
+  return {
+    taskId: taskRow.id,
+    staffId: staffRow.id,
+    staffName: staffRow.name,
+    status: "running",
+    workflowRunId,
+    message: `Task delegated to ${staffRow.name}. You can keep chatting.`,
+  };
 }
 
 export async function getTaskForWorkflow(taskId: string): Promise<{
@@ -626,4 +728,351 @@ export async function getTaskPreviewContent(taskId: string): Promise<string> {
   });
 
   return previewRow?.content ?? "";
+}
+
+function toIsoStringOrNull(value: Date | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return value.toISOString();
+}
+
+function truncateBrief(brief: string, maxLength = 48): string {
+  if (brief.length <= maxLength) {
+    return brief;
+  }
+
+  return `${brief.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function mapStaffSummary(row: typeof staff.$inferSelect): TaskStaffSummary {
+  return {
+    id: row.id,
+    name: row.name,
+    role: row.role,
+  };
+}
+
+async function getStaffMap(
+  staffIds: string[]
+): Promise<Map<string, typeof staff.$inferSelect>> {
+  const map = new Map<string, typeof staff.$inferSelect>();
+
+  if (staffIds.length === 0) {
+    return map;
+  }
+
+  const rows = await db.query.staff.findMany({
+    where: (staffTable, { inArray: inArrayOp }) =>
+      inArrayOp(staffTable.id, staffIds),
+  });
+
+  for (const row of rows) {
+    map.set(row.id, row);
+  }
+
+  return map;
+}
+
+async function getDeliverableMap(
+  taskIds: string[]
+): Promise<Map<string, typeof deliverable.$inferSelect>> {
+  const map = new Map<string, typeof deliverable.$inferSelect>();
+
+  if (taskIds.length === 0) {
+    return map;
+  }
+
+  const rows = await db.query.deliverable.findMany({
+    where: (deliverableTable, { inArray: inArrayOp }) =>
+      inArrayOp(deliverableTable.taskId, taskIds),
+  });
+
+  for (const row of rows) {
+    map.set(row.taskId, row);
+  }
+
+  return map;
+}
+
+function mapTaskSummary(
+  row: typeof task.$inferSelect,
+  staffMember: TaskStaffSummary,
+  deliverableRow: typeof deliverable.$inferSelect | undefined
+): TaskSummary {
+  return {
+    id: row.id,
+    brief: row.brief,
+    status: row.status,
+    progressPercent: row.progressPercent ?? 0,
+    currentStep: row.currentStep,
+    lastEventAt: toIsoStringOrNull(row.lastEventAt),
+    workflowRunId: row.workflowRunId,
+    startedAt: toIsoStringOrNull(row.startedAt),
+    completedAt: toIsoStringOrNull(row.completedAt),
+    createdAt: toIsoString(row.createdAt),
+    staffId: row.staffId,
+    staff: staffMember,
+    deliverable: deliverableRow
+      ? {
+          id: deliverableRow.id,
+          title: deliverableRow.title,
+          contentType: deliverableRow.contentType,
+        }
+      : null,
+  };
+}
+
+async function getOwnedTaskRow(userId: string, taskId: string) {
+  const row = await db.query.task.findFirst({
+    where: (taskTable, { and: andOp, eq: equals }) =>
+      andOp(equals(taskTable.id, taskId), equals(taskTable.userId, userId)),
+  });
+
+  if (!row) {
+    throw new TaskNotFoundError();
+  }
+
+  return row;
+}
+
+export async function listTasks(
+  userId: string,
+  options: {
+    limit?: number;
+    staffId?: string;
+    status?: TaskStatus[];
+  } = {}
+): Promise<TaskSummary[]> {
+  const limit = options.limit ?? DEFAULT_TASK_LIST_LIMIT;
+  const conditions = [eq(task.userId, userId)];
+
+  if (options.staffId) {
+    conditions.push(eq(task.staffId, options.staffId));
+  }
+
+  if (options.status && options.status.length > 0) {
+    conditions.push(inArray(task.status, options.status));
+  }
+
+  const rows = await db.query.task.findMany({
+    where: and(...conditions),
+    orderBy: desc(task.createdAt),
+    limit,
+  });
+
+  const staffMap = await getStaffMap(rows.map((row) => row.staffId));
+  const deliverableMap = await getDeliverableMap(rows.map((row) => row.id));
+
+  return rows.flatMap((row) => {
+    const staffMember = staffMap.get(row.staffId);
+
+    if (!staffMember) {
+      return [];
+    }
+
+    return [
+      mapTaskSummary(
+        row,
+        mapStaffSummary(staffMember),
+        deliverableMap.get(row.id)
+      ),
+    ];
+  });
+}
+
+export async function getTaskById(
+  userId: string,
+  taskId: string
+): Promise<TaskDetail | null> {
+  const row = await db.query.task.findFirst({
+    where: (taskTable, { and: andOp, eq: equals }) =>
+      andOp(equals(taskTable.id, taskId), equals(taskTable.userId, userId)),
+  });
+
+  if (!row) {
+    return null;
+  }
+
+  const staffMember = await db.query.staff.findFirst({
+    where: eq(staff.id, row.staffId),
+  });
+
+  if (!staffMember) {
+    return null;
+  }
+
+  const deliverableRow = await db.query.deliverable.findFirst({
+    where: eq(deliverable.taskId, row.id),
+  });
+
+  const summary = mapTaskSummary(
+    row,
+    mapStaffSummary(staffMember),
+    deliverableRow
+  );
+
+  return {
+    ...summary,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    deliverable: deliverableRow
+      ? {
+          id: deliverableRow.id,
+          title: deliverableRow.title,
+          content: deliverableRow.content,
+          contentType: deliverableRow.contentType,
+        }
+      : null,
+  };
+}
+
+export async function listTaskEvents(
+  userId: string,
+  taskId: string,
+  options: { cursor?: string; limit?: number } = {}
+): Promise<{ events: TaskEventRecord[]; nextCursor: string | null }> {
+  await getOwnedTaskRow(userId, taskId);
+
+  const limit = options.limit ?? DEFAULT_TASK_EVENTS_LIMIT;
+  let cursorCreatedAt: Date | undefined;
+
+  if (options.cursor) {
+    const cursorEvent = await db.query.taskEvent.findFirst({
+      where: (taskEventTable, { and: andOp, eq: equals }) =>
+        andOp(
+          equals(taskEventTable.id, options.cursor ?? ""),
+          equals(taskEventTable.taskId, taskId)
+        ),
+      columns: { createdAt: true },
+    });
+
+    if (cursorEvent) {
+      cursorCreatedAt = cursorEvent.createdAt;
+    }
+  }
+
+  const rows = await db.query.taskEvent.findMany({
+    where: (taskEventTable, { and: andOp, eq: equals }) => {
+      const filters = [equals(taskEventTable.taskId, taskId)];
+
+      if (cursorCreatedAt) {
+        filters.push(lt(taskEventTable.createdAt, cursorCreatedAt));
+      }
+
+      return andOp(...filters);
+    },
+    orderBy: desc(taskEvent.createdAt),
+    limit: limit + 1,
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore ? (page.at(-1)?.id ?? null) : null;
+
+  return {
+    events: page.map(mapTaskEvent),
+    nextCursor,
+  };
+}
+
+export async function getTaskPreviewRecord(
+  userId: string,
+  taskId: string
+): Promise<TaskPreviewRecord | null> {
+  await getOwnedTaskRow(userId, taskId);
+
+  const preview = await db.query.taskPreview.findFirst({
+    where: eq(taskPreview.taskId, taskId),
+  });
+
+  if (!preview) {
+    return null;
+  }
+
+  const content = preview.content ?? "";
+
+  return {
+    taskId,
+    content,
+    excerpt: excerpt(content, PREVIEW_EXCERPT_LENGTH),
+    updatedAt: toIsoString(preview.updatedAt),
+  };
+}
+
+export function buildTaskProgressSsePayload(
+  taskRow: TaskSummary
+): TaskProgressSsePayload {
+  return {
+    type: "task.progress",
+    taskId: taskRow.id,
+    staffId: taskRow.staffId,
+    progressPercent: taskRow.progressPercent,
+    currentStep: taskRow.currentStep ?? "Starting task...",
+  };
+}
+
+export function buildTaskCompletedSsePayload(
+  taskRow: TaskSummary,
+  preview: string | null
+): TaskCompletedSsePayload {
+  return {
+    type: "task.completed",
+    taskId: taskRow.id,
+    staffId: taskRow.staffId,
+    deliverableId: taskRow.deliverable?.id ?? null,
+    title: taskRow.deliverable?.title ?? truncateBrief(taskRow.brief, 120),
+    preview,
+  };
+}
+
+export function buildTaskFailedSsePayload(
+  taskRow: TaskSummary,
+  error: string
+): TaskFailedSsePayload {
+  return {
+    type: "task.failed",
+    taskId: taskRow.id,
+    staffId: taskRow.staffId,
+    error,
+  };
+}
+
+export async function listTasksUpdatedSince(
+  userId: string,
+  since: Date
+): Promise<TaskSummary[]> {
+  const rows = await db.query.task.findMany({
+    where: and(
+      eq(task.userId, userId),
+      or(
+        gt(task.lastEventAt, since),
+        and(
+          inArray(task.status, ["completed", "failed"]),
+          gt(task.completedAt, since)
+        )
+      )
+    ),
+    orderBy: desc(task.lastEventAt),
+    limit: DEFAULT_TASK_LIST_LIMIT,
+  });
+
+  const staffMap = await getStaffMap(rows.map((row) => row.staffId));
+  const deliverableMap = await getDeliverableMap(rows.map((row) => row.id));
+
+  return rows.flatMap((row) => {
+    const staffMember = staffMap.get(row.staffId);
+
+    if (!staffMember) {
+      return [];
+    }
+
+    return [
+      mapTaskSummary(
+        row,
+        mapStaffSummary(staffMember),
+        deliverableMap.get(row.id)
+      ),
+    ];
+  });
 }

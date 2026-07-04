@@ -36,6 +36,15 @@ export interface DelegateTaskInput {
   staffId: string;
 }
 
+export interface DelegateTaskResult {
+  message: string;
+  staffId: string;
+  staffName: string;
+  status: TaskStatus;
+  taskId: string;
+  workflowRunId: string;
+}
+
 export interface TaskEventRecord {
   createdAt: string;
   id: string;
@@ -86,4 +95,68 @@ export interface DeliverableRecord {
   id: string;
   taskId: string;
   title: string;
+}
+
+export interface TaskStaffSummary {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface TaskDeliverableSummary {
+  contentType: string;
+  id: string;
+  title: string;
+}
+
+export interface TaskSummary {
+  brief: string;
+  completedAt: string | null;
+  createdAt: string;
+  currentStep: string | null;
+  deliverable: TaskDeliverableSummary | null;
+  id: string;
+  lastEventAt: string | null;
+  progressPercent: number;
+  staff: TaskStaffSummary;
+  staffId: string;
+  startedAt: string | null;
+  status: TaskStatus;
+  workflowRunId: string | null;
+}
+
+export interface TaskDetail extends TaskSummary {
+  deliverable: (TaskDeliverableSummary & { content: string }) | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface TaskPreviewRecord {
+  content: string;
+  excerpt: string;
+  taskId: string;
+  updatedAt: string;
+}
+
+export interface TaskProgressSsePayload {
+  currentStep: string;
+  progressPercent: number;
+  staffId: string;
+  taskId: string;
+  type: "task.progress";
+}
+
+export interface TaskCompletedSsePayload {
+  deliverableId: string | null;
+  preview: string | null;
+  staffId: string;
+  taskId: string;
+  title: string;
+  type: "task.completed";
+}
+
+export interface TaskFailedSsePayload {
+  error: string;
+  staffId: string;
+  taskId: string;
+  type: "task.failed";
 }

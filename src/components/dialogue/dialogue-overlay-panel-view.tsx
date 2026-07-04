@@ -63,6 +63,7 @@ export function DialogueOverlayPanelView({
   return (
     <div
       aria-label={`Dialogue with ${speakerName}`}
+      aria-modal={isPanel ? undefined : true}
       className={cn(
         "flex flex-col",
         isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"

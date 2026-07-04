@@ -268,6 +268,7 @@ export function DialogueOverlay({
       <div
         aria-busy="true"
         aria-label={`Loading dialogue with ${speakerName}`}
+        aria-modal={layout === "panel" ? undefined : true}
         className={cn(
           "flex items-center justify-center",
           layout === "panel"

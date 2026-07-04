@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { runToolSafely } from "@/lib/assistant/errors";
 import { ALLOWED_MIME_TYPES } from "@/lib/documents/constants";
 import { createDocumentFromContent } from "@/lib/documents/service";
 import { documentToolContextSchema } from "@/lib/tools/documents/context";
@@ -19,24 +20,25 @@ export const createDocumentTool = tool({
       .describe("MIME type for the saved document"),
   }),
   contextSchema: documentToolContextSchema,
-  execute: async ({ filename, content, mimeType }, { context }) => {
-    const resolvedMimeType = ALLOWED_MIME_TYPES.has(mimeType)
-      ? mimeType
-      : "text/markdown";
+  execute: async ({ filename, content, mimeType }, { context }) =>
+    runToolSafely("create_document", async () => {
+      const resolvedMimeType = ALLOWED_MIME_TYPES.has(mimeType)
+        ? mimeType
+        : "text/markdown";
 
-    const created = await createDocumentFromContent(context.userId, {
-      filename,
-      content,
-      mimeType: resolvedMimeType,
-    });
+      const created = await createDocumentFromContent(context.userId, {
+        filename,
+        content,
+        mimeType: resolvedMimeType,
+      });
 
-    return {
-      id: created.id,
-      filename: created.filename,
-      mimeType: created.mimeType,
-      blobUrl: created.blobUrl,
-      status: created.status,
-      uploadedAt: created.uploadedAt,
-    };
-  },
+      return {
+        id: created.id,
+        filename: created.filename,
+        mimeType: created.mimeType,
+        blobUrl: created.blobUrl,
+        status: created.status,
+        uploadedAt: created.uploadedAt,
+      };
+    }),
 });

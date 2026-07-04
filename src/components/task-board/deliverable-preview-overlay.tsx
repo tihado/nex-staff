@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
 import { PixelButton, PixelCloseButton, PixelPanel } from "@/components/pixel";
 
@@ -40,6 +40,26 @@ function copyButtonLabel(state: "idle" | "copied" | "error"): string {
   return uiStrings.deliverable.copy;
 }
 
+const LEADING_NEWLINES_RE = /^\n+/;
+
+/** Avoid showing the same title twice when body repeats the heading line. */
+function bodyForPreview(title: string, content: string): string {
+  const trimmedTitle = title.trim();
+  const trimmedContent = content.trim();
+
+  if (!(trimmedTitle && trimmedContent.startsWith(trimmedTitle))) {
+    return content;
+  }
+
+  const remainder = trimmedContent.slice(trimmedTitle.length).trimStart();
+
+  if (remainder.startsWith("\n") || remainder.startsWith("#")) {
+    return remainder.replace(LEADING_NEWLINES_RE, "");
+  }
+
+  return content;
+}
+
 export function DeliverablePreviewOverlay({
   title,
   content,
@@ -48,6 +68,11 @@ export function DeliverablePreviewOverlay({
 }: DeliverablePreviewOverlayProps) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
     "idle"
+  );
+
+  const previewBody = useMemo(
+    () => bodyForPreview(title, content),
+    [content, title]
   );
 
   useEffect(() => {
@@ -96,41 +121,45 @@ export function DeliverablePreviewOverlay({
     <div
       aria-labelledby="deliverable-preview-title"
       aria-modal="true"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-backdrop)] p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-backdrop)] p-3 sm:p-4"
       role="dialog"
     >
       <PixelPanel
-        className="flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-3xl flex-col overflow-hidden p-4 sm:p-6"
-        contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-4"
+        className="flex max-h-[min(92vh,760px)] w-full max-w-3xl flex-col overflow-hidden"
+        contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-5"
         title={uiStrings.deliverable.title}
+        titleInset
       >
-        <div className="flex shrink-0 items-start justify-between gap-3">
-          <h2
-            className="font-body text-[22px] text-ink leading-snug"
-            id="deliverable-preview-title"
-          >
-            {title}
-          </h2>
-          <PixelCloseButton
-            aria-label={uiStrings.deliverable.closePreview}
-            onClick={onClose}
-          />
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+          <div className="flex shrink-0 items-start justify-between gap-3">
+            <h2
+              className="min-w-0 flex-1 font-body text-[20px] text-ink leading-snug sm:text-[22px]"
+              id="deliverable-preview-title"
+            >
+              {title}
+            </h2>
+            <PixelCloseButton
+              aria-label={uiStrings.deliverable.closePreview}
+              className="shrink-0"
+              onClick={onClose}
+            />
+          </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-2 border-wood bg-panel p-4">
-          <DialogueMarkdown content={content} />
-        </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-sm border-[3px] border-wood bg-[#fff9c4]/40 p-3 sm:p-4">
+            <DialogueMarkdown content={previewBody} />
+          </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <PixelButton onClick={handleCopy} type="button">
-            {copyButtonLabel(copyState)}
-          </PixelButton>
-          <PixelButton onClick={handleDownload} type="button">
-            {uiStrings.deliverable.download}
-          </PixelButton>
-          <PixelButton onClick={onClose} type="button">
-            {uiStrings.close}
-          </PixelButton>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-wood border-t-[3px] pt-3">
+            <PixelButton onClick={handleCopy} type="button">
+              {copyButtonLabel(copyState)}
+            </PixelButton>
+            <PixelButton onClick={handleDownload} type="button">
+              {uiStrings.deliverable.download}
+            </PixelButton>
+            <PixelButton onClick={onClose} type="button">
+              {uiStrings.close}
+            </PixelButton>
+          </div>
         </div>
       </PixelPanel>
     </div>

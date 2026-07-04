@@ -21,6 +21,7 @@ const PORTRAIT_SIZE = 56;
 interface DialoguePortraitProps {
   avatarSprite?: string;
   className?: string;
+  compact?: boolean;
   emotion?: DialogueEmotion;
   icon?: string;
   speakerId: string;
@@ -36,19 +37,21 @@ export function DialoguePortrait({
   icon,
   avatarSprite,
   emotion = "neutral",
+  compact = false,
   className,
 }: DialoguePortraitProps) {
+  const portraitSize = compact ? 40 : PORTRAIT_SIZE;
   let figure = (
-    <PixelIcon name={icon ?? EMOTION_ICON[emotion]} size={PORTRAIT_SIZE} />
+    <PixelIcon name={icon ?? EMOTION_ICON[emotion]} size={portraitSize} />
   );
   if (speakerId === "assistant") {
-    figure = <PixelAssistant size={PORTRAIT_SIZE} />;
+    figure = <PixelAssistant size={portraitSize} />;
   } else if (speakerId === "boss") {
-    figure = <PixelKing size={PORTRAIT_SIZE} />;
+    figure = <PixelKing size={portraitSize} />;
   } else if (avatarSprite) {
     figure = (
       <StaffAvatar
-        size={PORTRAIT_SIZE}
+        size={portraitSize}
         spriteId={avatarSprite}
         staffId={speakerId}
       />
@@ -58,7 +61,8 @@ export function DialoguePortrait({
   return (
     <div
       className={cn(
-        "portrait portrait-bounce pixel-frame flex size-16 items-center justify-center bg-sky-low text-sky-accent sm:size-24",
+        "portrait portrait-bounce pixel-frame flex shrink-0 items-center justify-center bg-sky-low text-sky-accent",
+        compact ? "size-11" : "size-16 sm:size-24",
         className
       )}
       key={speakerId}

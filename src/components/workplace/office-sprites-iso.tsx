@@ -5,18 +5,80 @@ interface SpriteProps {
   size?: number;
 }
 
-const WOOD_TOP = "#B8814A";
-const WOOD_MID = "#9A6634";
-const WOOD_FRONT = "#6E4A22";
-const WOOD_DARK = "#573417";
-const MONITOR = "#2B2B33";
-const SCREEN = "#4FB6EA";
+const WOOD_TOP = "#C9A66B";
+const WOOD_MID = "#B8814A";
+const WOOD_FRONT = "#9A6634";
+const WOOD_DARK = "#6E4A22";
+const MONITOR = "#1A1A22";
+const CODE_GREEN = "#57A93A";
+const CODE_DARK = "#2F7D2E";
+const CHAIR = "#4A5568";
+const CHAIR_HI = "#5A6578";
+const CHAIR_DK = "#3A4558";
+const CPU = "#8A9199";
+const CPU_DK = "#6E7580";
+const KEYBOARD = "#B8BCC4";
+const MOUSE = "#9CA3AF";
 const MUG = "#FFF6DF";
 
-/**
- * Oblique desk — desktop + front face + monitor + coffee mug (RPG / Stardew style).
- */
+/** Oblique workstation — code monitor, keyboard, mouse, CPU tower, office chair. */
 export function PixelDeskIso({ className, size = 80 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[3px_4px_0_rgba(0,0,0,0.35)]",
+        className
+      )}
+      height={(size * 52) / 56}
+      shapeRendering="crispEdges"
+      viewBox="0 0 56 52"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Workstation</title>
+      {/* CPU tower */}
+      <rect fill={CPU_DK} height="18" width="8" x="2" y="30" />
+      <rect fill={CPU} height="16" width="6" x="3" y="31" />
+      <rect fill="#C0392B" height="1" width="2" x="5" y="34" />
+      <rect fill="#57A93A" height="1" width="2" x="5" y="37" />
+      {/* Chair */}
+      <rect fill={CHAIR_DK} height="10" width="16" x="20" y="36" />
+      <rect fill={CHAIR} height="8" width="12" x="22" y="37" />
+      <rect fill={CHAIR_HI} height="6" width="8" x="24" y="28" />
+      <rect fill={CHAIR_DK} height="4" width="10" x="25" y="26" />
+      {/* Desktop */}
+      <rect fill={WOOD_DARK} height="16" width="40" x="10" y="16" />
+      <rect fill={WOOD_TOP} height="14" width="38" x="11" y="16" />
+      <rect fill={WOOD_MID} height="2" width="38" x="11" y="28" />
+      {/* Front face */}
+      <rect fill={WOOD_FRONT} height="12" width="40" x="10" y="30" />
+      <rect fill={WOOD_DARK} height="12" width="4" x="46" y="30" />
+      {/* Monitor */}
+      <rect fill={MONITOR} height="14" width="18" x="21" y="0" />
+      <rect fill="#0D0D12" height="10" width="14" x="23" y="2" />
+      <rect fill={CODE_GREEN} height="1" width="8" x="25" y="4" />
+      <rect fill={CODE_DARK} height="1" width="6" x="25" y="6" />
+      <rect fill={CODE_GREEN} height="1" width="10" x="25" y="8" />
+      <rect fill={CODE_DARK} height="1" width="4" x="25" y="10" />
+      <rect fill={MONITOR} height="2" width="8" x="26" y="14" />
+      {/* Keyboard + mouse */}
+      <rect fill={KEYBOARD} height="3" width="14" x="14" y="20" />
+      <rect fill="#9CA3AF" height="1" width="12" x="15" y="21" />
+      <rect fill={MOUSE} height="2" width="3" x="32" y="21" />
+    </svg>
+  );
+}
+
+const HIRE_WOOD_TOP = "#B8814A";
+const HIRE_WOOD_MID = "#9A6634";
+const HIRE_WOOD_FRONT = "#6E4A22";
+const HIRE_WOOD_DARK = "#573417";
+const HIRE_MONITOR = "#2B2B33";
+const HIRE_SCREEN = "#4FB6EA";
+
+/** Original empty-desk sprite — kept for "For hire" slots. */
+export function PixelHireDeskIso({ className, size = 80 }: SpriteProps) {
   return (
     <svg
       aria-hidden
@@ -30,23 +92,18 @@ export function PixelDeskIso({ className, size = 80 }: SpriteProps) {
       width={size}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <title>Desk</title>
-      {/* Chair back (behind desk) */}
+      <title>Empty desk</title>
       <rect fill="#4A5058" height="8" width="14" x="17" y="28" />
       <rect fill="#5A6270" height="6" width="10" x="19" y="29" />
-      {/* Desktop top */}
-      <rect fill={WOOD_DARK} height="14" width="36" x="6" y="14" />
-      <rect fill={WOOD_TOP} height="12" width="34" x="7" y="14" />
-      <rect fill={WOOD_MID} height="2" width="34" x="7" y="24" />
-      {/* Front face */}
-      <rect fill={WOOD_FRONT} height="10" width="36" x="6" y="26" />
-      <rect fill={WOOD_DARK} height="10" width="4" x="38" y="26" />
-      {/* Monitor */}
-      <rect fill={MONITOR} height="12" width="16" x="16" y="0" />
-      <rect fill={SCREEN} height="8" width="12" x="18" y="2" />
+      <rect fill={HIRE_WOOD_DARK} height="14" width="36" x="6" y="14" />
+      <rect fill={HIRE_WOOD_TOP} height="12" width="34" x="7" y="14" />
+      <rect fill={HIRE_WOOD_MID} height="2" width="34" x="7" y="24" />
+      <rect fill={HIRE_WOOD_FRONT} height="10" width="36" x="6" y="26" />
+      <rect fill={HIRE_WOOD_DARK} height="10" width="4" x="38" y="26" />
+      <rect fill={HIRE_MONITOR} height="12" width="16" x="16" y="0" />
+      <rect fill={HIRE_SCREEN} height="8" width="12" x="18" y="2" />
       <rect fill="#BFECFF" height="2" width="4" x="20" y="3" />
-      <rect fill={MONITOR} height="2" width="6" x="21" y="12" />
-      {/* Keyboard + mug on desk */}
+      <rect fill={HIRE_MONITOR} height="2" width="6" x="21" y="12" />
       <rect fill="#D9CBB2" height="2" width="10" x="10" y="18" />
       <rect fill={MUG} height="4" width="4" x="30" y="16" />
       <rect fill="#8F5E22" height="1" width="4" x="30" y="16" />
@@ -227,6 +284,61 @@ export function PixelLoungeChairIso({ className, size = 36 }: SpriteProps) {
       <rect fill="#A85D78" height="14" width="4" x="16" y="8" />
       <rect fill="#573417" height="4" width="4" x="5" y="22" />
       <rect fill="#573417" height="4" width="4" x="15" y="22" />
+    </svg>
+  );
+}
+
+/** Two-seater reception sofa (waiting area). */
+export function PixelSofaIso({ className, size = 56 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_3px_0_rgba(0,0,0,0.32)]",
+        className
+      )}
+      height={(size * 28) / 40}
+      shapeRendering="crispEdges"
+      viewBox="0 0 40 28"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Sofa</title>
+      <rect fill="#A85D78" height="8" width="6" x="2" y="4" />
+      <rect fill="#A85D78" height="8" width="6" x="32" y="4" />
+      <rect fill="#C9799A" height="10" width="36" x="2" y="4" />
+      <rect fill="#E896B0" height="12" width="32" x="4" y="10" />
+      <rect fill="#D47A98" height="4" width="32" x="4" y="10" />
+      <rect fill="#573417" height="4" width="4" x="6" y="22" />
+      <rect fill="#573417" height="4" width="4" x="30" y="22" />
+    </svg>
+  );
+}
+
+/** Low tea / coffee table for reception waiting area. */
+export function PixelTeaTableIso({ className, size = 36 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_2px_0_rgba(0,0,0,0.28)]",
+        className
+      )}
+      height={(size * 20) / 28}
+      shapeRendering="crispEdges"
+      viewBox="0 0 28 20"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Tea table</title>
+      <rect fill={WOOD_DARK} height="8" width="22" x="3" y="4" />
+      <rect fill={WOOD_TOP} height="6" width="20" x="4" y="4" />
+      <rect fill={WOOD_FRONT} height="5" width="22" x="3" y="10" />
+      <rect fill="#8F5E22" height="3" width="6" x="11" y="5" />
+      <rect fill={MUG} height="3" width="3" x="8" y="6" />
+      <rect fill={MUG} height="3" width="3" x="17" y="6" />
+      <rect fill="#573417" height="3" width="3" x="12" y="13" />
+      <rect fill="#573417" height="3" width="3" x="16" y="13" />
     </svg>
   );
 }

@@ -333,8 +333,8 @@ Tái sử dụng **patterns**, không import Eve:
 
 | Staff type     | `useSandbox` | Lý do                                     |
 | -------------- | ------------ | ----------------------------------------- |
-| Content Writer | `false`      | Text generation, RAG — không cần file ops |
-| Researcher     | `false`      | Web search + summarize                    |
+| Content Writer | `true` (MVP) | Đọc brief từ Archive, ghi draft `.md` trong workspace |
+| Researcher     | `false`      | Web search + summarize (post-MVP)         |
 | Data Analyst   | `true`       | Cần chạy scripts, xử lý CSV               |
 | Code Reviewer  | `true`       | File read/write trong workspace           |
 
@@ -348,7 +348,7 @@ Khi `useSandbox: true`:
 ## Quyết định kiến trúc
 
 1. **AI SDK thuần** — `ToolLoopAgent` (sync) + `DurableAgent` (async), cùng ecosystem
-2. **Vercel Sandbox per-task** — isolated execution; text-only staff skip sandbox
+2. **Vercel Sandbox per-task** — isolated execution; MVP Writer luôn `useSandbox: true`
 3. **Vercel Workflow** — `start()` fire-and-forget, survive deploys/restarts
 4. **NPC dialogue UX** — RPG dialogue box thay chat bubbles; `useChat` ở data layer
 5. **Per-user isolation** — staff, documents, sandbox scoped by `userId`

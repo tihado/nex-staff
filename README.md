@@ -28,6 +28,7 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 - **Company knowledge** — tài liệu được lưu trữ và tra cứu qua RAG
 - **Workspace** — sàn làm việc pixel: bàn staff, phòng lưu tài liệu, task board
 - **NPC dialogue** — hội thoại kiểu RPG khi click vào agent (overlay trên workspace)
+- **8-bit UI** — design system thống nhất (pixel fonts, panels, không chat app UI)
 
 ## Tech Stack
 

@@ -146,6 +146,6 @@ Chi tiết: [ROADMAP.md](ROADMAP.md)
 | Risk                        | Mitigation                                           |
 | --------------------------- | ---------------------------------------------------- |
 | Sandbox cold start (10-30s) | Pixel "staff đang chuẩn bị..." animation             |
-| LLM cost per task           | `maxSteps` limit; `useSandbox: false` cho text staff |
+| LLM cost per task           | `maxSteps` limit; destroy sandbox sau task complete  |
 | RAG hallucination           | Citation required; chunking eval benchmark           |
 | AI SDK 7 experimental APIs  | Pin versions; monitor changelog                      |

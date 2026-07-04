@@ -118,11 +118,13 @@ interface ToolDef {
 
 | Template     | Role                 | useSandbox | Default Skills                        |
 | ------------ | -------------------- | ---------- | ------------------------------------- |
-| `writer`     | Content Writer       | false      | Blog writing, SEO, tone adaptation    |
+| `writer`     | Content Writer       | **true** (MVP) | Blog writing, file draft, tone adaptation |
 | `researcher` | Researcher           | false      | Web research, summarization, citation |
 | `analyst`    | Data Analyst         | true       | CSV analysis, chart generation        |
 | `reviewer`   | Code Reviewer        | true       | Code review, security check           |
 | `social`     | Social Media Manager | false      | Post drafting, hashtag research       |
+
+> **MVP:** Chỉ ship template `writer` với `useSandbox: true` — seed docs từ Archive, ghi deliverable trong sandbox.
 
 ---
 

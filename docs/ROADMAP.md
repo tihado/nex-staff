@@ -194,7 +194,7 @@ Chỉ proceed nếu:
 | Risk                        | Impact                     | Likelihood | Mitigation                                                |
 | --------------------------- | -------------------------- | ---------- | --------------------------------------------------------- |
 | Sandbox cold start (10-30s) | UX delay khi delegate      | High       | Pixel "staff đang chuẩn bị..." animation; set expectation |
-| Vercel Sandbox cost         | Chi phí per sandbox-minute | Medium     | `useSandbox: false` cho text-only staff                   |
+| Vercel Sandbox cost         | Chi phí per sandbox-minute | Medium     | Destroy ngay sau task; monitor usage trên Vercel            |
 | Workflow cold start         | Delay trên hobby tier      | Medium     | Optimize step caching; set user expectation               |
 | LLM API cost                | Nhiều tasks = nhiều calls  | High       | `maxSteps` limit per task                                 |
 | RAG quality                 | Staff trả lời sai từ docs  | Medium     | Citation required; chunking eval benchmark                |

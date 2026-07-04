@@ -101,7 +101,7 @@ Called by `hire_staff` tool or directly.
   "template": "writer",
   "instructions": "Write casual blog posts for startup founders...",
   "documentIds": ["doc-uuid-1"],
-  "useSandbox": false
+  "useSandbox": true
 }
 ```
 

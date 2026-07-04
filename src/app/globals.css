@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/pixel-tokens.css";
+@import "../styles/pixel-animations.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -46,6 +48,21 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-bg-scene: var(--bg-scene);
+  --color-bg-dialogue: var(--bg-dialogue);
+  --color-border-dialogue: var(--border-dialogue);
+  --color-pixel-accent: var(--pixel-accent);
+  --color-highlight: var(--highlight);
+  --color-success: var(--success);
+  --color-alert: var(--alert);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-nameplate-bg: var(--nameplate-bg);
+  --color-choice-bg: var(--choice-bg);
+  --color-choice-hover: var(--choice-hover);
+  --font-family-pixel: var(--font-pixel);
+  --font-family-body: var(--font-body);
 }
 
 :root {
@@ -126,5 +143,10 @@
   }
   html {
     @apply font-sans;
+  }
+
+  .sprite,
+  .portrait {
+    image-rendering: pixelated;
   }
 }

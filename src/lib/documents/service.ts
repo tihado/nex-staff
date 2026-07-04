@@ -21,6 +21,7 @@ function mapDocumentSummary(
     id: row.id,
     filename: row.filename,
     mimeType: row.mimeType,
+    blobUrl: row.blobUrl,
     status: row.status,
     uploadedAt: toIsoString(row.uploadedAt),
     linkedStaffIds,
@@ -90,6 +91,7 @@ export async function uploadDocument(
       id: row.id,
       filename: row.filename,
       mimeType: row.mimeType,
+      blobUrl: row.blobUrl,
       status: row.status,
       uploadedAt: toIsoString(row.uploadedAt),
     };
@@ -138,6 +140,7 @@ export async function createDocumentFromContent(
       id: row.id,
       filename: row.filename,
       mimeType: row.mimeType,
+      blobUrl: row.blobUrl,
       status: row.status,
       uploadedAt: toIsoString(row.uploadedAt),
     };

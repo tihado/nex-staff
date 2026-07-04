@@ -34,6 +34,7 @@ export const createDocumentTool = tool({
       id: created.id,
       filename: created.filename,
       mimeType: created.mimeType,
+      blobUrl: created.blobUrl,
       status: created.status,
       uploadedAt: created.uploadedAt,
     };

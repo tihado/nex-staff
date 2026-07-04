@@ -14,8 +14,10 @@ interface AssistantChatProps {
 }
 
 interface UploadedDocument {
+  blobUrl: string;
   filename: string;
   id: string;
+  mimeType: string;
 }
 
 function getMessageText(message: AssistantUIMessage): string {
@@ -69,6 +71,8 @@ async function uploadDocument(file: File): Promise<UploadedDocument> {
   return {
     id: payload.id,
     filename: payload.filename,
+    mimeType: payload.mimeType,
+    blobUrl: payload.blobUrl,
   };
 }
 
@@ -118,6 +122,14 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
       const uploaded = await uploadDocument(file);
       await sendMessage({
         text: `Đã upload ${uploaded.filename}. File đã được lưu vào archive.`,
+        files: [
+          {
+            type: "file",
+            filename: uploaded.filename,
+            mediaType: uploaded.mimeType,
+            url: uploaded.blobUrl,
+          },
+        ],
       });
     } catch (uploadFailure) {
       setUploadError(

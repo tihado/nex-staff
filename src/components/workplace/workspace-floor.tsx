@@ -1,7 +1,9 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ReactNode, useMemo } from "react";
+import { useAgentWander } from "@/hooks/use-agent-wander";
 import { cn } from "@/lib/utils";
+import { initialWanderAnchorForStaff } from "@/lib/workplace/wander";
 import { depthZ } from "./iso-projection";
 import {
   PixelMeetingTable,
@@ -148,6 +150,20 @@ export function WorkspaceFloor({
   onSelectZone,
 }: WorkspaceFloorProps) {
   let pantryCounter = 0;
+
+  const roamingStaffIds = useMemo(
+    () =>
+      desks
+        .filter(
+          (desk) =>
+            desk.staffId && desk.location === "roaming" && desk.state === "idle"
+        )
+        .map((desk) => desk.staffId as string),
+    [desks]
+  );
+
+  const { onStaffArrived, reducedMotion, wanderAnchors } =
+    useAgentWander(roamingStaffIds);
 
   return (
     <WorkspaceScene>
@@ -401,6 +417,30 @@ export function WorkspaceFloor({
               key={`${desk.id}-pantry`}
               motionEnabled
               onSelect={onSelectAgent}
+              variant={index}
+              walkOriginAnchor={slot?.agentAnchor}
+            />
+          );
+        })}
+
+        {desks.map((desk, index) => {
+          if (!desk.staffId || desk.location !== "roaming") {
+            return null;
+          }
+
+          const slot = workspaceDeskSlot(desk.id);
+          const anchor =
+            wanderAnchors[desk.staffId] ??
+            initialWanderAnchorForStaff(desk.staffId);
+
+          return (
+            <WorkspaceAgent
+              anchor={anchor}
+              desk={desk}
+              key={`${desk.id}-roam`}
+              motionEnabled={!reducedMotion}
+              onSelect={onSelectAgent}
+              onStaffArrived={onStaffArrived}
               variant={index}
               walkOriginAnchor={slot?.agentAnchor}
             />

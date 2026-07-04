@@ -60,7 +60,12 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed-dev.ts",
-    "spike:cursor-coder": "tsx scripts/spike-cursor-coder.ts"
+    "spike:cursor-coder": "tsx scripts/spike-cursor-coder.ts",
+    "audio:generate-footsteps": "tsx scripts/generate-workplace-footsteps.ts",
+    "audio:generate-cat-meows": "tsx scripts/generate-workplace-cat-meows.ts",
+    "audio:generate-vocals": "tsx scripts/generate-workplace-vocals.ts",
+    "audio:generate-lofi": "tsx scripts/generate-workplace-lofi.ts",
+    "audio:generate": "pnpm audio:generate-footsteps && pnpm audio:generate-cat-meows && pnpm audio:generate-vocals && pnpm audio:generate-lofi"
   },
   "version": "0.1.0",
   "private": true,

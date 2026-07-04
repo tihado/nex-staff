@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { PixelIcon } from "@/components/pixel";
 import { StaffAvatar } from "@/components/staff/staff-avatar";
 import { useAgentWalk } from "@/hooks/use-agent-walk";
+import { EmoteBubbleAudio } from "@/hooks/use-emote-vocal";
+import { volumeForFloorAnchor } from "@/lib/audio/workplace-audio-volume";
 import { cn } from "@/lib/utils";
 import { PixelCharacterIso } from "./office-sprites-iso";
+import { WorkspaceAgentAudio } from "./workspace-agent-audio";
 import {
   type FloorAnchor,
   WORKSPACE_AGENT_SPRITE_SIZE,
@@ -50,32 +53,52 @@ interface WorkspaceAgentProps {
 
 interface WorkspaceAgentFigureProps {
   desk: WorkspaceDesk;
+  isWalking?: boolean;
+  location: WorkspaceDesk["location"];
+  staffId?: string;
   variant: number;
+  volumeScale?: number;
 }
 
-function WorkspaceAgentFigure({ desk, variant }: WorkspaceAgentFigureProps) {
+function WorkspaceAgentFigure({
+  desk,
+  isWalking = false,
+  location,
+  staffId,
+  variant,
+  volumeScale = 1,
+}: WorkspaceAgentFigureProps) {
   const emote = desk.emote;
 
   return (
     <>
       {emote ? (
-        <span
-          className={cn(
-            "advance-indicator absolute -top-5 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center border-2 border-wood bg-panel text-ink",
-            emote === "notify" && "animate-bounce"
-          )}
-          title={EMOTE_LABEL[emote]}
-        >
-          <PixelIcon
-            className={cn(
-              emote === "idea" && "text-pixel-accent",
-              (emote === "done" || emote === "notify") && "text-success"
-            )}
-            label={EMOTE_LABEL[emote]}
-            name={EMOTE_ICON[emote]}
-            size={16}
+        <>
+          <EmoteBubbleAudio
+            emote={emote}
+            isWalking={isWalking}
+            location={location}
+            staffId={staffId}
+            volumeScale={volumeScale}
           />
-        </span>
+          <span
+            className={cn(
+              "advance-indicator absolute -top-5 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center border-2 border-wood bg-panel text-ink",
+              emote === "notify" && "animate-bounce"
+            )}
+            title={EMOTE_LABEL[emote]}
+          >
+            <PixelIcon
+              className={cn(
+                emote === "idea" && "text-pixel-accent",
+                (emote === "done" || emote === "notify") && "text-success"
+              )}
+              label={EMOTE_LABEL[emote]}
+              name={EMOTE_ICON[emote]}
+              size={16}
+            />
+          </span>
+        </>
       ) : null}
 
       <span className="relative transition-transform group-hover:scale-110">
@@ -122,64 +145,130 @@ export function WorkspaceAgent({
   variant,
   walkOriginAnchor,
 }: WorkspaceAgentProps) {
+  const walkBobRef = useRef<HTMLSpanElement>(null);
+  const [arrivalSignal, setArrivalSignal] = useState(0);
+  const arrivalHandledRef = useRef(false);
+
   const handleArrived = useCallback(() => {
     if (desk.staffId && desk.location === "roaming") {
       onStaffArrived?.(desk.staffId);
     }
   }, [desk.location, desk.staffId, onStaffArrived]);
 
-  const { displayAnchor, durationMs, isWalking, onMoveTransitionEnd } =
-    useAgentWalk(anchor, motionEnabled && layout === "floor", undefined, {
-      onArrived: handleArrived,
-      walkOriginAnchor,
-    });
+  const {
+    displayAnchor,
+    durationMs,
+    isWalking,
+    onMoveTransitionEnd,
+    walkGeneration,
+  } = useAgentWalk(anchor, motionEnabled && layout === "floor", undefined, {
+    onArrived: handleArrived,
+    walkOriginAnchor,
+  });
+
+  const walkGenerationRef = useRef(walkGeneration);
+  if (walkGenerationRef.current !== walkGeneration) {
+    walkGenerationRef.current = walkGeneration;
+    arrivalHandledRef.current = false;
+  }
+
+  const handleTransitionEnd = useCallback(
+    (event: React.TransitionEvent<HTMLElement>) => {
+      const wasWalking = isWalking;
+      onMoveTransitionEnd(event);
+      if (
+        (event.propertyName === "top" || event.propertyName === "left") &&
+        wasWalking &&
+        !arrivalHandledRef.current
+      ) {
+        arrivalHandledRef.current = true;
+        setArrivalSignal((value) => value + 1);
+      }
+    },
+    [isWalking, onMoveTransitionEnd]
+  );
 
   if (layout === "desk") {
     return (
-      <button
-        aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
-        className="group relative z-10 mt-1 flex flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
-        onClick={() => onSelect(desk)}
-        type="button"
-      >
-        <WorkspaceAgentFigure desk={desk} variant={variant} />
-      </button>
+      <>
+        <WorkspaceAgentAudio
+          arrivalSignal={0}
+          desk={desk}
+          durationMs={0}
+          isWalking={false}
+          positionAnchor={anchor}
+          walkGeneration={0}
+        />
+        <button
+          aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
+          className="group relative z-10 mt-1 flex flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
+          onClick={() => onSelect(desk)}
+          type="button"
+        >
+          <WorkspaceAgentFigure
+            desk={desk}
+            location={desk.location}
+            staffId={desk.staffId}
+            variant={variant}
+            volumeScale={volumeForFloorAnchor(anchor)}
+          />
+        </button>
+      </>
     );
   }
 
   return (
-    <button
-      aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
-      className={cn(
-        "group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
-        isWalking && "will-change-[left,top]"
-      )}
-      onClick={() => onSelect(desk)}
-      onTransitionEnd={onMoveTransitionEnd}
-      style={{
-        left: `${displayAnchor.left}%`,
-        top: `${displayAnchor.top}%`,
-        zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 10,
-        transitionDuration: motionEnabled ? `${durationMs}ms` : "0ms",
-        transitionProperty: "left, top",
-        transitionTimingFunction: "linear",
-      }}
-      type="button"
-    >
-      <span
+    <>
+      <WorkspaceAgentAudio
+        arrivalSignal={arrivalSignal}
+        desk={desk}
+        durationMs={durationMs}
+        isWalking={isWalking}
+        positionAnchor={displayAnchor}
+        walkGeneration={walkGeneration}
+      />
+      <button
+        aria-label={`Talk to ${desk.label}${desk.role ? ` (${desk.role})` : ""}`}
         className={cn(
-          "relative flex flex-col items-center gap-0.5",
-          isWalking && "agent-walk-bob"
+          "group absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
+          isWalking && "will-change-[left,top]"
         )}
+        onClick={() => onSelect(desk)}
+        onTransitionEnd={handleTransitionEnd}
+        style={{
+          left: `${displayAnchor.left}%`,
+          top: `${displayAnchor.top}%`,
+          zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 10,
+          transitionDuration:
+            motionEnabled && isWalking ? `${durationMs}ms` : "0ms",
+          transitionProperty: "left, top",
+          transitionTimingFunction: "linear",
+        }}
+        type="button"
       >
-        {isWalking ? (
-          <span
-            aria-hidden
-            className="agent-walk-shadow pointer-events-none absolute -bottom-1 left-1/2 h-1.5 w-8 -translate-x-1/2 rounded-full bg-black/25"
+        <span
+          className={cn(
+            "relative flex flex-col items-center gap-0.5",
+            isWalking && "agent-walk-bob"
+          )}
+          ref={walkBobRef}
+        >
+          {isWalking ? (
+            <span
+              aria-hidden
+              className="agent-walk-shadow pointer-events-none absolute -bottom-1 left-1/2 h-1.5 w-8 -translate-x-1/2 rounded-full bg-black/25"
+            />
+          ) : null}
+          <WorkspaceAgentFigure
+            desk={desk}
+            isWalking={isWalking}
+            location={desk.location}
+            staffId={desk.staffId}
+            variant={variant}
+            volumeScale={volumeForFloorAnchor(displayAnchor)}
           />
-        ) : null}
-        <WorkspaceAgentFigure desk={desk} variant={variant} />
-      </span>
-    </button>
+        </span>
+      </button>
+    </>
   );
 }

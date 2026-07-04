@@ -20,6 +20,7 @@ import { matchChoiceFromTranscript } from "@/lib/voice/match-choice";
 import {
   handleDialogueChoiceSelection,
   handleDialogueInputSubmission,
+  resolveNpcDisplayText,
   resolveScriptedUi,
   useAssistantHireSuccessEffect,
   useDialoguePanelChrome,
@@ -143,19 +144,24 @@ function DialogueOverlayPanel({
 
   const useScriptedUi = resolveScriptedUi(hireContext, hireFlow);
 
-  const displayText = useScriptedUi
-    ? (hireFlow.scripted?.line ?? greeting)
-    : engine.displayText;
-
   const choices = useScriptedUi
     ? (hireFlow.scripted?.choices ?? [])
     : engine.choices;
+
+  const displayText = resolveNpcDisplayText({
+    choices,
+    engineDisplayText: engine.displayText,
+    greeting,
+    hireFlow,
+    useScriptedUi,
+  });
 
   const state = useScriptedUi
     ? (hireFlow.scripted?.dialogueState ?? "npc-speaking")
     : engine.state;
 
-  const isThinking = hireFlow.phase === "submitting" || engine.isThinking;
+  const isThinking =
+    hireFlow.phase === "submitting" || (!useScriptedUi && engine.isThinking);
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {

@@ -89,21 +89,30 @@ export function DialogueMarkdown({
     return null;
   }
 
+  const classNames = cn(
+    "dialogue-markdown font-pixel text-[11px] text-ink leading-[1.9] tracking-tight",
+    className
+  );
+
+  // Scripted hire lines and other static dialogue — plain text avoids Streamdown
+  // fade-in blocks that can leave the NPC box visually empty.
+  if (!isAnimating) {
+    return <p className={cn(classNames, "whitespace-pre-wrap")}>{content}</p>;
+  }
+
   return (
     <Streamdown
-      className={cn(
-        "dialogue-markdown font-pixel text-[11px] text-text-primary leading-[1.9] tracking-tight",
-        className
-      )}
+      animated={false}
+      className={classNames}
       components={createPixelComponents(variant)}
       controls={{
         code: { copy: true, download: false },
         mermaid: false,
         table: false,
       }}
-      isAnimating={isAnimating}
+      isAnimating
       lineNumbers={false}
-      mode={isAnimating ? "streaming" : "static"}
+      mode="streaming"
     >
       {content}
     </Streamdown>

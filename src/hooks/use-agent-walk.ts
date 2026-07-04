@@ -14,6 +14,7 @@ interface AgentWalkState {
   durationMs: number;
   isWalking: boolean;
   onMoveTransitionEnd: (event: React.TransitionEvent<HTMLElement>) => void;
+  walkGeneration: number;
 }
 
 interface UseAgentWalkOptions {
@@ -44,9 +45,12 @@ export function useAgentWalk(
 
   const [durationMs, setDurationMs] = useState(700);
   const [isWalking, setIsWalking] = useState(false);
+  const [walkGeneration, setWalkGeneration] = useState(0);
   const [displayAnchor, setDisplayAnchor] = useState<FloorAnchor>(
     () => walkOriginAnchor ?? anchor
   );
+  const displayAnchorRef = useRef(displayAnchor);
+  displayAnchorRef.current = displayAnchor;
 
   const anchorLeft = anchor.left;
   const anchorTop = anchor.top;
@@ -62,11 +66,15 @@ export function useAgentWalk(
     }
 
     const previous =
-      settledAnchorRef.current ?? walkOriginRef.current ?? target;
+      settledAnchorRef.current ??
+      walkOriginRef.current ??
+      displayAnchorRef.current;
     targetAnchorRef.current = target;
 
     if (anchorsEqual(previous, target)) {
+      settledAnchorRef.current = target;
       setDisplayAnchor(target);
+      setIsWalking(false);
       return;
     }
 
@@ -77,14 +85,20 @@ export function useAgentWalk(
     setDisplayAnchor(previous);
 
     let innerFrame = 0;
+    let cancelled = false;
     const outerFrame = requestAnimationFrame(() => {
       innerFrame = requestAnimationFrame(() => {
+        if (cancelled) {
+          return;
+        }
         setDisplayAnchor(target);
         setIsWalking(true);
+        setWalkGeneration((value) => value + 1);
       });
     });
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(outerFrame);
       cancelAnimationFrame(innerFrame);
     };
@@ -92,7 +106,7 @@ export function useAgentWalk(
 
   const onMoveTransitionEnd = useCallback(
     (event: React.TransitionEvent<HTMLElement>) => {
-      if (event.propertyName !== "top") {
+      if (event.propertyName !== "top" && event.propertyName !== "left") {
         return;
       }
       if (arrivalFiredRef.current) {
@@ -118,5 +132,6 @@ export function useAgentWalk(
     durationMs,
     isWalking,
     onMoveTransitionEnd,
+    walkGeneration,
   };
 }

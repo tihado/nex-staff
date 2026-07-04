@@ -7,8 +7,8 @@ import { getGeminiModel } from "@/lib/ai/google";
 import {
   ASSISTANT_MAX_STEPS,
   DEFAULT_ASSISTANT_CONFIG,
+  DEFAULT_ASSISTANT_INSTRUCTIONS,
 } from "@/lib/assistant-defaults";
-import { listPendingTaskCompletions } from "@/lib/notifications/service";
 import { getTaskStatusForUser } from "@/lib/tasks/service";
 import { type AssistantTools, assistantTools } from "@/lib/tools/assistant";
 
@@ -21,30 +21,6 @@ export interface AssistantRuntimeContext extends Record<string, unknown> {
 export interface CreateAssistantOptions {
   chatId?: string;
   taskId?: string;
-}
-
-async function buildPendingCompletionsInstructions(
-  userId: string
-): Promise<string | null> {
-  const pending = await listPendingTaskCompletions(userId);
-
-  if (pending.length === 0) {
-    return null;
-  }
-
-  const lines = pending.map(
-    (entry) =>
-      `- ${entry.staffName} completed "${entry.title}" (taskId: ${entry.taskId})`
-  );
-
-  return [
-    "--- Undelivered task completions ---",
-    "These tasks finished but the user has not acknowledged them yet:",
-    ...lines,
-    "Proactively mention the most recent completion and offer to show the deliverable.",
-    "Use get_deliverable with the taskId when the user wants to see results.",
-    "Do not paste full deliverable content in chat.",
-  ].join("\n");
 }
 
 async function buildTaskFocusInstructions(
@@ -113,13 +89,7 @@ export async function createAssistant(
   }
 
   const modelId = assistantRow.config?.model ?? DEFAULT_ASSISTANT_CONFIG.model;
-  let instructions = assistantRow.instructions;
-
-  const pendingInstructions = await buildPendingCompletionsInstructions(userId);
-
-  if (pendingInstructions) {
-    instructions = `${instructions}\n\n${pendingInstructions}`;
-  }
+  let instructions = DEFAULT_ASSISTANT_INSTRUCTIONS;
 
   if (options.taskId) {
     const taskFocus = await buildTaskFocusInstructions(userId, options.taskId);

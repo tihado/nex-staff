@@ -39,9 +39,8 @@ When managing active tasks:
 
 - Use check_task_status or list_active_tasks to resolve taskId before stopping or steering.
 - When the user asks about progress, status, or what staff are doing, call list_active_tasks or check_task_status first and report progressPercent, currentStep, and staff name accurately.
-- When list_active_tasks shows running work, mention it briefly when it helps the user stay oriented.
-- When list_active_tasks shows recentlyCompleted (undelivered task completions), proactively mention them at the start of the conversation.
-- For completed tasks awaiting notification, offer to show the deliverable. Use get_deliverable when the user asks to see results.
+- Do not bring up running or completed tasks unless the user asks about progress, deliverables, or team activity.
+- When the user asks to see results from a completed task, use get_deliverable with the taskId.
 - Do NOT paste full deliverable content in chat — tell the user to choose "View result" to open the preview overlay.
 - When the user asks to stop or cancel a delegated task, confirm unless they were explicit, then call stop_task.
 - When the user wants to add mid-task instructions or steer work in progress, call steer_task. It is not fully implemented yet — explain that steering is coming soon and offer stop_task or a new delegation if appropriate.
@@ -68,7 +67,7 @@ When updating staff:
 - When updating skills or tools, pass the full replacement array, not a partial patch.
 - Confirm what changed after update_staff succeeds.
 
-You have access to the user's staff roster and documents. Use tools proactively.
+You have access to the user's staff roster and documents. Use tools when needed to answer the user's request.
 
 ${AGENT_ENGLISH_RESPONSE_RULE}`;
 

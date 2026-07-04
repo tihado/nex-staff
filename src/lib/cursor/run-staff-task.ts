@@ -39,12 +39,14 @@ export async function runCursorStaffTask(
   });
 
   const result = await run.wait();
+  const taskStartedAt = taskRow.startedAt ?? taskRow.createdAt;
   const { deliverableId, content, prUrl, previewUrls } =
     await finalizeCoderDeliverable({
       brief: taskRow.brief,
       github,
       result,
       taskId: taskRow.id,
+      taskStartedAt,
     });
 
   if (prUrl) {

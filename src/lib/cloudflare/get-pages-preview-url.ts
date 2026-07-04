@@ -1,6 +1,13 @@
-const CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4";
-const PREVIEW_POLL_INTERVAL_MS = 10_000;
-const PREVIEW_POLL_TIMEOUT_MS = 180_000;
+import {
+  getCloudflareApiCredentials,
+  getCloudflarePagesProjectName,
+} from "@/lib/cloudflare/config";
+import {
+  CLOUDFLARE_API_BASE,
+  PREVIEW_INITIAL_DELAY_MS,
+  PREVIEW_POLL_INTERVAL_MS,
+  PREVIEW_POLL_TIMEOUT_MS,
+} from "@/lib/cloudflare/constants";
 
 interface CloudflareDeployment {
   aliases?: string[];
@@ -28,15 +35,14 @@ interface CloudflareListDeploymentsResponse {
 function getCloudflarePagesConfig():
   | { accountId: string; apiToken: string; projectName: string }
   | undefined {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
-  const projectName = process.env.CLOUDFLARE_PAGES_PROJECT_NAME?.trim();
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  const credentials = getCloudflareApiCredentials();
+  const projectName = getCloudflarePagesProjectName();
 
-  if (!(accountId && projectName && apiToken)) {
+  if (!(credentials && projectName)) {
     return;
   }
 
-  return { accountId, projectName, apiToken };
+  return { ...credentials, projectName };
 }
 
 function pickDeploymentUrl(
@@ -145,6 +151,8 @@ export async function getCloudflarePagesPreviewUrl(
   if (!getCloudflarePagesConfig()) {
     return;
   }
+
+  await sleep(PREVIEW_INITIAL_DELAY_MS);
 
   const startedAt = Date.now();
 

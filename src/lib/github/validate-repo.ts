@@ -1,20 +1,6 @@
 import { Octokit } from "@octokit/rest";
+import { parseGithubRepoUrl } from "@/lib/github/parse-repo-url";
 import { resolveCoderRepoUrl } from "@/lib/github/resolve-coder-repo";
-
-const LEADING_SLASH_PATTERN = /^\//;
-
-function parseGithubRepoUrl(repoUrl: string): { owner: string; repo: string } {
-  const url = new URL(repoUrl);
-  const [owner, repo] = url.pathname
-    .replace(LEADING_SLASH_PATTERN, "")
-    .split("/");
-
-  if (!(owner && repo)) {
-    throw new Error(`Invalid GitHub repository URL: ${repoUrl}`);
-  }
-
-  return { owner, repo };
-}
 
 function getGitHubClient(): Octokit | null {
   const token = process.env.GITHUB_TOKEN?.trim();

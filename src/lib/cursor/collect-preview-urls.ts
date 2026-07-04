@@ -1,4 +1,6 @@
+import { getCloudflareWorkerName } from "@/lib/cloudflare/config";
 import { getCloudflarePagesPreviewUrl } from "@/lib/cloudflare/get-pages-preview-url";
+import { getCloudflareWorkersPreviewUrl } from "@/lib/cloudflare/get-workers-preview-url";
 
 export async function collectPreviewUrls(input: {
   branch?: string;
@@ -11,12 +13,12 @@ export async function collectPreviewUrls(input: {
   }
 
   if (input.branch) {
-    const cloudflarePreviewUrl = await getCloudflarePagesPreviewUrl(
-      input.branch
-    );
+    const deploymentPreviewUrl = getCloudflareWorkerName()
+      ? await getCloudflareWorkersPreviewUrl(input.branch)
+      : await getCloudflarePagesPreviewUrl(input.branch);
 
-    if (cloudflarePreviewUrl) {
-      previewUrls.push(cloudflarePreviewUrl);
+    if (deploymentPreviewUrl) {
+      previewUrls.push(deploymentPreviewUrl);
     }
   }
 

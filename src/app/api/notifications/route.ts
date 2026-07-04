@@ -1,7 +1,6 @@
 import {
   formatSseEvent,
   listPendingNotifications,
-  markNotificationDelivered,
 } from "@/lib/notifications/service";
 import { getServerViewer } from "@/lib/viewer";
 
@@ -42,7 +41,6 @@ export async function GET(req: Request) {
           controller.enqueue(
             encoder.encode(formatSseEvent(item.type, item.payload))
           );
-          await markNotificationDelivered(viewer.id, item.id);
         }
       };
 

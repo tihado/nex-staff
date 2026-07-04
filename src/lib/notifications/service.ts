@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { notification } from "@/db/schema";
 
@@ -14,7 +14,17 @@ export interface NotificationRecord {
   id: string;
   payload: Record<string, unknown>;
   status: "delivered" | "pending";
+  taskId: string | null;
   type: string;
+}
+
+export interface PendingTaskCompletion {
+  deliverableId: string | null;
+  notificationId: string;
+  staffId: string;
+  staffName: string;
+  taskId: string;
+  title: string;
 }
 
 function toIsoString(value: Date): string {
@@ -28,9 +38,23 @@ function mapNotification(
     id: row.id,
     type: row.type,
     status: row.status,
+    taskId: row.taskId,
     payload: row.payload ?? {},
     createdAt: toIsoString(row.createdAt),
   };
+}
+
+function readPayloadString(
+  payload: Record<string, unknown>,
+  key: string
+): string | null {
+  const value = payload[key];
+
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  return null;
 }
 
 export async function createNotification(input: {
@@ -83,6 +107,67 @@ export async function listPendingNotifications(
   return rows.map(mapNotification);
 }
 
+export async function listPendingTaskCompletions(
+  userId: string
+): Promise<PendingTaskCompletion[]> {
+  const rows = await db.query.notification.findMany({
+    where: and(
+      eq(notification.userId, userId),
+      eq(notification.status, "pending"),
+      eq(notification.type, "task.completed")
+    ),
+    orderBy: desc(notification.createdAt),
+  });
+
+  const taskIds = rows
+    .map((row) => row.taskId)
+    .filter((id): id is string => Boolean(id));
+
+  const taskRows =
+    taskIds.length > 0
+      ? await db.query.task.findMany({
+          where: (taskTable, { and: andOp, eq: equals, inArray: inArrayOp }) =>
+            andOp(
+              equals(taskTable.userId, userId),
+              inArrayOp(taskTable.id, taskIds)
+            ),
+          columns: { id: true, staffId: true, brief: true },
+        })
+      : [];
+
+  const taskById = new Map(taskRows.map((row) => [row.id, row]));
+
+  return rows.flatMap((row) => {
+    if (!row.taskId) {
+      return [];
+    }
+
+    const taskRow = taskById.get(row.taskId);
+
+    if (!taskRow) {
+      return [];
+    }
+
+    const payload = row.payload ?? {};
+    const title =
+      readPayloadString(payload, "deliverableTitle") ??
+      taskRow.brief.trim().split("\n")[0]?.slice(0, 120) ??
+      "Task deliverable";
+    const deliverableId = readPayloadString(payload, "deliverableId");
+
+    return [
+      {
+        notificationId: row.id,
+        taskId: row.taskId,
+        staffId: taskRow.staffId,
+        staffName: readPayloadString(payload, "staffName") ?? "Staff",
+        title,
+        deliverableId,
+      },
+    ];
+  });
+}
+
 export async function markNotificationDelivered(
   userId: string,
   notificationId: string
@@ -107,6 +192,31 @@ export async function markNotificationDelivered(
       deliveredAt: new Date(),
     })
     .where(eq(notification.id, notificationId));
+
+  return true;
+}
+
+export async function markTaskNotificationDelivered(
+  userId: string,
+  taskId: string
+): Promise<boolean> {
+  const rows = await db.query.notification.findMany({
+    where: and(
+      eq(notification.userId, userId),
+      eq(notification.taskId, taskId),
+      eq(notification.status, "pending"),
+      eq(notification.type, "task.completed")
+    ),
+    columns: { id: true },
+  });
+
+  if (rows.length === 0) {
+    return false;
+  }
+
+  for (const row of rows) {
+    await markNotificationDelivered(userId, row.id);
+  }
 
   return true;
 }

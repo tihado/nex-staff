@@ -8,6 +8,8 @@ import {
   type WorkspaceDesk,
 } from "@/components/workplace/workspace-layout";
 import { useTaskEventSource } from "@/hooks/use-task-event-source";
+import { fetchPendingTaskCompletions } from "@/lib/notifications/client";
+import type { PendingTaskCompletion } from "@/lib/notifications/service";
 import type { DeskAssignments } from "@/lib/staff/desk-assignments";
 import {
   pruneDeskAssignments,
@@ -21,36 +23,26 @@ import type {
 } from "@/lib/tasks/types";
 
 const IDEA_PROGRESS_THRESHOLD = 60;
-const DONE_RECENCY_MS = 10 * 60 * 1000;
 
 interface DerivedAgent {
   emote: AgentEmote;
   location: "desk" | "pantry" | "roaming";
+  pendingTaskId: string | null;
   progress: number;
   state: DeskState;
 }
 
 export interface TaskCompletionBanner {
   staffId: string;
+  staffName: string;
   taskId: string;
   title: string;
 }
 
-function isRecentlyCompleted(task: TaskSummary): boolean {
-  if (task.status !== "completed") {
-    return false;
-  }
-
-  if (!task.completedAt) {
-    return true;
-  }
-
-  return Date.now() - new Date(task.completedAt).getTime() < DONE_RECENCY_MS;
-}
-
 function deriveAgent(
   staffMember: StaffSummary,
-  tasks: TaskSummary[]
+  tasks: TaskSummary[],
+  pendingCompletion: PendingTaskCompletion | undefined
 ): DerivedAgent {
   const activeTask = tasks.find(
     (task) => task.status === "running" || task.status === "pending"
@@ -60,6 +52,7 @@ function deriveAgent(
     return {
       state: "working",
       location: "desk",
+      pendingTaskId: null,
       progress: activeTask.progressPercent,
       emote:
         activeTask.progressPercent >= IDEA_PROGRESS_THRESHOLD
@@ -68,28 +61,40 @@ function deriveAgent(
     };
   }
 
-  const completedTask = tasks.find(isRecentlyCompleted);
-
-  if (completedTask) {
+  if (pendingCompletion) {
     return {
       state: "done",
       location: "pantry",
+      pendingTaskId: pendingCompletion.taskId,
       progress: 100,
       emote: "notify",
     };
   }
 
   if (staffMember.status === "offline") {
-    return { state: "offline", location: "desk", progress: 0, emote: null };
+    return {
+      state: "offline",
+      location: "desk",
+      pendingTaskId: null,
+      progress: 0,
+      emote: null,
+    };
   }
 
-  return { state: "idle", location: "roaming", progress: 0, emote: null };
+  return {
+    state: "idle",
+    location: "roaming",
+    pendingTaskId: null,
+    progress: 0,
+    emote: null,
+  };
 }
 
 function buildDesks(
   staffMembers: StaffSummary[],
   tasks: TaskSummary[],
-  deskAssignments: DeskAssignments
+  deskAssignments: DeskAssignments,
+  pendingByStaffId: Map<string, PendingTaskCompletion>
 ): WorkspaceDesk[] {
   const tasksByStaff = new Map<string, TaskSummary[]>();
   for (const task of tasks) {
@@ -141,7 +146,8 @@ function buildDesks(
 
     const derived = deriveAgent(
       staffMember,
-      tasksByStaff.get(staffMember.id) ?? []
+      tasksByStaff.get(staffMember.id) ?? [],
+      pendingByStaffId.get(staffMember.id)
     );
 
     return {
@@ -152,6 +158,7 @@ function buildDesks(
       emote: derived.emote,
       location: derived.location,
       progress: derived.progress,
+      pendingTaskId: derived.pendingTaskId,
       label: staffMember.name,
       role: staffMember.role,
       avatarSprite: staffMember.avatarSprite,
@@ -206,6 +213,18 @@ function upsertTaskProgress(
   return next;
 }
 
+function pendingToMap(
+  pending: PendingTaskCompletion[]
+): Map<string, PendingTaskCompletion> {
+  const map = new Map<string, PendingTaskCompletion>();
+
+  for (const entry of pending) {
+    map.set(entry.staffId, entry);
+  }
+
+  return map;
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -219,12 +238,15 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 interface UseWorkspaceStateResult {
+  acknowledgeCompletion: (taskId: string) => Promise<void>;
   banner: TaskCompletionBanner | null;
   desks: WorkspaceDesk[];
   dismissBanner: () => void;
   error: string | null;
+  getPendingCompletion: (taskId: string) => PendingTaskCompletion | undefined;
   loading: boolean;
   occupiedDeskSlotIds: string[];
+  pendingCompletions: PendingTaskCompletion[];
   refresh: () => Promise<void>;
   staff: StaffSummary[];
   tasks: TaskSummary[];
@@ -234,23 +256,33 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   const [staff, setStaff] = useState<StaffSummary[]>([]);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [deskAssignments, setDeskAssignments] = useState<DeskAssignments>({});
+  const [pendingCompletions, setPendingCompletions] = useState<
+    PendingTaskCompletion[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<TaskCompletionBanner | null>(null);
 
+  const refreshPending = useCallback(async () => {
+    const pending = await fetchPendingTaskCompletions();
+    setPendingCompletions(pending);
+  }, []);
+
   const load = useCallback(async () => {
     try {
-      const [staffResult, tasksResult] = await Promise.all([
+      const [staffResult, tasksResult, pending] = await Promise.all([
         fetchJson<{ staff: StaffSummary[] }>("/api/staff"),
         fetchJson<{ tasks: TaskSummary[] }>(
           "/api/tasks?status=running,pending,completed"
         ),
+        fetchPendingTaskCompletions(),
       ]);
 
       pruneDeskAssignments(staffResult.staff.map((member) => member.id));
 
       setStaff(staffResult.staff);
       setTasks(tasksResult.tasks);
+      setPendingCompletions(pending);
       setDeskAssignments(readDeskAssignments());
       setError(null);
     } catch (loadError) {
@@ -284,28 +316,38 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     [load]
   );
 
-  const handleCompleted = useCallback((payload: TaskCompletedSsePayload) => {
-    const completedAt = new Date().toISOString();
+  const handleCompleted = useCallback(
+    (payload: TaskCompletedSsePayload) => {
+      const completedAt = new Date().toISOString();
+      const staffName =
+        staff.find((member) => member.id === payload.staffId)?.name ?? "Staff";
 
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === payload.taskId
-          ? {
-              ...task,
-              status: "completed" as const,
-              progressPercent: 100,
-              completedAt,
-            }
-          : task
-      )
-    );
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === payload.taskId
+            ? {
+                ...task,
+                status: "completed" as const,
+                progressPercent: 100,
+                completedAt,
+              }
+            : task
+        )
+      );
 
-    setBanner({
-      taskId: payload.taskId,
-      staffId: payload.staffId,
-      title: payload.title,
-    });
-  }, []);
+      setBanner({
+        taskId: payload.taskId,
+        staffId: payload.staffId,
+        staffName,
+        title: payload.title,
+      });
+
+      refreshPending().catch(() => {
+        /* ignore refresh errors */
+      });
+    },
+    [refreshPending, staff]
+  );
 
   useTaskEventSource(
     {
@@ -315,9 +357,14 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     true
   );
 
+  const pendingByStaffId = useMemo(
+    () => pendingToMap(pendingCompletions),
+    [pendingCompletions]
+  );
+
   const desks = useMemo(
-    () => buildDesks(staff, tasks, deskAssignments),
-    [staff, tasks, deskAssignments]
+    () => buildDesks(staff, tasks, deskAssignments, pendingByStaffId),
+    [staff, tasks, deskAssignments, pendingByStaffId]
   );
 
   const occupiedDeskSlotIds = useMemo(
@@ -329,13 +376,50 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
     setBanner(null);
   }, []);
 
+  const acknowledgeCompletion = useCallback(
+    async (taskId: string) => {
+      const match = pendingCompletions.find((entry) => entry.taskId === taskId);
+
+      if (!match) {
+        return;
+      }
+
+      const response = await fetch(
+        `/api/notifications/${match.notificationId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "delivered" }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to acknowledge notification.");
+      }
+
+      setPendingCompletions((current) =>
+        current.filter((entry) => entry.taskId !== taskId)
+      );
+    },
+    [pendingCompletions]
+  );
+
+  const getPendingCompletion = useCallback(
+    (taskId: string) =>
+      pendingCompletions.find((entry) => entry.taskId === taskId),
+    [pendingCompletions]
+  );
+
   return {
+    acknowledgeCompletion,
     banner,
     desks,
     dismissBanner,
     error,
+    getPendingCompletion,
     loading,
     occupiedDeskSlotIds,
+    pendingCompletions,
     refresh: load,
     staff,
     tasks,

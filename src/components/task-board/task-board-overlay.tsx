@@ -17,6 +17,7 @@ interface TaskBoardOverlayProps {
   error?: string | null;
   loading?: boolean;
   onClose: () => void;
+  onViewDeliverable?: (taskId: string) => void;
   tasks: TaskSummary[];
 }
 
@@ -26,6 +27,7 @@ export function TaskBoardOverlay({
   loading = false,
   error = null,
   onClose,
+  onViewDeliverable,
 }: TaskBoardOverlayProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(null);
 
@@ -83,6 +85,7 @@ export function TaskBoardOverlay({
             <TaskDetailPanel
               onBack={handleBackFromDetail}
               onClose={onClose}
+              onViewDeliverable={onViewDeliverable}
               task={selectedTask}
               variant="split"
             />

@@ -4,6 +4,7 @@ import type { useChat } from "@ai-sdk/react";
 import { useCallback, useMemo } from "react";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { extractDelegateProposalChoices } from "@/lib/dialogue/delegate-choices";
+import { extractDeliverableToolChoices } from "@/lib/dialogue/deliverable-choices";
 import {
   extractHireDelegateChoices,
   extractHireProposalChoices,
@@ -147,6 +148,12 @@ function extractChoices(
 
   if (delegateChoices.length > 0) {
     return delegateChoices;
+  }
+
+  const deliverableChoices = extractDeliverableToolChoices(message);
+
+  if (deliverableChoices.length > 0) {
+    return deliverableChoices;
   }
 
   const hireDelegateChoices = extractHireDelegateChoices(

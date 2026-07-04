@@ -31,6 +31,7 @@ interface TaskDetailPanelProps {
   onAskAssistant?: (context: TaskDialogueContext) => void;
   onBack: () => void;
   onClose: () => void;
+  onViewDeliverable?: (taskId: string) => void;
   task: TaskSummary;
   variant?: "modal" | "split";
 }
@@ -197,6 +198,7 @@ export function TaskDetailPanel({
   onBack,
   onClose,
   onAskAssistant,
+  onViewDeliverable,
   variant = "modal",
 }: TaskDetailPanelProps) {
   const { detail, events, preview, loading, error, refresh } = useTaskDetail(
@@ -218,6 +220,15 @@ export function TaskDetailPanel({
       progressPercent: detail?.progressPercent ?? task.progressPercent,
       currentStep: detail?.currentStep ?? task.currentStep,
     });
+  };
+
+  const handleSelectOutputItem = (item: TaskOutputItem) => {
+    if (item.kind === "deliverable" && onViewDeliverable) {
+      onViewDeliverable(task.id);
+      return;
+    }
+
+    setPreviewItem(item);
   };
 
   return (
@@ -254,7 +265,7 @@ export function TaskDetailPanel({
               <TaskProgressSection events={visibleEvents} />
               <TaskOutputSection
                 items={outputItems}
-                onSelectItem={setPreviewItem}
+                onSelectItem={handleSelectOutputItem}
               />
 
               {variant === "modal" && onAskAssistant ? (

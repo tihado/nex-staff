@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArchiveRoomOverlay } from "@/components/archive-room/archive-room-overlay";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -453,12 +452,9 @@ export function WorkplaceHome({
       <OverlayStack className="flex min-h-0 flex-1 flex-col">
         <OverlayStack.Layer id="scene">
           <PixelHUD subtitle={viewerLabel} title="Nex Staff — Workspace">
-            <Link
-              className="pixel-wood-btn inline-flex min-h-9 items-center justify-center px-4 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase no-underline"
-              href="/reception"
-            >
+            <PixelButton onClick={openReception} type="button">
               ◀ Reception
-            </Link>
+            </PixelButton>
             <SignOutButton />
           </PixelHUD>
 

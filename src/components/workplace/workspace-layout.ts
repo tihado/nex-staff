@@ -1,6 +1,6 @@
 import { MAX_STAFF_PER_USER } from "@/lib/staff/constants";
 
-export type AgentEmote = "thinking" | "idea" | "done" | null;
+export type AgentEmote = "thinking" | "idea" | "done" | "notify" | null;
 
 export type AgentLocation = "desk" | "pantry";
 

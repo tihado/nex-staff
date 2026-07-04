@@ -3,10 +3,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { Loader2, SendHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { cn } from "@/lib/utils";
+
+const ASSISTANT_CHAT_STORAGE_KEY = "nex-staff-assistant-chat-id";
 
 interface AssistantChatProps {
   assistantName: string;
@@ -18,6 +20,18 @@ function getMessageText(message: AssistantUIMessage): string {
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("");
+}
+
+function getOrCreateChatId(): string {
+  const existingId = sessionStorage.getItem(ASSISTANT_CHAT_STORAGE_KEY);
+
+  if (existingId) {
+    return existingId;
+  }
+
+  const chatId = crypto.randomUUID();
+  sessionStorage.setItem(ASSISTANT_CHAT_STORAGE_KEY, chatId);
+  return chatId;
 }
 
 function ChatMessage({ message }: { message: AssistantUIMessage }) {
@@ -44,16 +58,29 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
   );
 }
 
-export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
-  const chatId = useMemo(() => crypto.randomUUID(), []);
+function AssistantChatPanel({
+  assistantName,
+  chatId,
+  greeting,
+  initialMessages,
+}: AssistantChatProps & {
+  chatId: string;
+  initialMessages: AssistantUIMessage[];
+}) {
   const [input, setInput] = useState("");
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+      }),
+    []
+  );
 
   const { messages, sendMessage, status, error, stop } =
     useChat<AssistantUIMessage>({
       id: chatId,
-      transport: new DefaultChatTransport({
-        api: "/api/chat",
-      }),
+      messages: initialMessages,
+      transport,
     });
 
   const isBusy = status === "submitted" || status === "streaming";
@@ -146,5 +173,70 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
         </form>
       </div>
     </div>
+  );
+}
+
+async function fetchChatHistory(chatId: string): Promise<AssistantUIMessage[]> {
+  try {
+    const response = await fetch(`/api/chats/${chatId}`);
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = (await response.json()) as {
+      messages?: AssistantUIMessage[];
+    };
+
+    return data.messages ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [initialMessages, setInitialMessages] = useState<
+    AssistantUIMessage[] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadChatHistory() {
+      const id = getOrCreateChatId();
+      const messages = await fetchChatHistory(id);
+
+      if (cancelled) {
+        return;
+      }
+
+      setInitialMessages(messages);
+      setChatId(id);
+    }
+
+    loadChatHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!chatId || initialMessages === null) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-4 py-6 text-muted-foreground text-sm">
+        <Loader2 className="mr-2 size-4 animate-spin" />
+        Loading conversation...
+      </div>
+    );
+  }
+
+  return (
+    <AssistantChatPanel
+      assistantName={assistantName}
+      chatId={chatId}
+      greeting={greeting}
+      initialMessages={initialMessages}
+    />
   );
 }

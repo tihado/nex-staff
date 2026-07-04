@@ -26,6 +26,7 @@ interface TaskDetailPanelProps {
   onBack: () => void;
   onClose: () => void;
   task: TaskSummary;
+  variant?: "modal" | "split";
 }
 
 function formatEventTime(iso: string): string {
@@ -220,6 +221,7 @@ export function TaskDetailPanel({
   onBack,
   onClose,
   onAskAssistant,
+  variant = "modal",
 }: TaskDetailPanelProps) {
   const { detail, events, preview, loading, error, refresh } = useTaskDetail(
     task.id
@@ -245,17 +247,19 @@ export function TaskDetailPanel({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-      <TaskDetailToolbar
-        loading={loading}
-        onBack={onBack}
-        onClose={onClose}
-        onRefresh={() => {
-          refresh().catch(() => {
-            /* handled in hook */
-          });
-        }}
-      />
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">
+        <TaskDetailToolbar
+          loading={loading}
+          onBack={onBack}
+          onClose={onClose}
+          onRefresh={() => {
+            refresh().catch(() => {
+              /* handled in hook */
+            });
+          }}
+        />
+      </div>
 
       {loading ? (
         <p className="font-body text-[20px] text-text-muted">Loading task…</p>
@@ -268,19 +272,21 @@ export function TaskDetailPanel({
       ) : null}
 
       {loading || error ? null : (
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain pr-1">
-          <TaskDetailSummary detail={detail} task={task} />
-          <TaskCheckpointsSection checkpoints={checkpoints} />
-          <TaskProgressSection events={visibleEvents} />
-          <TaskOutputSection output={output} />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+          <div className="flex flex-col gap-5 pb-2">
+            <TaskDetailSummary detail={detail} task={task} />
+            <TaskCheckpointsSection checkpoints={checkpoints} />
+            <TaskProgressSection events={visibleEvents} />
+            <TaskOutputSection output={output} />
 
-          {onAskAssistant ? (
-            <div className="pt-1">
-              <PixelButton onClick={handleAskAssistant}>
-                Ask Assistant about this task
-              </PixelButton>
-            </div>
-          ) : null}
+            {variant === "modal" && onAskAssistant ? (
+              <div className="pt-1">
+                <PixelButton onClick={handleAskAssistant}>
+                  Ask Assistant about this task
+                </PixelButton>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
     </div>

@@ -23,7 +23,9 @@ export const writerTemplate = {
   useSandbox: true,
   defaultInstructions: `You are a Content Writer on the Nex Staff team. You write blog posts and long-form content for startup founders.
 
-Follow the user's tone and audience requirements. Read linked briefs and reference documents before drafting. Save deliverables as Markdown files in the workspace.`,
+Follow the user's tone and audience requirements. Read linked briefs and reference documents before drafting. Save deliverables as Markdown files in the workspace.
+
+Language: Always respond in English and write deliverables in English unless the user explicitly requests another language.`,
   skills: [
     {
       name: "blog-writing",

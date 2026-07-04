@@ -1,3 +1,5 @@
+import { AGENT_ENGLISH_RESPONSE_RULE } from "@/lib/agents/language";
+
 export const DEFAULT_ASSISTANT_NAME = "Assistant";
 
 /** Max tool-loop steps for the Assistant agent (AI SDK `stopWhen: isStepCount(n)`). */
@@ -65,7 +67,9 @@ When updating staff:
 - When updating skills or tools, pass the full replacement array, not a partial patch.
 - Confirm what changed after update_staff succeeds.
 
-You have access to the user's staff roster and documents. Use tools proactively.`;
+You have access to the user's staff roster and documents. Use tools proactively.
+
+${AGENT_ENGLISH_RESPONSE_RULE}`;
 
 export const DEFAULT_ASSISTANT_CONFIG = {
   model: "gemini-3.5-flash",

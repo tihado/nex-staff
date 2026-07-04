@@ -56,6 +56,7 @@ interface WorkplaceHomeProps {
 
 interface ActiveDialogue {
   avatarSprite?: string;
+  freshSession?: boolean;
   greeting: string;
   hireContext?: HireDialogueContext;
   portraitIcon: string;
@@ -402,6 +403,7 @@ export function WorkplaceHome({
       speakerRole: "Coordinator",
       portraitIcon: "android",
       greeting,
+      freshSession: true,
       hireContext: { mode: "assistant" },
     });
   };
@@ -599,6 +601,7 @@ export function WorkplaceHome({
             {dialogue ? (
               <DialogueOverlay
                 avatarSprite={dialogue.avatarSprite}
+                freshSession={dialogue.freshSession}
                 greeting={dialogue.greeting}
                 hasWriterOnRoster={hasWriterOnRoster}
                 hireContext={dialogue.hireContext}

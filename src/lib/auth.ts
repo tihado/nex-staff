@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/db";
 // biome-ignore lint/performance/noNamespaceImport: Better Auth adapter expects the schema object.
 import * as schema from "@/db/schema";
-import { getAuthBaseUrl } from "@/lib/auth-url";
+import { getAuthBaseUrlConfig, getTrustedAuthOrigins } from "@/lib/auth-url";
 import { provisionAssistantForUser } from "@/lib/provision-assistant";
 
 function getAuthSecret(): string {
@@ -25,7 +25,8 @@ export const auth = betterAuth({
     schema,
   }),
   secret: getAuthSecret(),
-  baseURL: getAuthBaseUrl(),
+  baseURL: getAuthBaseUrlConfig(),
+  trustedOrigins: getTrustedAuthOrigins(),
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -33,6 +34,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
   },
   advanced: {
+    trustedProxyHeaders: Boolean(process.env.VERCEL),
     database: {
       generateId: () => crypto.randomUUID(),
     },

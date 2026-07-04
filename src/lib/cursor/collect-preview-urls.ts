@@ -1,86 +1,22 @@
-import type { SDKAgent } from "@cursor/sdk";
-import { put } from "@vercel/blob";
+import { getCloudflarePagesPreviewUrl } from "@/lib/cloudflare/get-pages-preview-url";
 
-const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif"]);
-const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mov"]);
-
-function getExtension(path: string): string {
-  const index = path.lastIndexOf(".");
-  if (index === -1) {
-    return "";
-  }
-
-  return path.slice(index).toLowerCase();
-}
-
-function isPreviewArtifact(path: string): boolean {
-  const extension = getExtension(path);
-  return IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension);
-}
-
-function contentTypeForPath(path: string): string {
-  const extension = getExtension(path);
-
-  switch (extension) {
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".webp":
-      return "image/webp";
-    case ".gif":
-      return "image/gif";
-    case ".mp4":
-      return "video/mp4";
-    case ".webm":
-      return "video/webm";
-    case ".mov":
-      return "video/quicktime";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-async function uploadArtifactToBlob(
-  buffer: Buffer,
-  artifactPath: string,
-  taskId: string
-): Promise<string> {
-  const filename = artifactPath.split("/").pop() ?? "preview.bin";
-  const pathname = `coder-previews/${taskId}/${filename}`;
-  const blob = await put(pathname, buffer, {
-    access: "public",
-    contentType: contentTypeForPath(artifactPath),
-  });
-
-  return blob.url;
-}
-
-export async function collectPreviewUrls(
-  agent: SDKAgent,
-  taskId: string,
-  prUrl?: string
-): Promise<string[]> {
+export async function collectPreviewUrls(input: {
+  branch?: string;
+  prUrl?: string;
+}): Promise<string[]> {
   const previewUrls: string[] = [];
 
-  if (prUrl) {
-    previewUrls.push(prUrl);
+  if (input.prUrl) {
+    previewUrls.push(input.prUrl);
   }
 
-  const artifacts = await agent.listArtifacts();
+  if (input.branch) {
+    const cloudflarePreviewUrl = await getCloudflarePagesPreviewUrl(
+      input.branch
+    );
 
-  for (const artifact of artifacts) {
-    if (!isPreviewArtifact(artifact.path)) {
-      continue;
-    }
-
-    try {
-      const buffer = await agent.downloadArtifact(artifact.path);
-      const blobUrl = await uploadArtifactToBlob(buffer, artifact.path, taskId);
-      previewUrls.push(blobUrl);
-    } catch {
-      // Artifact download is best-effort for preview links.
+    if (cloudflarePreviewUrl) {
+      previewUrls.push(cloudflarePreviewUrl);
     }
   }
 

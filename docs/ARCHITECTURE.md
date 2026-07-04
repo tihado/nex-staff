@@ -19,6 +19,7 @@ Nex Staff build trực tiếp trên **AI SDK 7** — không dùng Eve. Hai lớp
 | Staff runtime     | `DurableAgent` (`@workflow/ai`) hoặc Cursor SDK Cloud (`@cursor/sdk`) |
 | Sandbox           | `@ai-sdk/sandbox-vercel` — `createVercelSandbox()` (writer staff)     |
 | Coder workspace   | GitHub repo (`CODER_GITHUB_REPO_URL`) + Cursor Cloud Agent            |
+| Coder preview     | Cloudflare Pages deployment URL for the PR branch                     |
 | Durability        | Vercel Workflow (`workflow`, `@ai-sdk/workflow`)      |
 | Model provider    | Google Gemini (`@ai-sdk/google`)                |
 | Voice (planned)   | Gemini / Google STT + TTS via `/api/voice/*`    |

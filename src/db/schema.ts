@@ -181,6 +181,7 @@ export interface TaskMetadata {
   }>;
   coder?: {
     branch?: string;
+    cloudflarePreviewUrl?: string;
     previewUrls: string[];
     prUrl?: string;
     repoUrl: string;

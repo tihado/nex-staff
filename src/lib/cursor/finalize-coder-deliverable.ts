@@ -1,4 +1,4 @@
-import type { RunResult, SDKAgent } from "@cursor/sdk";
+import type { RunResult } from "@cursor/sdk";
 import type { StaffGithubConfig } from "@/db/schema";
 import { collectPreviewUrls } from "@/lib/cursor/collect-preview-urls";
 import { buildCoderTaskTitle } from "@/lib/cursor/cursor-agent";
@@ -11,7 +11,6 @@ import { createPullRequestFallback } from "@/lib/github/validate-repo";
 import { saveDeliverable, updateTaskCoderMetadata } from "@/lib/tasks/service";
 
 export async function finalizeCoderDeliverable(input: {
-  agent: SDKAgent;
   brief: string;
   github: StaffGithubConfig;
   result: RunResult;
@@ -35,11 +34,10 @@ export async function finalizeCoderDeliverable(input: {
     });
   }
 
-  const previewUrls = await collectPreviewUrls(
-    input.agent,
-    input.taskId,
-    prUrl
-  );
+  const previewUrls = await collectPreviewUrls({
+    branch: gitBranch?.branch,
+    prUrl,
+  });
 
   const deliverableInput: CoderDeliverableInput = {
     title: buildCoderTaskTitle(input.brief),

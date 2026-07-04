@@ -41,7 +41,6 @@ export async function runCursorStaffTask(
   const result = await run.wait();
   const { deliverableId, content, prUrl, previewUrls } =
     await finalizeCoderDeliverable({
-      agent,
       brief: taskRow.brief,
       github,
       result,

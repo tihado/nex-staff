@@ -1,19 +1,22 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PixelButton } from "@/components/pixel";
 import { authClient } from "@/lib/auth-client";
 
 export function SignOutButton() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSignOut() {
     setIsLoading(true);
-    await authClient.signOut();
-    router.push("/login");
-    router.refresh();
+
+    try {
+      await authClient.signOut();
+    } catch {
+      /* proceed to login even if the API call fails */
+    }
+
+    window.location.assign("/login");
   }
 
   return (

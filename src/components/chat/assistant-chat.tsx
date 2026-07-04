@@ -1,18 +1,26 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type FileUIPart } from "ai";
 import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { cn } from "@/lib/utils";
+import { FileAttachmentChip } from "./file-attachment-chip";
+import { MessageMarkdown } from "./message-markdown";
+import { PendingAttachmentChip } from "./pending-attachment-chip";
 
 const ASSISTANT_CHAT_STORAGE_KEY = "nex-staff-assistant-chat-id";
 
 interface AssistantChatProps {
   assistantName: string;
   greeting: string;
+}
+
+interface PendingFileAttachment {
+  file: File;
+  id: string;
 }
 
 interface UploadedDocument {
@@ -27,6 +35,18 @@ function getMessageText(message: AssistantUIMessage): string {
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("");
+}
+
+function getMessageFileParts(message: AssistantUIMessage): FileUIPart[] {
+  return message.parts.filter(
+    (part): part is FileUIPart => part.type === "file"
+  );
+}
+
+function hasMessageContent(message: AssistantUIMessage): boolean {
+  const hasText = getMessageText(message).trim().length > 0;
+  const hasFiles = getMessageFileParts(message).length > 0;
+  return hasText || hasFiles;
 }
 
 function getOrCreateChatId(): string {
@@ -44,8 +64,10 @@ function getOrCreateChatId(): string {
 function ChatMessage({ message }: { message: AssistantUIMessage }) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
+  const files = getMessageFileParts(message);
+  const variant = isUser ? "user" : "assistant";
 
-  if (!text) {
+  if (!hasMessageContent(message)) {
     return null;
   }
 
@@ -59,7 +81,16 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
             : "border border-border bg-card text-card-foreground"
         )}
       >
-        <p className="whitespace-pre-wrap">{text}</p>
+        <MessageMarkdown content={text} variant={variant} />
+        {files.map((file) => (
+          <FileAttachmentChip
+            filename={file.filename}
+            key={file.url}
+            mediaType={file.mediaType}
+            url={file.url}
+            variant={variant}
+          />
+        ))}
       </div>
     </div>
   );
@@ -119,6 +150,7 @@ function AssistantChatPanel({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<PendingFileAttachment[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const transport = useMemo(
@@ -140,24 +172,20 @@ function AssistantChatPanel({
   const isBusy =
     status === "submitted" || status === "streaming" || isUploading;
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const text = input.trim();
+  const canSend =
+    (input.trim().length > 0 || pendingFiles.length > 0) && !isBusy;
 
-    if (!text || isBusy) {
-      return;
-    }
-
-    sendMessage({ text });
-    setInput("");
+  function handleRemovePendingFile(id: string) {
+    setPendingFiles((current) => current.filter((item) => item.id !== id));
   }
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    event.target.value = "";
+    const text = input.trim();
+    const filesToUpload = pendingFiles;
 
-    if (!file || isBusy) {
+    if ((!text && filesToUpload.length === 0) || isBusy) {
       return;
     }
 
@@ -165,27 +193,65 @@ function AssistantChatPanel({
     setIsUploading(true);
 
     try {
-      const uploaded = await uploadDocument(file);
+      const uploadedFiles =
+        filesToUpload.length > 0
+          ? await Promise.all(
+              filesToUpload.map((item) => uploadDocument(item.file))
+            )
+          : [];
+
+      const messageText =
+        text ||
+        (uploadedFiles.length > 0 ? "Review the attached file(s)." : "");
+
+      if (!messageText) {
+        return;
+      }
+
       await sendMessage({
-        text: `Đã upload ${uploaded.filename}. File đã được lưu vào archive.`,
-        files: [
-          {
-            type: "file",
-            filename: uploaded.filename,
-            mediaType: uploaded.mimeType,
-            url: uploaded.blobUrl,
-          },
-        ],
+        text: messageText,
+        ...(uploadedFiles.length > 0
+          ? {
+              files: uploadedFiles.map((uploaded) => ({
+                type: "file" as const,
+                filename: uploaded.filename,
+                mediaType: uploaded.mimeType,
+                url: uploaded.blobUrl,
+              })),
+            }
+          : {}),
       });
-    } catch (uploadFailure) {
+
+      setInput("");
+      setPendingFiles([]);
+    } catch (submitFailure) {
       setUploadError(
-        uploadFailure instanceof Error
-          ? uploadFailure.message
-          : "Failed to upload document."
+        submitFailure instanceof Error
+          ? submitFailure.message
+          : "Failed to send message with attachments."
       );
     } finally {
       setIsUploading(false);
     }
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const selectedFiles = input.files;
+
+    if (!selectedFiles || selectedFiles.length === 0 || isBusy) {
+      input.value = "";
+      return;
+    }
+
+    const newAttachments = Array.from(selectedFiles).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+    }));
+
+    input.value = "";
+    setUploadError(null);
+    setPendingFiles((current) => [...current, ...newAttachments]);
   }
 
   return (
@@ -234,64 +300,80 @@ function AssistantChatPanel({
       </div>
 
       <div className="border-border border-t bg-background/95 px-4 py-4 backdrop-blur sm:px-6">
-        <form
-          className="mx-auto flex w-full max-w-3xl items-end gap-3"
-          onSubmit={handleSubmit}
-        >
+        <form className="mx-auto w-full max-w-3xl" onSubmit={handleSubmit}>
           <input
             accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain"
             className="sr-only"
             disabled={isBusy}
             id="assistant-chat-file-input"
+            multiple
             onChange={handleFileChange}
             ref={fileInputRef}
             type="file"
           />
 
-          <Button
-            aria-label="Upload document"
-            disabled={isBusy}
-            onClick={() => fileInputRef.current?.click()}
-            size="icon-lg"
-            type="button"
-            variant="outline"
-          >
-            <Paperclip />
-          </Button>
+          <div className="overflow-hidden rounded-2xl border border-input bg-background shadow-xs focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+            {pendingFiles.length > 0 ? (
+              <div className="flex flex-wrap gap-2 border-border border-b bg-muted/60 px-3 py-2.5">
+                {pendingFiles.map((attachment) => (
+                  <PendingAttachmentChip
+                    disabled={isBusy}
+                    filename={attachment.file.name}
+                    key={attachment.id}
+                    mediaType={attachment.file.type || undefined}
+                    onRemove={() => handleRemovePendingFile(attachment.id)}
+                  />
+                ))}
+              </div>
+            ) : null}
 
-          <label className="sr-only" htmlFor="assistant-chat-input">
-            Message {assistantName}
-          </label>
-          <textarea
-            className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm leading-6 shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={status === "submitted" || isUploading}
-            id="assistant-chat-input"
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            placeholder={`Message ${assistantName}...`}
-            rows={1}
-            value={input}
-          />
+            <label className="sr-only" htmlFor="assistant-chat-input">
+              Message {assistantName}
+            </label>
+            <textarea
+              className="max-h-40 min-h-12 w-full resize-none border-0 bg-transparent px-4 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isBusy}
+              id="assistant-chat-input"
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder={`Message ${assistantName}...`}
+              rows={1}
+              value={input}
+            />
 
-          {status === "streaming" ? (
-            <Button onClick={stop} type="button" variant="outline">
-              Stop
-            </Button>
-          ) : (
-            <Button
-              aria-label="Send message"
-              disabled={!input.trim() || isBusy}
-              size="icon-lg"
-              type="submit"
-            >
-              <SendHorizontal />
-            </Button>
-          )}
+            <div className="flex items-center justify-between px-2 pb-2">
+              <Button
+                aria-label="Attach document"
+                disabled={isBusy}
+                onClick={() => fileInputRef.current?.click()}
+                size="icon-lg"
+                type="button"
+                variant="ghost"
+              >
+                <Paperclip />
+              </Button>
+
+              {status === "streaming" ? (
+                <Button onClick={stop} type="button" variant="outline">
+                  Stop
+                </Button>
+              ) : (
+                <Button
+                  aria-label="Send message"
+                  disabled={!canSend}
+                  size="icon-lg"
+                  type="submit"
+                >
+                  <SendHorizontal />
+                </Button>
+              )}
+            </div>
+          </div>
         </form>
       </div>
     </div>

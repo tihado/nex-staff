@@ -99,6 +99,54 @@ export async function uploadDocument(
   }
 }
 
+export async function createDocumentFromContent(
+  userId: string,
+  input: {
+    content: string;
+    filename: string;
+    mimeType: string;
+  }
+): Promise<DocumentUploadResult> {
+  const documentId = crypto.randomUUID();
+  const filename = sanitizeFilename(input.filename);
+  const pathname = buildBlobPath(userId, documentId, filename);
+
+  const blob = await put(pathname, input.content, {
+    access: "public",
+    addRandomSuffix: false,
+    contentType: input.mimeType,
+  });
+
+  try {
+    const [row] = await db
+      .insert(document)
+      .values({
+        id: documentId,
+        userId,
+        filename,
+        mimeType: input.mimeType,
+        blobUrl: blob.url,
+        status: "ready",
+      })
+      .returning();
+
+    if (!row) {
+      throw new Error("Failed to persist created document.");
+    }
+
+    return {
+      id: row.id,
+      filename: row.filename,
+      mimeType: row.mimeType,
+      status: row.status,
+      uploadedAt: toIsoString(row.uploadedAt),
+    };
+  } catch (error) {
+    await del(blob.url).catch(() => undefined);
+    throw error;
+  }
+}
+
 export async function listDocuments(
   userId: string,
   options: { staffId?: string } = {}

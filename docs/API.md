@@ -319,7 +319,7 @@ Tạo staff profile mới.
 
 ### `delegate_task`
 
-Giao việc cho staff — fire-and-forget.
+Giao việc cho staff — fire-and-forget. Assistant có thể kèm checkpoints và acceptance criteria.
 
 ```typescript
 {
@@ -328,6 +328,14 @@ Giao việc cho staff — fire-and-forget.
   inputSchema: z.object({
     staffId: z.string(),
     brief: z.string(),
+    acceptanceCriteria: z.string().optional(),
+    checkpoints: z.array(z.object({
+      label: z.string(),
+      criteria: z.string(),
+      order: z.number(),
+    })).optional(),
+    parentGroupId: z.string().optional(),
+    dependsOn: z.array(z.string()).optional(),
   }),
 }
 ```
@@ -416,6 +424,70 @@ Fetch completed work.
 }
 ```
 
+### `verify_checkpoint`
+
+Verify planned checkpoint — so evidence vs criteria, LLM judge pass/fail.
+
+```typescript
+{
+  name: "verify_checkpoint",
+  description: "Verify a task checkpoint against its criteria using worker evidence",
+  inputSchema: z.object({
+    taskId: z.string(),
+    checkpointId: z.string(),
+  }),
+  // Returns: status (verified|failed), score, reasoning, evidence
+}
+```
+
+### `review_deliverable`
+
+Chấm deliverable vs `acceptanceCriteria` trong task metadata.
+
+```typescript
+{
+  name: "review_deliverable",
+  description: "Review completed deliverable against acceptance criteria",
+  inputSchema: z.object({
+    taskId: z.string(),
+  }),
+  // Returns: score (1-10), passed (boolean), dimensions[], reasoning
+}
+```
+
+### `revise_task`
+
+Gửi feedback cho worker đang chạy hoặc spawn revision task.
+
+```typescript
+{
+  name: "revise_task",
+  description: "Request revision on a running or completed task with specific feedback",
+  inputSchema: z.object({
+    taskId: z.string(),
+    feedback: z.string(),
+    mode: z.enum(["signal", "new_task"]).default("new_task"),
+  }),
+  // signal: Phase 2 workflow signal to running worker
+  // new_task: create task with revised brief + metadata.retryCount++
+}
+```
+
+### `list_queued_tasks`
+
+Pending backlog per staff — tasks created but workflow not started.
+
+```typescript
+{
+  name: "list_queued_tasks",
+  description: "List queued (pending) tasks per staff member",
+  inputSchema: z.object({
+    staffId: z.string().optional(),
+  }),
+  // Returns: { staffId, staffName, queued: [{ taskId, brief, createdAt, queuePosition }] }
+}
+```
+
 ---
 
 ## SSE Events
@@ -426,7 +498,8 @@ Client connects via `GET /api/notifications` (EventSource).
 | ---------------- | ------------------------------------------- | --------------------------------- |
 | `message.delta`  | `{ text: string }`                          | Assistant streaming (via useChat) |
 | `task.started`    | `{ taskId, staffName, staffRole }`                    | Task dispatched to workflow        |
-| `task.progress`   | `{ taskId, progressPercent, currentStep, preview? }`  | Mỗi `reportProgress` step          |
+| `task.progress`   | `{ taskId, progressPercent, currentStep, preview?, checkpointId? }`  | Mỗi `reportProgress` step          |
+| `task.checkpoint` | `{ taskId, checkpointId, label, status }`                            | Checkpoint reached/verified/failed |
 | `task.completed`  | `{ taskId, deliverableId, title, preview }`           | Workflow finished successfully     |
 | `task.failed`     | `{ taskId, error }`                                   | Workflow or agent error            |
 | `staff.hired`    | `{ staffId, name, role, avatarSprite }`     | New staff created                 |
@@ -486,3 +559,4 @@ Standard error format:
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Implementation details
 - [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Tool behavior and delegation
 - [DATA-MODEL.md](DATA-MODEL.md) — Database tables
+- [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests

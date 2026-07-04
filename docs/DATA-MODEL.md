@@ -14,6 +14,7 @@ erDiagram
     staff }o--o{ staff_document : accesses
     document ||--o{ staff_document : linked
     task ||--o{ task_event : logs
+    task ||--o{ task_checkpoint : milestones
     task ||--o| task_preview : drafts
     task ||--o| deliverable : produces
     user ||--o{ notification : receives
@@ -84,6 +85,19 @@ erDiagram
         uuid task_id FK
         text content
         timestamp updated_at
+    }
+
+    task_checkpoint {
+        uuid id PK
+        uuid task_id FK
+        string label
+        text criteria
+        int order_index
+        enum status
+        text evidence
+        timestamp reached_at
+        timestamp verified_at
+        timestamp created_at
     }
 
     notification {
@@ -267,6 +281,9 @@ export const task = pgTable("task", {
 interface TaskMetadata {
   retryCount?: number;
   parentTaskId?: string;
+  parentGroupId?: string;
+  dependsOn?: string[];
+  acceptanceCriteria?: string;
   error?: string;
 }
 ```
@@ -274,6 +291,17 @@ interface TaskMetadata {
 ### `task_event`
 
 Append-only progress log cho task observability.
+
+**Event types** (non-exhaustive):
+
+| Type | Layer |
+|------|-------|
+| `workflow.started`, `workflow.completed`, `workflow.failed` | Workflow |
+| `sandbox.creating`, `sandbox.created` | Sandbox |
+| `agent.step_started`, `agent.step_completed`, `agent.tool_called`, `agent.tool_result`, `agent.text_delta` | Agent |
+| `checkpoint.reached`, `checkpoint.verified`, `checkpoint.failed` | Checkpoints |
+| `worker.query_response` | Phase 2 — dynamic query |
+| `deliverable.saved` | Output |
 
 ```typescript
 export const taskEvent = pgTable("task_event", {
@@ -286,6 +314,36 @@ export const taskEvent = pgTable("task_event", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 ```
+
+### `task_checkpoint`
+
+Planned milestones — Assistant tạo khi delegate; worker báo cáo qua `checkpoint.reached` events.
+
+```typescript
+export const checkpointStatusEnum = pgEnum("checkpoint_status", [
+  "pending",
+  "reached",
+  "verified",
+  "failed",
+]);
+
+export const taskCheckpoint = pgTable("task_checkpoint", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  taskId: uuid("task_id")
+    .notNull()
+    .references(() => task.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  criteria: text("criteria").notNull(),
+  orderIndex: integer("order_index").notNull(),
+  status: checkpointStatusEnum("status").notNull().default("pending"),
+  evidence: text("evidence"),
+  reachedAt: timestamp("reached_at"),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
+**Indexes:** `(task_id, order_index)`, `(task_id, status)`.
 
 ### `task_preview`
 
@@ -542,3 +600,5 @@ async function searchDocuments(
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — How data flows through the system
 - [API.md](API.md) — REST endpoints using these tables
+- [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Checkpoints, supervision, task metadata usage
+- [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Metrics sourced from task/task_event tables

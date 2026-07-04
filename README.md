@@ -47,7 +47,8 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 | ------------------------------------ | --------------------------------------------- |
 | [PRD](docs/PRD.md)                   | Product Requirements Document                 |
 | [Architecture](docs/ARCHITECTURE.md) | Kiến trúc kỹ thuật                            |
-| [Agent System](docs/AGENT-SYSTEM.md) | Hiring, delegation, skills/tools              |
+| [Agent System](docs/AGENT-SYSTEM.md) | Hiring, delegation, supervision, checkpoints |
+| [Eval Framework](docs/EVAL-FRAMEWORK.md) | Worker quality metrics, tests, eval harness |
 | [Data Model](docs/DATA-MODEL.md)     | Database schema                               |
 | [API](docs/API.md)                   | REST endpoints, tools, events                 |
 | [UI/UX](docs/UI-UX.md)               | Workspace tilemap + NPC dialogue 8-bit          |

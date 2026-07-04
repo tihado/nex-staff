@@ -43,6 +43,15 @@ export class TaskCancelledError extends Error {
   }
 }
 
+export class TaskMergeError extends Error {
+  readonly code = "merge_error" as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "TaskMergeError";
+  }
+}
+
 export function isTaskCancelledError(error: unknown): boolean {
   return (
     error instanceof TaskCancelledError ||

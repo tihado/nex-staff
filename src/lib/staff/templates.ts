@@ -1,14 +1,18 @@
+import type { StaffConfig, StaffRuntimeProvider } from "@/db/schema";
 import type {
   HireStaffInput,
   StaffSkill,
   StaffTemplateId,
   StaffToolDef,
 } from "@/lib/staff/types";
+import { coderTemplate } from "@/lib/templates/coder";
 import { writerTemplate } from "@/lib/templates/writer";
 
 export interface AppliedStaffProfile {
+  config?: StaffConfig;
   instructions: string;
   role: string;
+  runtimeProvider?: StaffRuntimeProvider;
   skills: StaffSkill[];
   tools: StaffToolDef[];
   useSandbox: boolean;
@@ -16,17 +20,23 @@ export interface AppliedStaffProfile {
 
 const STAFF_TEMPLATES = {
   writer: writerTemplate,
+  coder: coderTemplate,
 } as const;
 
 export function applyTemplate(
   templateId: StaffTemplateId,
-  overrides: Pick<HireStaffInput, "instructions" | "role" | "useSandbox">
+  overrides: Pick<
+    HireStaffInput,
+    "githubRepoUrl" | "instructions" | "role" | "useSandbox"
+  >
 ): AppliedStaffProfile {
   const template = STAFF_TEMPLATES[templateId];
 
-  return {
+  const profile: AppliedStaffProfile = {
     role: overrides.role || template.role,
     useSandbox: overrides.useSandbox ?? template.useSandbox,
+    runtimeProvider:
+      "runtimeProvider" in template ? template.runtimeProvider : undefined,
     instructions: mergeInstructions(
       template.defaultInstructions,
       overrides.instructions
@@ -34,6 +44,14 @@ export function applyTemplate(
     skills: [...template.skills],
     tools: [...template.tools],
   };
+
+  if (templateId === "coder") {
+    profile.config = {
+      runtimeProvider: "cursor_cloud",
+    };
+  }
+
+  return profile;
 }
 
 function mergeInstructions(

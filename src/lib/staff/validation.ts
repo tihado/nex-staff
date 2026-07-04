@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const staffStatusSchema = z.enum(["idle", "working", "offline"]);
 
-export const staffTemplateIdSchema = z.enum(["writer"]);
+export const staffTemplateIdSchema = z.enum(["writer", "coder"]);
 
 export const staffToolHandlerSchema = z.enum([
   "http",
@@ -27,6 +27,7 @@ export const staffToolDefSchema = z.object({
 
 export const hireStaffBodySchema = z.object({
   documentIds: z.array(z.string().uuid()).optional(),
+  githubRepoUrl: z.string().url().optional(),
   instructions: z.string().min(1),
   name: z.string().min(1),
   role: z.string().min(1),

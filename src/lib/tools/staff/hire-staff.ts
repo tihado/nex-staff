@@ -14,9 +14,11 @@ export const hireStaffTool = tool({
       .describe("Display name for the staff member, e.g. Alex"),
     role: z.string().min(1).describe("Job role, e.g. Content Writer"),
     template: z
-      .enum(["writer"])
+      .enum(["writer", "coder"])
       .optional()
-      .describe("Preset template. Use writer for blog and content work."),
+      .describe(
+        "Preset template. Use writer for blog/content work or coder for GitHub coding tasks."
+      ),
     instructions: z
       .string()
       .min(1)
@@ -26,6 +28,13 @@ export const hireStaffTool = tool({
       .optional()
       .describe(
         "Document IDs from list_documents to link as reference material"
+      ),
+    githubRepoUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Optional GitHub repo URL for coder staff. Defaults to CODER_GITHUB_REPO_URL."
       ),
     useSandbox: z
       .boolean()

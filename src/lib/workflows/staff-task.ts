@@ -12,6 +12,7 @@ import {
 } from "@/lib/sandbox/create-staff-sandbox";
 import { extractDeliverableFromSandbox } from "@/lib/sandbox/extract-deliverable";
 import type { StaffSandboxHandle } from "@/lib/sandbox/types";
+import { isCursorCloudStaff } from "@/lib/staff/config";
 import { DEFAULT_STAFF_MODEL } from "@/lib/staff/constants";
 import { DEFAULT_MAX_STEPS } from "@/lib/tasks/constants";
 import { isTaskCancelledError } from "@/lib/tasks/errors";
@@ -27,6 +28,7 @@ import {
   setStaffWorking,
 } from "@/lib/tasks/service";
 import type { ProgressInput } from "@/lib/tasks/types";
+import { runCursorStaffTaskStep } from "@/lib/workflows/staff-task-cursor";
 
 async function assertTaskNotCancelledStep(taskId: string): Promise<void> {
   "use step";
@@ -129,6 +131,20 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
 
     await assertTaskNotCancelledStep(taskId);
     await setStaffWorkingStep(staff.id);
+
+    if (isCursorCloudStaff(staff.config, staff.useSandbox)) {
+      const { deliverableId } = await runCursorStaffTaskStep(taskId);
+
+      await reportProgressStep(taskId, {
+        type: "workflow.completed",
+        label: "Complete",
+        progressPercent: 100,
+        payload: { deliverableId },
+      });
+
+      await createTaskCompletedNotificationStep(taskId);
+      return;
+    }
 
     if (staff.useSandbox) {
       await reportProgressStep(taskId, {

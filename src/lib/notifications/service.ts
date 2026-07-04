@@ -21,10 +21,13 @@ export interface NotificationRecord {
 export interface PendingTaskCompletion {
   deliverableId: string | null;
   notificationId: string;
+  prMerged: boolean;
+  prUrl: string | null;
   staffId: string;
   staffName: string;
   taskId: string;
   title: string;
+  websitePreviewUrl: string | null;
 }
 
 function toIsoString(value: Date): string {
@@ -154,6 +157,8 @@ export async function listPendingTaskCompletions(
       taskRow.brief.trim().split("\n")[0]?.slice(0, 120) ??
       "Task deliverable";
     const deliverableId = readPayloadString(payload, "deliverableId");
+    const websitePreviewUrl = readPayloadString(payload, "websitePreviewUrl");
+    const prUrl = readPayloadString(payload, "prUrl");
 
     return [
       {
@@ -163,6 +168,9 @@ export async function listPendingTaskCompletions(
         staffName: readPayloadString(payload, "staffName") ?? "Staff",
         title,
         deliverableId,
+        websitePreviewUrl,
+        prUrl,
+        prMerged: payload.prMerged === true,
       },
     ];
   });

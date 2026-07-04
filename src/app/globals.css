@@ -202,6 +202,7 @@
 /* --- Retro 8-bit wooden plank button (game menu style) --- */
 .pixel-wood-btn {
   position: relative;
+  margin: 3px;
   color: #ffce3a;
   text-shadow: 2px 2px 0 #4a2410;
   image-rendering: pixelated;
@@ -218,12 +219,26 @@
     #a76d2c 80%,
     #a76d2c 100%
   );
-  /* Stacked hard rings = double pixel frame + crisp drop shadow */
+  border: none;
+  /* Frame rings use box-shadow only (no border) so edges stay crisp when grouped */
   box-shadow:
-    0 0 0 3px #4a2410,
-    0 0 0 6px #7a4a24,
     inset 0 0 0 2px rgba(255, 240, 205, 0.35),
-    5px 5px 0 0 rgba(0, 0, 0, 0.35);
+    0 0 0 2px #7a4a24,
+    0 0 0 4px #4a2410,
+    4px 4px 0 0 rgba(0, 0, 0, 0.35);
+}
+
+.pixel-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+.pixel-button-row-start {
+  justify-content: flex-start;
 }
 
 /* Square metal rivets in the plank corners */
@@ -255,9 +270,9 @@
 
 .pixel-wood-btn:active:not(:disabled) {
   box-shadow:
-    0 0 0 3px #4a2410,
-    0 0 0 6px #7a4a24,
     inset 0 0 0 2px rgba(255, 240, 205, 0.3),
+    0 0 0 2px #7a4a24,
+    0 0 0 4px #4a2410,
     2px 2px 0 0 rgba(0, 0, 0, 0.35);
   transform: translate(2px, 2px);
 }

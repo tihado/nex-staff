@@ -120,6 +120,19 @@ export interface Skill {
 
 export type StaffToolHandler = "http" | "rag" | "sandbox_bash" | "sandbox_file";
 
+export type StaffRuntimeProvider = "vercel_sandbox" | "cursor_cloud";
+
+export interface StaffGithubConfig {
+  cursorAgentId?: string;
+  defaultBranch: string;
+  repoUrl: string;
+}
+
+export interface StaffConfig {
+  github?: StaffGithubConfig;
+  runtimeProvider?: StaffRuntimeProvider;
+}
+
 export interface ToolDef {
   config?: Record<string, unknown>;
   description?: string;
@@ -143,6 +156,7 @@ export const staff = pgTable(
     skills: jsonb("skills").$type<Skill[]>().default([]),
     tools: jsonb("tools").$type<ToolDef[]>().default([]),
     useSandbox: boolean("use_sandbox").notNull().default(false),
+    config: jsonb("config").$type<StaffConfig>().default({}),
     status: staffStatusEnum("status").notNull().default("idle"),
     hiredAt: timestamp("hired_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -165,6 +179,14 @@ export interface TaskMetadata {
     label: string;
     order: number;
   }>;
+  coder?: {
+    branch?: string;
+    cloudflarePreviewUrl?: string;
+    previewUrls: string[];
+    prMergedAt?: string;
+    prUrl?: string;
+    repoUrl: string;
+  };
   dependsOn?: string[];
   documentIds?: string[];
   error?: string;

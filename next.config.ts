@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   },
   // Workflow step bundle imports @vercel/sandbox → @vercel/oidc (CJS).
   // Externalize so Turbopack doesn't inline dynamic require; keep as direct dep for resolution.
-  serverExternalPackages: ["@vercel/oidc"],
+  serverExternalPackages: ["@cursor/sdk", "@octokit/rest", "@vercel/oidc"],
 };
 
 export default withWorkflow(nextConfig);

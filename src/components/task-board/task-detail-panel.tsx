@@ -8,11 +8,17 @@ import {
   PixelProgressBar,
 } from "@/components/pixel";
 import { StaffAvatar } from "@/components/staff/staff-avatar";
+import { CoderPrActionButtons } from "@/components/task-board/coder-pr-action-buttons";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskOutputList } from "@/components/task-board/task-output-list";
 import { useTaskDetail } from "@/hooks/use-task-detail";
 import type { TaskCheckpoint } from "@/lib/tasks/checkpoints";
 import { parseTaskCheckpoints } from "@/lib/tasks/checkpoints";
+import {
+  getCoderPrUrl,
+  getCoderWebsitePreviewUrl,
+  isCoderPrMerged,
+} from "@/lib/tasks/coder-preview";
 import {
   buildQuestLogEvents,
   formatTaskEventLabel,
@@ -335,6 +341,11 @@ export function TaskDetailPanel({
 
   const checkpoints = detail ? parseTaskCheckpoints(detail.metadata) : [];
   const outputItems = buildTaskOutputItems(task, detail, preview);
+  const websitePreviewUrl = detail
+    ? getCoderWebsitePreviewUrl(detail.metadata)
+    : undefined;
+  const prUrl = detail ? getCoderPrUrl(detail.metadata) : undefined;
+  const prMerged = detail ? isCoderPrMerged(detail.metadata) : false;
   const hasDeliverable = outputItems.some(
     (item) => item.kind === "deliverable"
   );
@@ -405,6 +416,23 @@ export function TaskDetailPanel({
                     onSelectItem={handleSelectOutputItem}
                   />
                 </QuestSection>
+                {websitePreviewUrl || prUrl ? (
+                  <QuestSection icon="globe" title="Website">
+                    <div className="pixel-button-row pixel-button-row-start">
+                      <CoderPrActionButtons
+                        onMerged={() => {
+                          refresh().catch(() => {
+                            /* handled in hook */
+                          });
+                        }}
+                        prMerged={prMerged}
+                        prUrl={prUrl}
+                        taskId={task.id}
+                        websitePreviewUrl={websitePreviewUrl}
+                      />
+                    </div>
+                  </QuestSection>
+                ) : null}
               </div>
             </div>
 
@@ -424,7 +452,11 @@ export function TaskDetailPanel({
           content={previewItem.content}
           contentType={previewItem.contentType}
           onClose={() => setPreviewItem(null)}
+          prMerged={prMerged}
+          prUrl={prUrl}
+          taskId={task.id}
           title={previewItem.title}
+          websitePreviewUrl={websitePreviewUrl}
         />
       ) : null}
     </>

@@ -22,6 +22,7 @@ export const maxDuration = 30;
 interface ChatRequestBody {
   id?: string;
   messages?: AssistantUIMessage[];
+  taskId?: string;
 }
 
 function getLastUserMessage(
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
   }
 
   const chatId = parseUuid(body.id);
+  const taskId = body.taskId ? parseUuid(body.taskId) : null;
   const messages = body.messages;
 
   if (!chatId) {
@@ -98,7 +100,10 @@ export async function POST(req: Request) {
   let agent: Awaited<ReturnType<typeof createAssistant>>;
 
   try {
-    agent = await createAssistant(viewer.id, { chatId });
+    agent = await createAssistant(viewer.id, {
+      chatId,
+      taskId: taskId ?? undefined,
+    });
   } catch (error) {
     logAssistantError("create-assistant", error);
     return NextResponse.json(

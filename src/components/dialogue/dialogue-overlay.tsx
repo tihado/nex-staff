@@ -26,6 +26,29 @@ interface DialogueOverlayProps {
   speakerId: string;
   speakerName: string;
   speakerRole?: string;
+  taskId?: string;
+}
+
+function createAssistantTransport(taskId?: string) {
+  return new DefaultChatTransport({
+    api: "/api/chat",
+    fetch: (url, init) => {
+      if (!(taskId && init?.body)) {
+        return fetch(url, init);
+      }
+
+      try {
+        const parsed = JSON.parse(String(init.body)) as Record<string, unknown>;
+
+        return fetch(url, {
+          ...init,
+          body: JSON.stringify({ ...parsed, taskId }),
+        });
+      } catch {
+        return fetch(url, init);
+      }
+    },
+  });
 }
 
 const PLAYER_NAME = "Boss (you)";
@@ -60,11 +83,9 @@ function DialogueOverlayPanel({
   chatId,
   initialMessages,
   onClose,
+  taskId,
 }: DialogueOverlayPanelProps) {
-  const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/chat" }),
-    []
-  );
+  const transport = useMemo(() => createAssistantTransport(taskId), [taskId]);
 
   const chat = useChat<AssistantUIMessage>({
     id: chatId,
@@ -228,6 +249,7 @@ export function DialogueOverlay({
   greeting,
   chatId: chatIdProp,
   onClose,
+  taskId,
 }: DialogueOverlayProps) {
   const [chatId, setChatId] = useState<string | null>(chatIdProp ?? null);
   const [initialMessages, setInitialMessages] = useState<
@@ -282,6 +304,7 @@ export function DialogueOverlay({
       speakerId={speakerId}
       speakerName={speakerName}
       speakerRole={speakerRole}
+      taskId={taskId}
     />
   );
 }

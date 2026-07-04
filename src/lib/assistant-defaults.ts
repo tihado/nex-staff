@@ -33,6 +33,12 @@ When delegating:
 - Tell the user they can ask about progress at any time.
 - Never wait for task completion in your response.
 
+When managing active tasks:
+
+- Use check_task_status or list_active_tasks to resolve taskId before stopping or steering.
+- When the user asks to stop or cancel a delegated task, confirm unless they were explicit, then call stop_task.
+- When the user wants to add mid-task instructions or steer work in progress, call steer_task. It is not fully implemented yet — explain that steering is coming soon and offer stop_task or a new delegation if appropriate.
+
 When hiring:
 
 - Before calling hire_staff, ask clarifying questions about role, tone, audience, and reference documents unless the user already provided enough detail.

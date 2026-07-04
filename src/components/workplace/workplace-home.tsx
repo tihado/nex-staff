@@ -8,7 +8,10 @@ import { GameShell } from "@/components/layout";
 import { PixelHUD, PixelNotification } from "@/components/pixel";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { useWorkspaceState } from "@/hooks/use-workspace-state";
-import type { TaskSummary } from "@/lib/tasks/types";
+import {
+  buildTaskDialogueGreeting,
+  type TaskDialogueContext,
+} from "@/lib/dialogue/task-context";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
 import type { WorkspaceDesk } from "./workspace-layout";
@@ -26,6 +29,7 @@ interface ActiveDialogue {
   speakerId: string;
   speakerName: string;
   speakerRole?: string;
+  taskId?: string;
 }
 
 interface ActiveZone {
@@ -105,9 +109,16 @@ export function WorkplaceHome({
     });
   };
 
-  const handleTaskSelect = (_task: TaskSummary) => {
+  const openAssistantForTask = (context: TaskDialogueContext) => {
     setTaskBoardOpen(false);
-    openReception();
+    setDialogue({
+      speakerId: "assistant",
+      speakerName: assistantName,
+      speakerRole: "Coordinator",
+      portraitIcon: "android",
+      greeting: buildTaskDialogueGreeting(assistantName, context),
+      taskId: context.taskId,
+    });
   };
 
   const handleSelectZone = (selected: WorkspaceZone) => {
@@ -164,8 +175,8 @@ export function WorkplaceHome({
         <TaskBoardOverlay
           error={tasksError}
           loading={tasksLoading}
+          onAskAssistant={openAssistantForTask}
           onClose={() => setTaskBoardOpen(false)}
-          onSelectTask={handleTaskSelect}
           tasks={tasks}
         />
       ) : null}
@@ -178,6 +189,7 @@ export function WorkplaceHome({
           speakerId={dialogue.speakerId}
           speakerName={dialogue.speakerName}
           speakerRole={dialogue.speakerRole}
+          taskId={dialogue.taskId}
         />
       ) : null}
 

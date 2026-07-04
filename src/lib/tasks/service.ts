@@ -812,6 +812,7 @@ function mapStaffSummary(row: typeof staff.$inferSelect): TaskStaffSummary {
     id: row.id,
     name: row.name,
     role: row.role,
+    avatarSprite: row.avatarSprite,
   };
 }
 

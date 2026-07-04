@@ -31,6 +31,7 @@ interface WorkplaceHomeProps {
 }
 
 interface ActiveDialogue {
+  avatarSprite?: string;
   greeting: string;
   hireContext?: HireDialogueContext;
   portraitIcon: string;
@@ -155,6 +156,7 @@ export function WorkplaceHome({
       speakerName: desk.label,
       speakerRole: desk.role,
       portraitIcon: "human",
+      avatarSprite: desk.avatarSprite,
       greeting: `Hi boss! I'm ${desk.label}. What can I help with?`,
     });
   };
@@ -264,6 +266,7 @@ export function WorkplaceHome({
 
       {dialogue ? (
         <DialogueOverlay
+          avatarSprite={dialogue.avatarSprite}
           greeting={dialogue.greeting}
           hasWriterOnRoster={hasWriterOnRoster}
           hireContext={dialogue.hireContext}

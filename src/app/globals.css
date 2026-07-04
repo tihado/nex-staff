@@ -337,6 +337,48 @@
   animation: portrait-bounce 0.35s ease-out;
 }
 
+@keyframes agent-walk-bob {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(1px, -4px);
+  }
+  50% {
+    transform: translate(0, 0);
+  }
+  75% {
+    transform: translate(-1px, -4px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes agent-walk-shadow {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: scaleX(0.85);
+  }
+}
+
+.agent-walk-bob {
+  animation: agent-walk-bob 0.5s steps(4) infinite;
+}
+
+.agent-walk-shadow {
+  animation: agent-walk-shadow 0.5s steps(4) infinite;
+}
+
+.agent-walk-bob-slow {
+  animation: agent-walk-bob 0.75s steps(4) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-blink,
   .advance-indicator,

@@ -25,7 +25,7 @@ const DONE_RECENCY_MS = 10 * 60 * 1000;
 
 interface DerivedAgent {
   emote: AgentEmote;
-  location: "desk" | "pantry";
+  location: "desk" | "pantry" | "roaming";
   progress: number;
   state: DeskState;
 }
@@ -83,7 +83,7 @@ function deriveAgent(
     return { state: "offline", location: "desk", progress: 0, emote: null };
   }
 
-  return { state: "idle", location: "desk", progress: 0, emote: null };
+  return { state: "idle", location: "roaming", progress: 0, emote: null };
 }
 
 function buildDesks(

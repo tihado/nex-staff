@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
 import { staff, staffDocument, task } from "@/db/schema";
 import { getDocumentById } from "@/lib/documents/service";
+import { pickRandomAvatarSprite } from "@/lib/staff/avatars";
 import { DEFAULT_STAFF_MODEL, MAX_STAFF_PER_USER } from "@/lib/staff/constants";
 import { StaffLimitError, StaffValidationError } from "@/lib/staff/errors";
 import { resolveStaffProfile } from "@/lib/staff/templates";
@@ -198,7 +199,7 @@ export async function hireStaff(
       userId,
       name: input.name,
       role: profile.role,
-      avatarSprite: profile.avatarSprite,
+      avatarSprite: pickRandomAvatarSprite(),
       model: DEFAULT_STAFF_MODEL,
       instructions: profile.instructions,
       skills: profile.skills,

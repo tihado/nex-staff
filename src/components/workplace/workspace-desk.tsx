@@ -2,7 +2,11 @@
 
 import { cn } from "@/lib/utils";
 import { PixelDeskIso } from "./office-sprites-iso";
-import type { FloorAnchor, WorkspaceDesk } from "./workspace-layout";
+import {
+  type FloorAnchor,
+  WORKSPACE_DESK_SPRITE_SIZE,
+  type WorkspaceDesk,
+} from "./workspace-layout";
 
 interface WorkspaceDeskCellProps {
   anchor: FloorAnchor;
@@ -37,7 +41,7 @@ export function WorkspaceDeskCell({
       className={cn("absolute -translate-x-1/2 -translate-y-[78%]")}
       style={positionStyle}
     >
-      <PixelDeskIso size={72} />
+      <PixelDeskIso size={WORKSPACE_DESK_SPRITE_SIZE} />
     </div>
   );
 }
@@ -70,9 +74,9 @@ export function WorkspaceHireDeskCell({
     >
       <PixelDeskIso
         className="opacity-70 transition-opacity group-hover:opacity-100"
-        size={72}
+        size={WORKSPACE_DESK_SPRITE_SIZE}
       />
-      <span className="border-2 border-wood border-dashed bg-panel/80 px-1 py-0.5 font-[family-name:var(--font-pixel)] text-[8px] text-ink uppercase tracking-widest group-hover:bg-choice-hover">
+      <span className="border-2 border-wood border-dashed bg-panel/80 px-1.5 py-0.5 font-[family-name:var(--font-pixel)] text-[9px] text-ink uppercase tracking-widest group-hover:bg-choice-hover">
         For hire
       </span>
     </button>

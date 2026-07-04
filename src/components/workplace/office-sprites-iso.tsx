@@ -429,3 +429,115 @@ export function PixelCatIso({ className, size = 32 }: SpriteProps) {
     </svg>
   );
 }
+
+/** Metal filing cabinet for the archive room. */
+export function PixelFilingCabinetIso({ className, size = 36 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_3px_0_rgba(0,0,0,0.35)]",
+        className
+      )}
+      height={(size * 44) / 28}
+      shapeRendering="crispEdges"
+      viewBox="0 0 28 44"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Filing cabinet</title>
+      <rect fill="#4A5058" height="42" width="24" x="2" y="0" />
+      <rect fill="#7A8494" height="40" width="20" x="4" y="1" />
+      <rect fill="#4A5058" height="1" width="20" x="4" y="15" />
+      <rect fill="#4A5058" height="1" width="20" x="4" y="29" />
+      <rect fill="#C2CAD4" height="1" width="6" x="11" y="8" />
+      <rect fill="#C2CAD4" height="1" width="6" x="11" y="22" />
+      <rect fill="#C2CAD4" height="1" width="6" x="11" y="36" />
+      <rect fill="#2B2B33" height="4" width="24" x="2" y="40" />
+    </svg>
+  );
+}
+
+/** Document shelf with colored binders (archive room). */
+export function PixelArchiveShelfIso({ className, size = 48 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_3px_0_rgba(0,0,0,0.3)]",
+        className
+      )}
+      height={(size * 32) / 40}
+      shapeRendering="crispEdges"
+      viewBox="0 0 40 32"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Archive shelf</title>
+      <rect fill="#573417" height="32" width="40" x="0" y="0" />
+      <rect fill="#6E4A22" height="30" width="6" x="34" y="1" />
+      <rect fill="#9C6B3B" height="28" width="32" x="2" y="2" />
+      <rect fill="#C0392B" height="10" width="4" x="4" y="4" />
+      <rect fill="#2E86C1" height="10" width="4" x="10" y="4" />
+      <rect fill="#57A93A" height="10" width="4" x="16" y="4" />
+      <rect fill="#E8A33D" height="10" width="4" x="22" y="4" />
+      <rect fill="#8E5BD0" height="10" width="4" x="28" y="4" />
+      <rect fill="#573417" height="1" width="32" x="2" y="16" />
+      <rect fill="#FF8FB1" height="8" width="4" x="4" y="18" />
+      <rect fill="#4FB6EA" height="8" width="4" x="10" y="18" />
+      <rect fill="#F5A623" height="8" width="4" x="16" y="18" />
+    </svg>
+  );
+}
+
+/** Short room partition wall (archive alcove). */
+export function PixelRoomPartitionIso({ className, size = 48 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_2px_0_rgba(0,0,0,0.3)]",
+        className
+      )}
+      height={(size * 20) / 8}
+      shapeRendering="crispEdges"
+      viewBox="0 0 8 20"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Room partition</title>
+      <rect fill="#1a2030" height="20" width="8" x="0" y="0" />
+      <rect fill="#2a3548" height="20" width="3" x="0" y="0" />
+      <rect fill="#0d1018" height="20" width="2" x="6" y="0" />
+    </svg>
+  );
+}
+
+/** Wall-mounted whiteboard with sticky notes (task board zone). */
+export function PixelWhiteboardIso({ className, size = 64 }: SpriteProps) {
+  return (
+    <svg
+      aria-hidden
+      className={cn(
+        "sprite drop-shadow-[2px_3px_0_rgba(0,0,0,0.35)]",
+        className
+      )}
+      height={(size * 36) / 48}
+      shapeRendering="crispEdges"
+      viewBox="0 0 48 36"
+      width={size}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Whiteboard</title>
+      <rect fill="#6E4A22" height="36" width="48" x="0" y="0" />
+      <rect fill="#F5F5F0" height="30" width="42" x="3" y="3" />
+      <rect fill="#E8E8E0" height="30" width="4" x="41" y="3" />
+      <rect fill="#FFF9C4" height="8" width="8" x="8" y="8" />
+      <rect fill="#FFD6E8" height="7" width="7" x="20" y="10" />
+      <rect fill="#C8F0C8" height="6" width="6" x="32" y="12" />
+      <rect fill="#2B2B33" height="1" width="12" x="8" y="22" />
+      <rect fill="#2B2B33" height="1" width="10" x="8" y="26" />
+      <rect fill="#8A9199" height="4" width="2" x="23" y="32" />
+    </svg>
+  );
+}

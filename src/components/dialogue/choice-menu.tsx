@@ -41,21 +41,14 @@ export function ChoiceMenu({ choices, onSelect }: ChoiceMenuProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const activeChoiceId = visible[selected]?.id;
-
   return (
     <div
-      aria-activedescendant={
-        activeChoiceId ? `dialogue-choice-${activeChoiceId}` : undefined
-      }
       aria-label="Dialogue choices"
       className="flex flex-col gap-2"
       role="menu"
-      tabIndex={0}
     >
       {visible.map((choice, index) => (
         <PixelChoice
-          id={`dialogue-choice-${choice.id}`}
           key={choice.id}
           onClick={() => onSelect(choice.id)}
           onMouseEnter={() => setSelected(index)}

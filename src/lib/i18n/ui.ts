@@ -42,6 +42,10 @@ export const uiStrings = {
     bannerCompleted: (staffName: string, title: string) =>
       `✨ ${staffName} completed: ${title}`,
     hireJoined: (name: string) => `✨ ${name} joined the team!`,
+    activeTasksGreeting: (count: number, baseGreeting: string) => {
+      const taskLabel = count === 1 ? "1 task" : `${count} tasks`;
+      return `${taskLabel} in progress — your team is working in the background. You can hire more staff, delegate new work, or ask about anything else.\n\n${baseGreeting}`;
+    },
     pendingCompletionGreeting: (
       staffName: string,
       title: string,

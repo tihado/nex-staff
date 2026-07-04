@@ -14,7 +14,6 @@ import { PixelButton, PixelHUD, PixelNotification } from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { HireSparkle } from "@/components/workplace/hire-sparkle";
-import { StaffStatusOverlay } from "@/components/workplace/staff-status-overlay";
 import {
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
@@ -27,7 +26,6 @@ import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 import type { TaskDetail, TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
-import { findStaffTask } from "@/lib/workplace/staff-task";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
 
 interface WorkplaceHomeProps {
@@ -59,25 +57,29 @@ interface DeliverablePreviewState {
   title: string;
 }
 
-interface StaffStatusState {
-  desk: WorkspaceDesk;
-  task: TaskSummary | null;
-}
-
 function buildReceptionGreeting(
   baseGreeting: string,
-  pendingCompletions: PendingTaskCompletion[]
+  pendingCompletions: PendingTaskCompletion[],
+  activeTasks: TaskSummary[]
 ): string {
-  if (pendingCompletions.length === 0) {
-    return baseGreeting;
+  if (pendingCompletions.length > 0) {
+    const latest = pendingCompletions[0];
+    return uiStrings.workplace.pendingCompletionGreeting(
+      latest.staffName,
+      latest.title,
+      baseGreeting
+    );
   }
 
-  const latest = pendingCompletions[0];
-  return uiStrings.workplace.pendingCompletionGreeting(
-    latest.staffName,
-    latest.title,
-    baseGreeting
-  );
+  const runningCount = activeTasks.filter(
+    (task) => task.status === "running" || task.status === "pending"
+  ).length;
+
+  if (runningCount > 0) {
+    return uiStrings.workplace.activeTasksGreeting(runningCount, baseGreeting);
+  }
+
+  return baseGreeting;
 }
 
 /**
@@ -109,7 +111,6 @@ export function WorkplaceHome({
     useState<PendingTaskCompletion | null>(null);
   const [deliverablePreview, setDeliverablePreview] =
     useState<DeliverablePreviewState | null>(null);
-  const [staffStatus, setStaffStatus] = useState<StaffStatusState | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [hireCelebration, setHireCelebration] =
@@ -122,9 +123,7 @@ export function WorkplaceHome({
 
   const hasOverlayLayer = dialogue !== null || taskBoardOpen || archiveOpen;
   const hasModalLayer =
-    completionCutscene !== null ||
-    deliverablePreview !== null ||
-    staffStatus !== null;
+    completionCutscene !== null || deliverablePreview !== null;
   const hasNotificationLayer = Boolean(
     banner || hireCelebration || actionError
   );
@@ -239,19 +238,22 @@ export function WorkplaceHome({
       speakerName: assistantName,
       speakerRole: "Coordinator",
       portraitIcon: "android",
-      greeting: buildReceptionGreeting(greeting, pendingCompletions),
+      greeting: buildReceptionGreeting(greeting, pendingCompletions, tasks),
       hireContext: { mode: "assistant" },
     });
   };
 
-  const openHireDialogue = (_deskId: string) => {
+  const openHireDialogue = (deskId: string) => {
     setDialogue({
       speakerId: "assistant",
       speakerName: assistantName,
       speakerRole: "Coordinator",
       portraitIcon: "android",
       greeting: uiStrings.workplace.emptyDeskGreeting,
-      hireContext: { mode: "assistant" },
+      hireContext: {
+        mode: "scripted",
+        deskId,
+      },
     });
   };
 
@@ -260,15 +262,19 @@ export function WorkplaceHome({
       return;
     }
 
-    setStaffStatus({
-      desk,
-      task: findStaffTask(desk, tasks),
-    });
-  };
+    if (desk.state === "done" && desk.pendingTaskId) {
+      openCompletionCutscene(desk.pendingTaskId);
+      return;
+    }
 
-  const openAssistantFromStaffStatus = () => {
-    setStaffStatus(null);
-    openReception();
+    setDialogue({
+      speakerId: desk.staffId,
+      speakerName: desk.label,
+      speakerRole: desk.role,
+      portraitIcon: "human",
+      avatarSprite: desk.avatarSprite,
+      greeting: `Hi boss! I'm ${desk.label}. What can I help with?`,
+    });
   };
 
   const handleStaffHired = useCallback(
@@ -489,18 +495,6 @@ export function WorkplaceHome({
                 handleCloseDeliverablePreview();
               }}
               title={deliverablePreview.title}
-            />
-          ) : null}
-
-          {staffStatus ? (
-            <StaffStatusOverlay
-              desk={staffStatus.desk}
-              onClose={() => setStaffStatus(null)}
-              onOpenAssistant={openAssistantFromStaffStatus}
-              onViewDeliverable={(taskId) => {
-                openDeliverablePreview(taskId);
-              }}
-              task={staffStatus.task}
             />
           ) : null}
         </OverlayStack.Layer>

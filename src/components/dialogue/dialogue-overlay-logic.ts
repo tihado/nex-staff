@@ -5,7 +5,6 @@ import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { readDeliverableTaskIdFromMessage } from "@/lib/dialogue/deliverable-choices";
 import { extractHireStaffSuccessOutput } from "@/lib/dialogue/hire-choices";
 import { detectWriteIntent } from "@/lib/dialogue/hire-intent";
-import { uiStrings } from "@/lib/i18n/ui";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 
@@ -123,7 +122,7 @@ export function handleDialogueChoiceSelection({
   }
 
   if (choiceId === "deliverable-continue") {
-    engine.submitInput({ text: uiStrings.dialogue.continue });
+    engine.submitInput({ text: "Tiếp tục" });
     return;
   }
 

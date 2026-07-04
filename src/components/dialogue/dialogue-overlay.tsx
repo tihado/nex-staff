@@ -9,9 +9,8 @@ import { useHireFlow } from "@/hooks/use-hire-flow";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import {
   fetchAssistantChatHistory,
-  getOrCreateDialogueChatId,
+  getOrCreateAssistantChatId,
 } from "@/lib/chat/assistant-session";
-import { uiStrings } from "@/lib/i18n/ui";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import {
@@ -151,47 +150,6 @@ function DialogueOverlayPanel({
     : engine.state;
 
   const isThinking = hireFlow.phase === "submitting" || engine.isThinking;
-  const isAnimating = !useScriptedUi && engine.isStreaming;
-  const isPlayerInput = state === "player-input";
-  const useTypewriter =
-    !(useScriptedUi || isAnimating || isThinking || isPlayerInput) &&
-    Boolean(displayText.trim());
-
-  const [typewriterComplete, setTypewriterComplete] = useState(!useTypewriter);
-  const [hasAdvanced, setHasAdvanced] = useState(!useTypewriter);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset advance state when the NPC line changes
-  useEffect(() => {
-    setTypewriterComplete(!useTypewriter);
-    setHasAdvanced(!useTypewriter);
-  }, [displayText, useTypewriter]);
-
-  const waitingAdvance =
-    useTypewriter && typewriterComplete && !hasAdvanced && !isThinking;
-
-  const handleAdvance = useCallback(() => {
-    setHasAdvanced(true);
-  }, []);
-
-  useEffect(() => {
-    if (!waitingAdvance) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Enter" && event.key !== " ") {
-        return;
-      }
-
-      event.preventDefault();
-      handleAdvance();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleAdvance, waitingAdvance]);
-
-  const canShowPlayerUi = hasAdvanced || !useTypewriter;
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
@@ -227,29 +185,26 @@ function DialogueOverlayPanel({
     displayText
   );
 
-  const showInput = isPlayerInput;
-  const showChoices = state === "player-choice" && canShowPlayerUi;
+  const showInput = state === "player-input";
+  const showChoices = state === "player-choice";
   const showNpcBox = state === "npc-speaking" || showChoices || showInput;
 
   return (
     <DialogueOverlayPanelView
-      advanceLabel={uiStrings.dialogue.advance}
       avatarSprite={avatarSprite}
       choices={choices}
       displayText={displayText}
       inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}
-      isAnimating={isAnimating}
+      isAnimating={!useScriptedUi && engine.isStreaming}
       isPanel={layout === "panel"}
       isThinking={isThinking}
       log={engine.log}
       logOpen={logOpen}
-      onAdvance={handleAdvance}
       onClose={onClose}
       onCloseLog={() => setLogOpen(false)}
       onOpenLog={() => setLogOpen(true)}
       onSelectChoice={handleSelectChoice}
       onSubmitInput={handleSubmitInput}
-      onTypewriterComplete={() => setTypewriterComplete(true)}
       playerName={PLAYER_NAME}
       portraitIcon={portraitIcon}
       scrollRef={scrollRef}
@@ -258,8 +213,6 @@ function DialogueOverlayPanel({
       showNpcBox={showNpcBox}
       speakerId={speakerId}
       speakerName={speakerName}
-      useTypewriter={useTypewriter}
-      waitingAdvance={waitingAdvance}
     />
   );
 }
@@ -290,7 +243,7 @@ export function DialogueOverlay({
     let cancelled = false;
 
     async function loadSession() {
-      const id = chatIdProp ?? getOrCreateDialogueChatId({ speakerId, taskId });
+      const id = chatIdProp ?? getOrCreateAssistantChatId();
       const messages = await fetchAssistantChatHistory(id);
 
       if (cancelled) {
@@ -301,21 +254,18 @@ export function DialogueOverlay({
       setChatId(id);
     }
 
-    setChatId(null);
-    setInitialMessages(null);
     loadSession();
 
     return () => {
       cancelled = true;
     };
-  }, [chatIdProp, speakerId, taskId]);
+  }, [chatIdProp]);
 
   if (!chatId || initialMessages === null) {
     return (
       <div
         aria-busy="true"
         aria-label={`Loading dialogue with ${speakerName}`}
-        aria-modal={layout === "panel" ? undefined : true}
         className={cn(
           "flex items-center justify-center",
           layout === "panel"

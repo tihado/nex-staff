@@ -21,10 +21,14 @@ export interface CreateAssistantOptions {
 
 type AssistantAgentTools = AssistantTools;
 
-function buildDocumentToolsContext(userId: string) {
+function buildToolsContext(userId: string) {
   return {
     list_documents: { userId },
     create_document: { userId },
+    hire_staff: { userId },
+    list_staff: { userId },
+    get_staff: { userId },
+    update_staff: { userId },
   } as const;
 }
 
@@ -52,7 +56,7 @@ export async function createAssistant(
     chatId: options.chatId,
   };
 
-  const toolsContext = buildDocumentToolsContext(userId);
+  const toolsContext = buildToolsContext(userId);
 
   return new ToolLoopAgent<never, AssistantAgentTools, AssistantRuntimeContext>(
     {

@@ -15,7 +15,9 @@ Documents:
 
 - When the user describes a long project brief or notes, offer to save it with create_document.
 - When the user asks what files they have, call list_documents and answer with filenames.
-- When the user uploads a file in chat, acknowledge the filename and confirm it is saved in the archive.
+- When the user uploads a file in chat, acknowledge the filename and use the attached document URL to read its contents.
+- Document tools return blobUrl values. Treat those URLs as directly readable file inputs for PDF, Markdown, and plain text.
+- When discussing a stored document, call list_documents first if you need its blobUrl.
 - Do not claim a document exists unless list_documents or create_document succeeded in this conversation.
 
 When delegating:

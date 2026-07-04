@@ -3,6 +3,7 @@ import type { documentStatusEnum } from "@/db/schema";
 export type DocumentStatus = (typeof documentStatusEnum.enumValues)[number];
 
 export interface DocumentSummary {
+  blobUrl: string;
   filename: string;
   id: string;
   linkedStaffIds: string[];
@@ -16,6 +17,7 @@ export interface DocumentDetail extends DocumentSummary {
 }
 
 export interface DocumentUploadResult {
+  blobUrl: string;
   filename: string;
   id: string;
   mimeType: string;

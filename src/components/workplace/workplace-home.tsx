@@ -148,14 +148,14 @@ export function WorkplaceHome({
           {/* Speech bubble */}
           <div className="relative border-[3px] border-wood bg-panel px-4 py-2 shadow-[3px_3px_0_0_rgba(122,74,36,0.35)]">
             <span className="font-body text-[20px] text-ink leading-none">
-              Chào boss! Bấm để nói chuyện.
+              Hi boss! Click to talk.
             </span>
             <span className="absolute -bottom-[10px] left-6 h-0 w-0 border-t-[10px] border-t-wood border-r-[8px] border-r-transparent border-l-[8px] border-l-transparent" />
           </div>
 
           {/* Assistant sprite */}
           <button
-            aria-label={`Nói chuyện với ${assistantName}`}
+            aria-label={`Talk to ${assistantName}`}
             className="group flex flex-col items-center gap-2"
             onClick={() => setDialogueOpen(true)}
             type="button"

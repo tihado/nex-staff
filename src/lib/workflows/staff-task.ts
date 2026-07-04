@@ -93,15 +93,15 @@ function summarizeStep(step: StepResult<ToolSet>): string {
   const toolNames = step.toolCalls?.map((call) => call.toolName) ?? [];
 
   if (toolNames.length > 0) {
-    return `Đang dùng: ${toolNames.join(", ")}`;
+    return `Using: ${toolNames.join(", ")}`;
   }
 
   if (step.text) {
     const excerpt = step.text.trim().slice(0, 80);
-    return excerpt.length > 0 ? excerpt : "Đang xử lý...";
+    return excerpt.length > 0 ? excerpt : "Processing...";
   }
 
-  return "Đang xử lý...";
+  return "Processing...";
 }
 
 export async function staffTaskWorkflow(taskId: string): Promise<void> {
@@ -113,7 +113,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
   try {
     await reportProgressStep(taskId, {
       type: "workflow.started",
-      label: "Bắt đầu công việc",
+      label: "Starting work",
       progressPercent: 0,
     });
 
@@ -125,7 +125,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
     if (staff.useSandbox) {
       await reportProgressStep(taskId, {
         type: "sandbox.creating",
-        label: "Chuẩn bị workspace...",
+        label: "Preparing workspace...",
         progressPercent: 5,
       });
 
@@ -134,7 +134,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
 
       await reportProgressStep(taskId, {
         type: "sandbox.created",
-        label: "Workspace sẵn sàng",
+        label: "Workspace ready",
         progressPercent: 10,
         payload: { durationMs: Date.now() - sandboxStartedAt },
       });
@@ -160,7 +160,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
 
         await reportProgressStep(taskId, {
           type: "agent.step_started",
-          label: `Bước ${stepIndex}/${maxSteps}`,
+          label: `Step ${stepIndex}/${maxSteps}`,
           payload: { step: stepIndex, maxSteps },
         });
 
@@ -178,7 +178,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
         if (step.text) {
           await reportProgressStep(taskId, {
             type: "agent.text_delta",
-            label: "Đang viết draft...",
+            label: "Writing draft...",
             payload: { length: step.text.length },
           });
           await appendTaskPreviewStep(taskId, step.text);
@@ -221,7 +221,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
 
     await reportProgressStep(taskId, {
       type: "workflow.completed",
-      label: "Hoàn thành",
+      label: "Complete",
       progressPercent: 100,
       payload: { deliverableId },
     });

@@ -31,9 +31,9 @@ const COLOR_SWATCHES = [
 ] as const;
 
 const DEMO_CHOICES: PixelChoiceOption[] = [
-  { id: "hire", label: "Có, hire Content Writer" },
-  { id: "later", label: "Không, để sau" },
-  { id: "explain", label: "Giải thích thêm về role này" },
+  { id: "hire", label: "Yes, hire Content Writer" },
+  { id: "later", label: "No, maybe later" },
+  { id: "explain", label: "Explain more about this role" },
 ];
 
 function Section({
@@ -150,7 +150,7 @@ export function DesignSystemShowcase() {
             showAdvancePrompt
             speakerName="Assistant"
           >
-            Chào boss! Hôm nay cần gì?
+            Hi boss! What do you need today?
             <span className="pixel-cursor-blink">█</span>
           </PixelDialogueBox>
         </Section>
@@ -173,7 +173,7 @@ export function DesignSystemShowcase() {
             </PixelButton>
             {showNotification ? (
               <PixelNotification
-                message="Alex đã hoàn thành!"
+                message="Alex has finished!"
                 onDismiss={() => setShowNotification(false)}
                 title="QUEST COMPLETE"
               />

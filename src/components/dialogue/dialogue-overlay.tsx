@@ -23,7 +23,7 @@ interface DialogueOverlayProps {
   speakerRole?: string;
 }
 
-const PLAYER_NAME = "Boss (bạn)";
+const PLAYER_NAME = "Boss (you)";
 
 export function DialogueOverlay({
   speakerId,
@@ -94,13 +94,13 @@ export function DialogueOverlay({
 
   return (
     <div
-      aria-label={`Hội thoại với ${speakerName}`}
+      aria-label={`Dialogue with ${speakerName}`}
       className="fixed inset-0 z-20 flex flex-col"
       role="dialog"
     >
       {/* Backdrop dims the workspace 50% behind the dialogue. */}
       <button
-        aria-label="Đóng hội thoại"
+        aria-label="Close dialogue"
         className="absolute inset-0 cursor-default bg-black/50"
         onClick={onClose}
         tabIndex={-1}
@@ -113,7 +113,7 @@ export function DialogueOverlay({
             <PixelIcon name="list" size={12} /> Log
           </span>
         </PixelButton>
-        <PixelButton aria-label="Đóng (Esc)" onClick={onClose}>
+        <PixelButton aria-label="Close (Esc)" onClick={onClose}>
           <PixelIcon name="close" size={12} />
         </PixelButton>
       </div>
@@ -147,7 +147,7 @@ export function DialogueOverlay({
               />
             ) : (
               <button
-                aria-label="Tiếp tục hội thoại"
+                aria-label="Continue dialogue"
                 className="block w-full text-left"
                 disabled={!speaking}
                 onClick={advance}

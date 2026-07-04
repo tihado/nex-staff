@@ -4,7 +4,7 @@ interface PixelAdvancePromptProps {
 }
 
 export function PixelAdvancePrompt({
-  label = "▼ Tiếp tục",
+  label = "▼ Continue",
   visible = true,
 }: PixelAdvancePromptProps) {
   if (!visible) {

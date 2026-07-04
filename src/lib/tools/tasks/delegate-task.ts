@@ -56,7 +56,7 @@ export const delegateTaskTool = tool({
       staffId: staffMember.id,
       staffName: staffMember.name,
       workflowRunId: run.runId,
-      message: `Đã giao việc cho ${staffMember.name}. Bạn có thể tiếp tục chat.`,
+      message: `Task delegated to ${staffMember.name}. You can keep chatting.`,
     };
   },
 });

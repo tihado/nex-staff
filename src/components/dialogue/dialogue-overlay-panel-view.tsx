@@ -279,8 +279,10 @@ function StandardDialogueContent({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain",
-        isPanel ? "min-h-0 flex-1 p-2 sm:p-3" : "mt-auto p-4 sm:p-6"
+        "pointer-events-auto flex w-full flex-col gap-2 overscroll-contain",
+        isPanel
+          ? "min-h-0 flex-1 overflow-y-auto p-2 sm:p-3"
+          : "max-h-[85dvh] shrink-0 overflow-y-auto p-4 pb-6 sm:p-6"
       )}
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
@@ -394,7 +396,7 @@ export function DialogueOverlayPanelView({
       {isPanel ? null : (
         <button
           aria-label="Close dialogue"
-          className="absolute inset-0 cursor-default bg-black/50"
+          className="absolute inset-0 z-0 cursor-default bg-black/50"
           onClick={onClose}
           tabIndex={-1}
           type="button"
@@ -442,29 +444,31 @@ export function DialogueOverlayPanelView({
           voiceLocale={voiceLocale}
         />
       ) : (
-        <StandardDialogueContent
-          avatarSprite={avatarSprite}
-          chatError={chatError}
-          chatId={chatId}
-          choices={choices}
-          choiceVoice={choiceVoice}
-          displayText={displayText}
-          inputDisabled={inputDisabled}
-          isAnimating={isAnimating}
-          isPanel={isPanel}
-          isThinking={isThinking}
-          onSelectChoice={onSelectChoice}
-          onSubmitInput={onSubmitInput}
-          playerName={playerName}
-          portraitIcon={portraitIcon}
-          scrollRef={scrollRef}
-          showChoices={showChoices}
-          showInput={showInput}
-          showNpcBox={showNpcBox}
-          speakerId={speakerId}
-          speakerName={speakerName}
-          voiceLocale={voiceLocale}
-        />
+        <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col justify-end">
+          <StandardDialogueContent
+            avatarSprite={avatarSprite}
+            chatError={chatError}
+            chatId={chatId}
+            choices={choices}
+            choiceVoice={choiceVoice}
+            displayText={displayText}
+            inputDisabled={inputDisabled}
+            isAnimating={isAnimating}
+            isPanel={isPanel}
+            isThinking={isThinking}
+            onSelectChoice={onSelectChoice}
+            onSubmitInput={onSubmitInput}
+            playerName={playerName}
+            portraitIcon={portraitIcon}
+            scrollRef={scrollRef}
+            showChoices={showChoices}
+            showInput={showInput}
+            showNpcBox={showNpcBox}
+            speakerId={speakerId}
+            speakerName={speakerName}
+            voiceLocale={voiceLocale}
+          />
+        </div>
       )}
 
       {useOppositeLayout && showChoices ? (

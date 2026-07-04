@@ -6,6 +6,7 @@ import {
   initialWanderAnchorForStaff,
   pickNextWanderAnchor,
 } from "@/lib/workplace/wander";
+import { STAFF_WANDER_MOVE_CHANCE } from "@/lib/workplace/wander-config";
 
 const WANDER_PAUSE_MIN_MS = 6000;
 const WANDER_PAUSE_JITTER_MS = 6000;
@@ -36,7 +37,7 @@ function usePrefersReducedMotion(): boolean {
 
 /**
  * Roaming anchors for idle staff. After each walk completes, staff pause 6–12s
- * then pick a new random point inside a roam zone, avoiding other staff.
+ * then ~70% chance to walk to a new point inside a roam zone.
  */
 export function useAgentWander(roamingStaffIds: string[]): {
   onStaffArrived: (staffId: string) => void;
@@ -49,6 +50,7 @@ export function useAgentWander(roamingStaffIds: string[]): {
   );
 
   const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const kickstartedRef = useRef<Set<string>>(new Set());
   const scheduleNextMoveRef = useRef<(staffId: string) => void>(() => {
     /* assigned below */
   });
@@ -73,6 +75,12 @@ export function useAgentWander(roamingStaffIds: string[]): {
         WANDER_PAUSE_MIN_MS + Math.random() * WANDER_PAUSE_JITTER_MS;
       timeoutsRef.current[staffId] = setTimeout(() => {
         delete timeoutsRef.current[staffId];
+
+        if (Math.random() >= STAFF_WANDER_MOVE_CHANCE) {
+          queueMicrotask(() => scheduleNextMoveRef.current(staffId));
+          return;
+        }
+
         setAnchors((current) => {
           const currentAnchor =
             current[staffId] ?? initialWanderAnchorForStaff(staffId);
@@ -116,7 +124,26 @@ export function useAgentWander(roamingStaffIds: string[]): {
         clearStaffTimeout(staffId);
       }
     }
+    for (const staffId of kickstartedRef.current) {
+      if (!active.has(staffId)) {
+        kickstartedRef.current.delete(staffId);
+      }
+    }
   }, [clearStaffTimeout, roamingStaffIds]);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      return;
+    }
+
+    for (const staffId of roamingStaffIds) {
+      if (kickstartedRef.current.has(staffId)) {
+        continue;
+      }
+      kickstartedRef.current.add(staffId);
+      scheduleNextMove(staffId);
+    }
+  }, [reducedMotion, roamingStaffIds, scheduleNextMove]);
 
   useEffect(
     () => () => {

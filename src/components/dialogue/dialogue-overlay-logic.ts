@@ -5,6 +5,8 @@ import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { readDeliverableTaskIdFromMessage } from "@/lib/dialogue/deliverable-choices";
 import { extractHireStaffSuccessOutput } from "@/lib/dialogue/hire-choices";
 import { detectWriteIntent } from "@/lib/dialogue/hire-intent";
+import type { DialogueChoice } from "@/lib/dialogue/types";
+import { uiStrings } from "@/lib/i18n/ui";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
 
@@ -176,10 +178,37 @@ export function resolveScriptedUi(
   hireFlow: HireFlowHelpers
 ): boolean {
   if (hireContext?.mode === "scripted") {
-    return hireFlow.isScriptedActive;
+    return true;
   }
 
   return hireFlow.isScriptedActive && hireFlow.phase !== "idle";
+}
+
+/** NPC line — never leave the dialogue box empty when choices are visible. */
+export function resolveNpcDisplayText(options: {
+  choices: DialogueChoice[];
+  engineDisplayText: string;
+  greeting: string;
+  hireFlow: HireFlowHelpers;
+  useScriptedUi: boolean;
+}): string {
+  const { choices, engineDisplayText, greeting, hireFlow, useScriptedUi } =
+    options;
+
+  const raw = useScriptedUi
+    ? hireFlow.scripted?.line || greeting
+    : engineDisplayText || greeting;
+
+  const trimmed = raw.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+
+  if (choices.some((choice) => choice.id === "hire-explain")) {
+    return uiStrings.hire.proposeDesk;
+  }
+
+  return greeting.trim() || uiStrings.hire.proposeDesk;
 }
 
 export function useDialoguePanelChrome(

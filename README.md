@@ -38,8 +38,9 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 | Agent framework | AI SDK 7 (`ToolLoopAgent`, `DurableAgent`) |
 | Async execution | Vercel Workflow                            |
 | Sandbox         | Vercel Sandbox (`@ai-sdk/sandbox-vercel`)  |
+| Model provider  | Google Gemini (`@ai-sdk/google`)           |
 | Database        | Neon Postgres + Drizzle ORM + pgvector     |
-| Auth            | Better Auth (Google OAuth)                 |
+| Auth            | Better Auth (email/password; Google OAuth later) |
 | Storage         | Vercel Blob                                |
 
 ## Tài liệu
@@ -57,7 +58,60 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 
 ## Trạng thái
 
-**Planning** — dự án đang ở giai đoạn thiết kế. Chưa có implementation.
+**Foundation (issue #3)** — auth, database schema, health check, and Vercel deploy scaffolding are in place. Workplace UI and agent features follow in later issues.
+
+## Local setup
+
+1. Copy env template and fill in values:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Create a [Neon](https://neon.tech) Postgres database and set `DATABASE_URL`.
+
+3. Generate a random `BETTER_AUTH_SECRET` (32+ characters).
+
+4. Add a [Google AI Studio](https://aistudio.google.com/apikey) API key as `GOOGLE_GENERATIVE_AI_API_KEY`.
+
+5. Push the schema to Neon:
+
+```bash
+pnpm db:push
+```
+
+6. Start the dev server:
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3000`, sign up or sign in with email/password, and confirm the placeholder home page shows your user and Assistant IDs.
+
+### Useful commands
+
+| Command | Purpose |
+| ------- | ------- |
+| `pnpm db:generate` | Generate SQL migrations from `src/db/schema.ts` |
+| `pnpm db:migrate` | Apply migrations |
+| `pnpm db:push` | Push schema directly (dev) |
+| `pnpm db:seed` | Verify database connectivity |
+
+### Health check
+
+`GET /api/health` returns `{ ok: true, db: true }` when the app and database are reachable.
+
+### Vercel deploy
+
+Set these environment variables on Vercel:
+
+- `DATABASE_URL`
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL` (optional on Vercel — auto-detected from `VERCEL_URL`)
+- `BLOB_READ_WRITE_TOKEN`
+- `GOOGLE_GENERATIVE_AI_API_KEY`
+
+Enable **Sandbox OIDC** in the Vercel project settings so `@ai-sdk/sandbox-vercel` can authenticate in preview/production. Verify with `GET /api/staging/sandbox-oidc` after deploy (remove that route once confirmed).
 
 ## Đối tượng
 

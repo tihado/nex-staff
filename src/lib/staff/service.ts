@@ -1,7 +1,10 @@
 import { and, asc, count, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
+import type { StaffConfig } from "@/db/schema";
 import { staff, staffDocument, task } from "@/db/schema";
 import { getDocumentById } from "@/lib/documents/service";
+import { buildCoderGithubConfig } from "@/lib/github/resolve-coder-repo";
+import { validateGitHubRepo } from "@/lib/github/validate-repo";
 import { pickRandomAvatarSprite } from "@/lib/staff/avatars";
 import { DEFAULT_STAFF_MODEL, MAX_STAFF_PER_USER } from "@/lib/staff/constants";
 import { StaffLimitError, StaffValidationError } from "@/lib/staff/errors";
@@ -188,6 +191,7 @@ export async function hireStaff(
 
   const documentIds = await validateDocumentIds(userId, input.documentIds);
   const profile = resolveStaffProfile(input);
+  const staffConfig = await buildStaffConfig(input, profile);
   const duplicateNameWarning = await findDuplicateNameWarning(
     userId,
     input.name
@@ -205,6 +209,7 @@ export async function hireStaff(
       skills: profile.skills,
       tools: profile.tools,
       useSandbox: profile.useSandbox,
+      config: staffConfig,
       status: "idle",
     })
     .returning();
@@ -370,4 +375,66 @@ export async function deleteStaff(
   await db.delete(staff).where(eq(staff.id, staffId));
 
   return true;
+}
+
+async function buildStaffConfig(
+  input: HireStaffInput,
+  profile: ReturnType<typeof resolveStaffProfile>
+): Promise<StaffConfig> {
+  const config: StaffConfig = { ...(profile.config ?? {}) };
+
+  if (profile.runtimeProvider) {
+    config.runtimeProvider = profile.runtimeProvider;
+  }
+
+  if (input.template === "coder") {
+    try {
+      const github = await validateGitHubRepo(input.githubRepoUrl);
+      config.github = {
+        repoUrl: github.repoUrl,
+        defaultBranch: github.defaultBranch,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to configure coder GitHub repository.";
+      throw new StaffValidationError(message);
+    }
+  }
+
+  return config;
+}
+
+export async function saveCursorAgentId(
+  staffId: string,
+  cursorAgentId: string
+): Promise<void> {
+  const row = await db.query.staff.findFirst({
+    where: eq(staff.id, staffId),
+    columns: { config: true },
+  });
+
+  if (!row) {
+    throw new Error(`Staff ${staffId} not found.`);
+  }
+
+  const nextConfig: StaffConfig = {
+    ...(row.config ?? {}),
+    github: {
+      repoUrl: row.config?.github?.repoUrl ?? buildCoderGithubConfig().repoUrl,
+      defaultBranch:
+        row.config?.github?.defaultBranch ??
+        buildCoderGithubConfig().defaultBranch,
+      cursorAgentId,
+    },
+  };
+
+  await db
+    .update(staff)
+    .set({
+      config: nextConfig,
+      updatedAt: new Date(),
+    })
+    .where(eq(staff.id, staffId));
 }

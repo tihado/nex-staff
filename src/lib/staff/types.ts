@@ -2,7 +2,7 @@ import type { Skill, staffStatusEnum, ToolDef } from "@/db/schema";
 
 export type StaffStatus = (typeof staffStatusEnum.enumValues)[number];
 
-export type StaffTemplateId = "writer";
+export type StaffTemplateId = "writer" | "coder";
 
 export type StaffSkill = Skill;
 
@@ -37,6 +37,7 @@ export interface StaffDetail extends StaffSummary {
 
 export interface HireStaffInput {
   documentIds?: string[];
+  githubRepoUrl?: string;
   instructions: string;
   name: string;
   role: string;

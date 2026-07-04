@@ -8,6 +8,13 @@
       "when": 1783168932668,
       "tag": "0000_colorful_clint_barton",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783192265774,
+      "tag": "0001_classy_avengers",
+      "breakpoints": true
     }
   ]
 }

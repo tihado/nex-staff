@@ -423,6 +423,28 @@ export async function markTaskFailed(
     .where(eq(task.id, taskId));
 }
 
+export async function updateTaskCoderMetadata(
+  taskId: string,
+  coder: NonNullable<TaskMetadata["coder"]>
+): Promise<void> {
+  const taskRow = await db.query.task.findFirst({
+    where: eq(task.id, taskId),
+    columns: { metadata: true },
+  });
+
+  const metadata: TaskMetadata = {
+    ...(taskRow?.metadata ?? {}),
+    coder,
+  };
+
+  await db
+    .update(task)
+    .set({
+      metadata,
+    })
+    .where(eq(task.id, taskId));
+}
+
 const NON_CANCELLABLE_STATUSES = new Set<TaskStatus>([
   "completed",
   "failed",

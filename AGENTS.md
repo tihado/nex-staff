@@ -128,3 +128,51 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 ---
 
 Most formatting and common issues are automatically fixed by Biome. Run `pnpm dlx ultracite fix` before committing to ensure compliance.
+
+## Cursor Cloud specific instructions
+
+Standard commands live in `README.md` and `package.json` scripts (`pnpm dev`, `pnpm lint`, `pnpm build`, `pnpm db:*`). The notes below only cover the non-obvious cloud setup.
+
+### Local database (no external Neon)
+The app's runtime uses the `@neondatabase/serverless` **neon-http** driver, which always POSTs SQL to `https://api.<host>/sql`. There is no real Neon instance in the cloud VM, so a local stack is provided:
+
+- **Postgres 16** runs locally (role `neon` / password `neon`, database `nexstaff`).
+- A tiny **Neon HTTP protocol proxy** lives at `/opt/neon-proxy/server.js` and listens on `https://api.neonlocal.internal:443/sql`, forwarding to local Postgres. It uses a self-signed cert (`/opt/neon-proxy/cert.pem`).
+- `/etc/hosts` maps `db.neonlocal.internal` and `api.neonlocal.internal` to `127.0.0.1`.
+
+Start the stack (idempotent) with:
+
+```bash
+/opt/neon-proxy/start-db-stack.sh
+```
+
+`.env.local` (gitignored) is already configured with:
+```
+DATABASE_URL=postgresql://neon:neon@db.neonlocal.internal:5432/nexstaff
+BETTER_AUTH_SECRET=local-dev-better-auth-secret-000000000000
+SANDBOX_DISABLED=true
+```
+If `.env.local` is missing, recreate it with those three lines.
+
+### Critical gotchas
+- **`NODE_EXTRA_CA_CERTS` is required.** Any process that talks to the DB via the app's neon-http client (the dev server, `pnpm db:seed`, scripts) must trust the proxy cert. Run the dev server as:
+  ```bash
+  NODE_EXTRA_CA_CERTS=/opt/neon-proxy/cert.pem pnpm dev
+  ```
+  Without it you get `fetch failed` / self-signed cert errors.
+- **`pnpm db:push` / `pnpm db:migrate` do NOT work against the proxy.** drizzle-kit uses the Neon serverless **WebSocket** driver, which the HTTP proxy does not serve. Apply schema changes by running the generated SQL directly:
+  ```bash
+  pnpm db:generate   # writes SQL to drizzle/migrations/ (no DB needed)
+  PGPASSWORD=neon psql -h 127.0.0.1 -U neon -d nexstaff -f drizzle/migrations/<file>.sql
+  ```
+  The current schema is already applied. `pnpm db:seed` (neon-http, just a connectivity check) works fine with `NODE_EXTRA_CA_CERTS` set.
+- **Dependency install:** use `pnpm install --ignore-scripts`. The `prepare` script runs `lefthook install`, which fails because Cursor manages `core.hooksPath`. `--ignore-scripts` avoids that non-fatal failure and does not skip any needed dependency builds (platform binaries come via optional deps).
+
+### Secrets and features
+- `GOOGLE_GENERATIVE_AI_API_KEY` (Google AI Studio) powers the core AI features — Assistant chat, hiring staff, and delegating tasks (`staffTaskWorkflow`). Without it, `/api/chat` returns `"Assistant unavailable"` and the server logs `GOOGLE_GENERATIVE_AI_API_KEY is not set`.
+- `BLOB_READ_WRITE_TOKEN` (Vercel Blob) powers document upload and staff deliverable persistence.
+- Both keys are read from `process.env` / `.env.local`. They are provided as injected environment secrets, and are also written into `.env.local` so the app picks them up regardless of shell. If a key is rotated, update `.env.local` (or start the dev server from a shell that has the fresh injected value). Auth + non-AI pages work even without these keys.
+- The Vercel Workflow engine runs embedded in `pnpm dev` (no separate service). Vercel Sandbox is bypassed via `SANDBOX_DISABLED=true`.
+
+### tmux + injected secrets gotcha
+The tmux server captures its environment when first started. If you create the tmux server before secrets are injected, new tmux windows inherit a stale env missing those secrets — the dev server then can't see `GOOGLE_GENERATIVE_AI_API_KEY`. Because the keys are in `.env.local`, Next.js still loads them; but if you rely on shell env, start the dev server from a freshly-created tmux server (or plain shell) that has the injected secrets.

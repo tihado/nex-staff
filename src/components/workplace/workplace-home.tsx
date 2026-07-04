@@ -1,17 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArchiveRoomOverlay } from "@/components/archive-room/archive-room-overlay";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
+import {
+  DialogueOverlay,
+  type HireDialogueContext,
+} from "@/components/dialogue/dialogue-overlay";
 import { GameShell } from "@/components/layout";
 import { PixelHUD, PixelNotification } from "@/components/pixel";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
+import { HireSparkle } from "@/components/workplace/hire-sparkle";
+import {
+  WORKSPACE_DESK_SLOTS,
+  type WorkspaceDesk,
+} from "@/components/workplace/workspace-layout";
 import { useWorkspaceState } from "@/hooks/use-workspace-state";
+import { hasContentWriterOnRoster } from "@/lib/dialogue/hire-intent";
+import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
+import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
-import type { WorkspaceDesk } from "./workspace-layout";
 import { ZoneOverlay } from "./zone-overlay";
 
 interface WorkplaceHomeProps {
@@ -23,6 +33,7 @@ interface WorkplaceHomeProps {
 interface ActiveDialogue {
   avatarSprite?: string;
   greeting: string;
+  hireContext?: HireDialogueContext;
   portraitIcon: string;
   speakerId: string;
   speakerName: string;
@@ -36,11 +47,10 @@ interface ActiveZone {
   title: string;
 }
 
-const HIRE_ZONE: ActiveZone = {
-  title: "Hire an agent",
-  description: "The hire flow opens in a later update (#11).",
-  icon: "briefcase-plus",
-};
+interface HireCelebration {
+  deskSlotId: string;
+  name: string;
+}
 
 /**
  * Workplace home (#8): a top-down pixel office floor. Agents work at desks,
@@ -58,13 +68,17 @@ export function WorkplaceHome({
     dismissBanner,
     error: tasksError,
     loading: tasksLoading,
-    refresh: reloadTasks,
+    occupiedDeskSlotIds,
+    refresh: reloadWorkspace,
+    staff,
     tasks,
   } = useWorkspaceState();
   const [dialogue, setDialogue] = useState<ActiveDialogue | null>(null);
   const [zone, setZone] = useState<ActiveZone | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [hireCelebration, setHireCelebration] =
+    useState<HireCelebration | null>(null);
 
   const overlayOpen =
     dialogue !== null || zone !== null || taskBoardOpen || archiveOpen;
@@ -85,13 +99,27 @@ export function WorkplaceHome({
 
   const hasDoneDesk = desks.some((desk) => desk.state === "done");
 
+  const hasWriterOnRoster = hasContentWriterOnRoster(staff);
+
+  const sparkleAnchor = useMemo(() => {
+    if (!hireCelebration) {
+      return null;
+    }
+
+    const slot = WORKSPACE_DESK_SLOTS.find(
+      (entry) => entry.id === hireCelebration.deskSlotId
+    );
+
+    return slot?.agentAnchor ?? null;
+  }, [hireCelebration]);
+
   useEffect(() => {
     if (taskBoardOpen) {
-      reloadTasks().catch(() => {
+      reloadWorkspace().catch(() => {
         /* ignore refresh errors */
       });
     }
-  }, [taskBoardOpen, reloadTasks]);
+  }, [taskBoardOpen, reloadWorkspace]);
 
   const openReception = () => {
     setDialogue({
@@ -100,6 +128,21 @@ export function WorkplaceHome({
       speakerRole: "Coordinator",
       portraitIcon: "android",
       greeting,
+      hireContext: { mode: "assistant" },
+    });
+  };
+
+  const openHireDialogue = (deskId: string) => {
+    setDialogue({
+      speakerId: "assistant",
+      speakerName: assistantName,
+      speakerRole: "Coordinator",
+      portraitIcon: "android",
+      greeting: "Muốn hire ai cho bàn này?",
+      hireContext: {
+        mode: "scripted",
+        deskId,
+      },
     });
   };
 
@@ -117,6 +160,25 @@ export function WorkplaceHome({
       greeting: `Hi boss! I'm ${desk.label}. What can I help with?`,
     });
   };
+
+  const handleStaffHired = useCallback(
+    (result: HireStaffResult) => {
+      const deskSlotId =
+        result.assignedDeskSlotId ?? assignNewStaffToDesk(result.id);
+
+      reloadWorkspace().catch(() => {
+        /* ignore refresh errors */
+      });
+
+      if (deskSlotId) {
+        setHireCelebration({
+          name: result.name,
+          deskSlotId,
+        });
+      }
+    },
+    [reloadWorkspace]
+  );
 
   const handleSelectZone = (selected: WorkspaceZone) => {
     if (selected === "taskboard") {
@@ -146,11 +208,18 @@ export function WorkplaceHome({
             overlayOpen && "pointer-events-none opacity-50"
           )}
         >
+          {sparkleAnchor ? (
+            <HireSparkle
+              anchor={sparkleAnchor}
+              visible={Boolean(hireCelebration)}
+            />
+          ) : null}
+
           <WorkspaceFloor
             assistantName={assistantName}
             desks={desks}
             hasDoneDesk={hasDoneDesk}
-            onHire={() => setZone(HIRE_ZONE)}
+            onHire={openHireDialogue}
             onSelectAgent={openAgent}
             onSelectReception={openReception}
             onSelectZone={handleSelectZone}
@@ -164,6 +233,16 @@ export function WorkplaceHome({
             message={`${banner.title} is ready to review.`}
             onDismiss={dismissBanner}
             title="Task complete"
+          />
+        </div>
+      ) : null}
+
+      {hireCelebration ? (
+        <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
+          <PixelNotification
+            message={`✨ ${hireCelebration.name} joined the team!`}
+            onDismiss={() => setHireCelebration(null)}
+            title="New hire"
           />
         </div>
       ) : null}
@@ -189,7 +268,11 @@ export function WorkplaceHome({
         <DialogueOverlay
           avatarSprite={dialogue.avatarSprite}
           greeting={dialogue.greeting}
+          hasWriterOnRoster={hasWriterOnRoster}
+          hireContext={dialogue.hireContext}
+          occupiedDeskSlotIds={occupiedDeskSlotIds}
           onClose={() => setDialogue(null)}
+          onStaffHired={handleStaffHired}
           portraitIcon={dialogue.portraitIcon}
           speakerId={dialogue.speakerId}
           speakerName={dialogue.speakerName}

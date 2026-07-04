@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { OFFICE_WANDER_ANCHORS } from "@/components/workplace/workspace-layout";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FloorAnchor } from "@/components/workplace/workspace-layout";
+import {
+  initialWanderAnchorForStaff,
+  pickNextWanderAnchor,
+} from "@/lib/workplace/wander";
 
-const WANDER_MIN_MS = 2500;
-const WANDER_JITTER_MS = 2000;
+const WANDER_PAUSE_MIN_MS = 6000;
+const WANDER_PAUSE_JITTER_MS = 6000;
 
-function hashStaffId(staffId: string): number {
-  let hash = 0;
-  for (const char of staffId) {
-    hash = Math.imul(hash, 31) + char.charCodeAt(0);
+function buildInitialAnchors(staffIds: string[]): Record<string, FloorAnchor> {
+  const initial: Record<string, FloorAnchor> = {};
+  for (const id of staffIds) {
+    initial[id] = initialWanderAnchorForStaff(id);
   }
-  return Math.abs(hash);
+  return initial;
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -30,34 +34,75 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-function buildInitialIndices(staffIds: string[]): Record<string, number> {
-  const initial: Record<string, number> = {};
-  for (const id of staffIds) {
-    initial[id] = hashStaffId(id) % OFFICE_WANDER_ANCHORS.length;
-  }
-  return initial;
-}
-
 /**
- * Advances waypoint indices for idle roaming staff on a staggered timer.
- * Returns staffId → anchor index into OFFICE_WANDER_ANCHORS.
+ * Roaming anchors for idle staff. After each walk completes, staff pause 6–12s
+ * then pick a new random point inside a roam zone, avoiding other staff.
  */
 export function useAgentWander(roamingStaffIds: string[]): {
+  onStaffArrived: (staffId: string) => void;
   reducedMotion: boolean;
-  wanderIndices: Record<string, number>;
+  wanderAnchors: Record<string, FloorAnchor>;
 } {
   const reducedMotion = usePrefersReducedMotion();
-
-  const [indices, setIndices] = useState<Record<string, number>>(() =>
-    buildInitialIndices(roamingStaffIds)
+  const [anchors, setAnchors] = useState<Record<string, FloorAnchor>>(() =>
+    buildInitialAnchors(roamingStaffIds)
   );
 
+  const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const scheduleNextMoveRef = useRef<(staffId: string) => void>(() => {
+    /* assigned below */
+  });
+
+  const clearStaffTimeout = useCallback((staffId: string) => {
+    const timeout = timeoutsRef.current[staffId];
+    if (timeout) {
+      clearTimeout(timeout);
+      delete timeoutsRef.current[staffId];
+    }
+  }, []);
+
+  const scheduleNextMove = useCallback(
+    (staffId: string) => {
+      if (reducedMotion) {
+        return;
+      }
+
+      clearStaffTimeout(staffId);
+
+      const delay =
+        WANDER_PAUSE_MIN_MS + Math.random() * WANDER_PAUSE_JITTER_MS;
+      timeoutsRef.current[staffId] = setTimeout(() => {
+        delete timeoutsRef.current[staffId];
+        setAnchors((current) => {
+          const currentAnchor =
+            current[staffId] ?? initialWanderAnchorForStaff(staffId);
+          const nextAnchor = pickNextWanderAnchor(
+            staffId,
+            currentAnchor,
+            current
+          );
+          if (
+            nextAnchor.left === currentAnchor.left &&
+            nextAnchor.top === currentAnchor.top
+          ) {
+            queueMicrotask(() => scheduleNextMoveRef.current(staffId));
+            return current;
+          }
+          return { ...current, [staffId]: nextAnchor };
+        });
+      }, delay);
+    },
+    [clearStaffTimeout, reducedMotion]
+  );
+
+  scheduleNextMoveRef.current = scheduleNextMove;
+
   useEffect(() => {
-    setIndices((current) => {
+    setAnchors((current) => {
       const next = { ...current };
       for (const id of roamingStaffIds) {
         if (next[id] === undefined) {
-          next[id] = hashStaffId(id) % OFFICE_WANDER_ANCHORS.length;
+          next[id] = initialWanderAnchorForStaff(id);
         }
       }
       return next;
@@ -65,35 +110,26 @@ export function useAgentWander(roamingStaffIds: string[]): {
   }, [roamingStaffIds]);
 
   useEffect(() => {
-    if (reducedMotion || roamingStaffIds.length === 0) {
-      return;
-    }
-
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
-
-    for (const staffId of roamingStaffIds) {
-      const scheduleTick = () => {
-        const delay = WANDER_MIN_MS + Math.random() * WANDER_JITTER_MS;
-        const timeout = setTimeout(() => {
-          setIndices((current) => {
-            const currentIndex = current[staffId] ?? 0;
-            const nextIndex = (currentIndex + 1) % OFFICE_WANDER_ANCHORS.length;
-            return { ...current, [staffId]: nextIndex };
-          });
-          scheduleTick();
-        }, delay);
-        timeouts.push(timeout);
-      };
-
-      scheduleTick();
-    }
-
-    return () => {
-      for (const timeout of timeouts) {
-        clearTimeout(timeout);
+    const active = new Set(roamingStaffIds);
+    for (const staffId of Object.keys(timeoutsRef.current)) {
+      if (!active.has(staffId)) {
+        clearStaffTimeout(staffId);
       }
-    };
-  }, [reducedMotion, roamingStaffIds]);
+    }
+  }, [clearStaffTimeout, roamingStaffIds]);
 
-  return { wanderIndices: indices, reducedMotion };
+  useEffect(
+    () => () => {
+      for (const staffId of Object.keys(timeoutsRef.current)) {
+        clearStaffTimeout(staffId);
+      }
+    },
+    [clearStaffTimeout]
+  );
+
+  return {
+    onStaffArrived: scheduleNextMove,
+    wanderAnchors: anchors,
+    reducedMotion,
+  };
 }

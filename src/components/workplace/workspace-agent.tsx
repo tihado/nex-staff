@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { PixelIcon } from "@/components/pixel";
 import { StaffAvatar } from "@/components/staff/staff-avatar";
 import { useAgentWalk } from "@/hooks/use-agent-walk";
@@ -36,7 +37,9 @@ interface WorkspaceAgentProps {
   desk: WorkspaceDesk;
   motionEnabled?: boolean;
   onSelect: (desk: WorkspaceDesk) => void;
+  onStaffArrived?: (staffId: string) => void;
   variant: number;
+  walkOriginAnchor?: FloorAnchor;
 }
 
 /**
@@ -47,14 +50,23 @@ export function WorkspaceAgent({
   anchor,
   desk,
   motionEnabled = true,
+  onStaffArrived,
   onSelect,
   variant,
+  walkOriginAnchor,
 }: WorkspaceAgentProps) {
   const emote = desk.emote;
-  const { durationMs, isWalking, onMoveTransitionEnd } = useAgentWalk(
-    anchor,
-    motionEnabled
-  );
+  const handleArrived = useCallback(() => {
+    if (desk.staffId && desk.location === "roaming") {
+      onStaffArrived?.(desk.staffId);
+    }
+  }, [desk.location, desk.staffId, onStaffArrived]);
+
+  const { displayAnchor, durationMs, isWalking, onMoveTransitionEnd } =
+    useAgentWalk(anchor, motionEnabled, undefined, {
+      onArrived: handleArrived,
+      walkOriginAnchor,
+    });
 
   return (
     <button
@@ -66,9 +78,9 @@ export function WorkspaceAgent({
       onClick={() => onSelect(desk)}
       onTransitionEnd={onMoveTransitionEnd}
       style={{
-        left: `${anchor.left}%`,
-        top: `${anchor.top}%`,
-        zIndex: Math.round(anchor.left + anchor.top) + 10,
+        left: `${displayAnchor.left}%`,
+        top: `${displayAnchor.top}%`,
+        zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 10,
         transitionDuration: motionEnabled ? `${durationMs}ms` : "0ms",
         transitionProperty: "left, top",
         transitionTimingFunction: "linear",

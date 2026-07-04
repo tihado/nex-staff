@@ -59,15 +59,29 @@ export const TASK_BOARD_ZONE = {
   wallAnchor: { left: 52, top: 10 },
 } as const;
 
-/** Waypoints for idle staff roaming around the office. */
-export const OFFICE_WANDER_ANCHORS: FloorAnchor[] = [
-  { left: 20, top: 40 },
-  { left: 32, top: 48 },
-  { left: 16, top: 58 },
-  { left: 40, top: 33 },
-  { left: 60, top: 36 },
-  { left: 74, top: 54 },
-  { left: 68, top: 30 },
+/** Roam zones for idle staff — random jitter within each zone avoids overlap. */
+export interface OfficeWanderZone {
+  center: FloorAnchor;
+  radius: { left: number; top: number };
+}
+
+export const OFFICE_WANDER_BOUNDS = {
+  minLeft: 12,
+  maxLeft: 54,
+  minTop: 32,
+  maxTop: 74,
+} as const;
+
+export const STAFF_WANDER_MIN_DISTANCE = 5;
+
+export const OFFICE_WANDER_ZONES: OfficeWanderZone[] = [
+  { center: { left: 20, top: 40 }, radius: { left: 3.5, top: 3.5 } },
+  { center: { left: 32, top: 48 }, radius: { left: 3.5, top: 3.5 } },
+  { center: { left: 16, top: 58 }, radius: { left: 3, top: 3 } },
+  { center: { left: 40, top: 36 }, radius: { left: 3.5, top: 3 } },
+  { center: { left: 28, top: 66 }, radius: { left: 3, top: 3 } },
+  { center: { left: 46, top: 52 }, radius: { left: 3, top: 3 } },
+  { center: { left: 24, top: 72 }, radius: { left: 2.5, top: 2.5 } },
 ];
 
 /**
@@ -206,8 +220,4 @@ export const RECEPTION_EXTRA_PROPS: Array<
 
 export function pantryAnchorForIndex(index: number): FloorAnchor {
   return PANTRY_ANCHORS[index % PANTRY_ANCHORS.length];
-}
-
-export function wanderAnchorForIndex(index: number): FloorAnchor {
-  return OFFICE_WANDER_ANCHORS[index % OFFICE_WANDER_ANCHORS.length];
 }

@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode, useMemo } from "react";
 import { useAgentWander } from "@/hooks/use-agent-wander";
 import { cn } from "@/lib/utils";
+import { initialWanderAnchorForStaff } from "@/lib/workplace/wander";
 import { depthZ } from "./iso-projection";
 import {
   PixelMeetingTable,
@@ -31,6 +32,7 @@ import { WorkspaceAgent } from "./workspace-agent";
 import { WorkspaceDeskCell } from "./workspace-desk";
 import {
   ARCHIVE_ROOM,
+  type FloorAnchor,
   PANTRY_CAFE_CLUSTERS,
   PANTRY_LOWER_PROPS,
   pantryAnchorForIndex,
@@ -42,7 +44,6 @@ import {
   WORKSPACE_CORRIDOR_PROPS,
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
-  wanderAnchorForIndex,
 } from "./workspace-layout";
 import { WorkspaceOfficeCat } from "./workspace-office-cat";
 import {
@@ -125,7 +126,7 @@ function resolveAgentAnchor(
   desk: WorkspaceDesk,
   slotIndex: number,
   pantryIndex: number,
-  wanderIndices: Record<string, number>,
+  wanderAnchors: Record<string, FloorAnchor>,
   reducedMotion: boolean
 ) {
   if (desk.location === "pantry") {
@@ -133,8 +134,9 @@ function resolveAgentAnchor(
   }
 
   if (desk.location === "roaming" && desk.staffId && !reducedMotion) {
-    const wanderIndex = wanderIndices[desk.staffId] ?? 0;
-    return wanderAnchorForIndex(wanderIndex);
+    return (
+      wanderAnchors[desk.staffId] ?? initialWanderAnchorForStaff(desk.staffId)
+    );
   }
 
   return WORKSPACE_DESK_SLOTS[slotIndex].agentAnchor;
@@ -159,7 +161,8 @@ export function WorkspaceFloor({
     [desks]
   );
 
-  const { reducedMotion, wanderIndices } = useAgentWander(roamingStaffIds);
+  const { onStaffArrived, reducedMotion, wanderAnchors } =
+    useAgentWander(roamingStaffIds);
 
   return (
     <WorkspaceScene>
@@ -332,7 +335,7 @@ export function WorkspaceFloor({
             desk,
             index,
             pantryCounter,
-            wanderIndices,
+            wanderAnchors,
             reducedMotion
           );
 
@@ -347,7 +350,13 @@ export function WorkspaceFloor({
               key={desk.id}
               motionEnabled={!reducedMotion}
               onSelect={onSelectAgent}
+              onStaffArrived={onStaffArrived}
               variant={index}
+              walkOriginAnchor={
+                desk.location === "roaming"
+                  ? WORKSPACE_DESK_SLOTS[index].agentAnchor
+                  : undefined
+              }
             />
           );
         })}

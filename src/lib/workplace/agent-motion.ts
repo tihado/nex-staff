@@ -7,9 +7,9 @@ export interface WalkSpeedProfile {
 }
 
 export const STAFF_WALK_SPEED: WalkSpeedProfile = {
-  maxWalkMs: 4800,
-  minWalkMs: 900,
-  msPerPercent: 90,
+  maxWalkMs: 5760,
+  minWalkMs: 1080,
+  msPerPercent: 108,
 };
 
 export const CAT_WALK_SPEED: WalkSpeedProfile = {

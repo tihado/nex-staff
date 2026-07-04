@@ -16,11 +16,8 @@ export function WorkspaceOfficeCat({
 }: WorkspaceOfficeCatProps) {
   const { anchor, reducedMotion } = useOfficeCatWander(motionEnabled);
   const walkEnabled = motionEnabled && !reducedMotion;
-  const { durationMs, isWalking, onMoveTransitionEnd } = useAgentWalk(
-    anchor,
-    walkEnabled,
-    CAT_WALK_SPEED
-  );
+  const { displayAnchor, durationMs, isWalking, onMoveTransitionEnd } =
+    useAgentWalk(anchor, walkEnabled, CAT_WALK_SPEED);
 
   return (
     <div
@@ -31,9 +28,9 @@ export function WorkspaceOfficeCat({
       )}
       onTransitionEnd={onMoveTransitionEnd}
       style={{
-        left: `${anchor.left}%`,
-        top: `${anchor.top}%`,
-        zIndex: Math.round(anchor.left + anchor.top) + 8,
+        left: `${displayAnchor.left}%`,
+        top: `${displayAnchor.top}%`,
+        zIndex: Math.round(displayAnchor.left + displayAnchor.top) + 8,
         transitionDuration: walkEnabled ? `${durationMs}ms` : "0ms",
         transitionProperty: "left, top",
         transitionTimingFunction: "linear",

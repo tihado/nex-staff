@@ -10,7 +10,14 @@ import {
   type HireDialogueContext,
 } from "@/components/dialogue/dialogue-overlay";
 import { GameShell } from "@/components/layout";
-import { PixelButton, PixelCloseButton, PixelHUD, PixelIcon, PixelNotification, PixelPanel } from "@/components/pixel";
+import {
+  PixelButton,
+  PixelCloseButton,
+  PixelHUD,
+  PixelIcon,
+  PixelNotification,
+  PixelPanel,
+} from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { HireSparkle } from "@/components/workplace/hire-sparkle";
@@ -210,12 +217,15 @@ function MeetingRoomOverlay({ onClose }: { onClose: () => void }) {
         tabIndex={-1}
         type="button"
       />
-      <PixelPanel className="relative z-10 w-full max-w-md" title="Meeting Room">
+      <PixelPanel
+        className="relative z-10 w-full max-w-md"
+        title="Meeting Room"
+      >
         <div className="flex flex-col items-center gap-4 p-6 text-center">
           <PixelIcon className="text-pixel-accent" name="human" size={48} />
           <p className="font-[family-name:var(--font-body)] text-[length:var(--font-size-dialogue)] text-text-primary leading-snug">
-            Small meeting room — brief the team, review plans, or sync with staff
-            before assigning tasks.
+            Small meeting room — brief the team, review plans, or sync with
+            staff before assigning tasks.
           </p>
           <PixelCloseButton label="[ OK ]" onClick={onClose} />
         </div>

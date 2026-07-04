@@ -38,6 +38,18 @@ function questListPrefix(selected: boolean, isRunning: boolean): string {
   return "▷";
 }
 
+function questStepTextClass(isFailed: boolean, isRunning: boolean): string {
+  if (isFailed) {
+    return "text-alert";
+  }
+
+  if (isRunning) {
+    return "text-[#7a3d10]";
+  }
+
+  return "text-ink";
+}
+
 export function TaskStickyNote({
   task,
   onSelect,
@@ -119,7 +131,7 @@ export function TaskStickyNote({
       <p
         className={cn(
           "line-clamp-2 font-body text-[16px] leading-snug",
-          isFailed ? "text-alert" : isRunning ? "text-[#7a3d10]" : "text-ink"
+          questStepTextClass(isFailed, isRunning)
         )}
       >
         {stepLabel}

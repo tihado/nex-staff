@@ -355,9 +355,8 @@ export function WorkplaceHome({
             type="button"
           >
             <PixelNotification
-              autoDismissMs={6000}
+              autoDismissMs={0}
               message={`✨ ${banner.staffName} hoàn thành: ${banner.title}`}
-              onDismiss={dismissBanner}
               title="Quest complete"
             />
           </button>

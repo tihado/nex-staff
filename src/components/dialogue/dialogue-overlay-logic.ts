@@ -122,7 +122,7 @@ export function handleDialogueChoiceSelection({
   }
 
   if (choiceId === "deliverable-continue") {
-    engine.submitInput({ text: "Tiếp tục" });
+    engine.submitInput({ text: "Continue" });
     return;
   }
 
@@ -184,7 +184,8 @@ export function resolveScriptedUi(
 
 export function useDialoguePanelChrome(
   onClose: () => void,
-  displayText: string
+  displayText: string,
+  enableClose = true
 ) {
   const [logOpen, setLogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -205,6 +206,10 @@ export function useDialoguePanelChrome(
   }, [displayText, reducedMotion]);
 
   useEffect(() => {
+    if (!enableClose) {
+      return;
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
         return;
@@ -222,7 +227,7 @@ export function useDialoguePanelChrome(
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [logOpen, onClose]);
+  }, [enableClose, logOpen, onClose]);
 
   return {
     logOpen,

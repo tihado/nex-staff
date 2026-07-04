@@ -26,7 +26,9 @@ interface PendingFileAttachment {
 }
 
 interface DialogueInputProps {
+  align?: "left" | "right";
   chatId?: string;
+  compact?: boolean;
   disabled?: boolean;
   onSubmit: (payload: DialogueSubmitPayload) => void | Promise<void>;
   playerName: string;
@@ -35,13 +37,46 @@ interface DialogueInputProps {
   voiceLocale?: string;
 }
 
+function DialogueInputNameplate({
+  align,
+  compact,
+  playerName,
+}: {
+  align: "left" | "right";
+  compact: boolean;
+  playerName: string;
+}) {
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          "mb-1.5 flex",
+          align === "right" ? "justify-end" : "justify-start"
+        )}
+      >
+        <div className="inline-flex items-center gap-1 border-2 border-border-dialogue bg-nameplate-bg px-2 py-0.5 font-pixel text-[8px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+          <PixelIcon name="chevron-down" size={10} /> {playerName}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
+      <PixelIcon name="chevron-down" size={12} /> {playerName}
+    </div>
+  );
+}
+
 /**
  * Free-text input embedded inside the dialogue box (state `player-input`).
- * Supports Markdown preview, document attachments, and push-to-talk voice.
+ * Supports Markdown preview, document attachments, and toggle voice input.
  */
 export function DialogueInput({
   playerName,
   disabled = false,
+  compact = false,
+  align = "left",
   onSubmit,
   chatId,
   voiceEnabled = true,
@@ -188,12 +223,15 @@ export function DialogueInput({
 
   return (
     <div className="relative">
-      <div className="absolute -top-[14px] left-4 z-10 flex items-center gap-1 border-[3px] border-border-dialogue bg-nameplate-bg px-3 py-1 font-pixel text-[10px] text-sun uppercase tracking-widest [text-shadow:1px_1px_0_#5c3a1a]">
-        <PixelIcon name="chevron-down" size={12} /> {playerName}
-      </div>
+      <DialogueInputNameplate
+        align={align}
+        compact={compact}
+        playerName={playerName}
+      />
       <div
         className={cn(
-          "pixel-frame bg-bg-dialogue px-5 pt-6 pb-4",
+          "pixel-frame bg-bg-dialogue pb-4",
+          compact ? "px-3 pt-2" : "px-5 pt-6",
           voiceInput.state === "listening" && "ring-2 ring-sun-glow"
         )}
       >
@@ -248,7 +286,10 @@ export function DialogueInput({
 
         <textarea
           aria-describedby={voiceError ? "dialogue-voice-error" : undefined}
-          className="min-h-[4rem] w-full resize-none bg-transparent font-pixel text-[11px] text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "w-full resize-none bg-transparent font-pixel text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50",
+            compact ? "min-h-[2.5rem] text-[10px]" : "min-h-[4rem] text-[11px]"
+          )}
           disabled={isBusy}
           id="dialogue-input"
           onChange={(event) => setValue(event.target.value)}

@@ -57,10 +57,12 @@ function DialogueChoiceVoiceSection({
 
 interface DialogueOverlayPanelViewProps {
   avatarSprite?: string;
+  chatError?: string | null;
   chatId?: string;
   choices: DialogueChoice[];
   choiceVoice?: DialogueChoiceVoiceProps;
   displayText: string;
+  embedded?: boolean;
   inputDisabled: boolean;
   isAnimating: boolean;
   isPanel: boolean;
@@ -85,12 +87,276 @@ interface DialogueOverlayPanelViewProps {
   voiceOutputEnabled?: boolean;
 }
 
+function EmbeddedOppositeDialogue({
+  avatarSprite,
+  chatId,
+  displayText,
+  inputDisabled,
+  isAnimating,
+  isThinking,
+  playerName,
+  portraitIcon,
+  scrollRef,
+  showInput,
+  showNpcBox,
+  speakerId,
+  speakerName,
+  voiceLocale,
+  onSubmitInput,
+}: {
+  avatarSprite?: string;
+  chatId?: string;
+  displayText: string;
+  inputDisabled: boolean;
+  isAnimating: boolean;
+  isThinking: boolean;
+  playerName: string;
+  portraitIcon?: string;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  showInput: boolean;
+  showNpcBox: boolean;
+  speakerId: string;
+  speakerName: string;
+  voiceLocale?: string;
+  onSubmitInput: (payload: { text: string }) => void;
+}) {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-3">
+      <div className="grid grid-cols-[3rem_1fr_3rem] items-start gap-x-2 gap-y-3">
+        <div className="col-start-1 row-start-1 flex justify-center pt-0.5">
+          {showNpcBox ? (
+            <DialoguePortrait
+              avatarSprite={avatarSprite}
+              compact
+              icon={portraitIcon}
+              speakerId={speakerId}
+            />
+          ) : null}
+        </div>
+
+        <div className="col-start-2 row-start-1 min-w-0">
+          {showNpcBox ? (
+            <PixelDialogueBox
+              compact
+              scrollRef={scrollRef}
+              speakerName={speakerName}
+            >
+              {isThinking ? (
+                <span className="advance-indicator text-pixel-text-muted">
+                  …
+                </span>
+              ) : (
+                <DialogueMarkdown
+                  content={displayText}
+                  isAnimating={isAnimating}
+                />
+              )}
+            </PixelDialogueBox>
+          ) : null}
+        </div>
+
+        <div className="col-start-3 row-start-1" />
+
+        <div className="col-start-1 row-start-2" />
+
+        <div className="col-start-2 row-start-2 min-w-0">
+          {showInput ? (
+            <DialogueInput
+              align="right"
+              chatId={chatId}
+              compact
+              disabled={inputDisabled}
+              onSubmit={onSubmitInput}
+              playerName={playerName}
+              voiceDisabled={inputDisabled}
+              voiceLocale={voiceLocale}
+            />
+          ) : null}
+        </div>
+
+        <div className="col-start-3 row-start-2 flex justify-center pt-1">
+          {showInput ? (
+            <DialoguePortrait
+              className="bg-panel text-leaf-dark"
+              compact
+              icon="human"
+              speakerId="boss"
+            />
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DialogueChromeButtons({
+  onClose,
+  onOpenLog,
+  onToggleVoiceOutput,
+  voiceOutputEnabled = false,
+}: {
+  onClose: () => void;
+  onOpenLog: () => void;
+  onToggleVoiceOutput?: () => void;
+  voiceOutputEnabled?: boolean;
+}) {
+  return (
+    <>
+      <PixelButton onClick={onOpenLog}>
+        <span className="flex items-center gap-1">
+          <PixelIcon name="list" size={12} /> Log
+        </span>
+      </PixelButton>
+      {onToggleVoiceOutput ? (
+        <PixelButton
+          aria-label={
+            voiceOutputEnabled
+              ? "Disable NPC voice readback"
+              : "Enable NPC voice readback"
+          }
+          aria-pressed={voiceOutputEnabled}
+          onClick={onToggleVoiceOutput}
+        >
+          <PixelIcon
+            label={voiceOutputEnabled ? "Voice on" : "Voice off"}
+            name={voiceOutputEnabled ? "volume-high" : "volume-off"}
+            size={12}
+          />
+        </PixelButton>
+      ) : null}
+      <PixelButton aria-label="Close (Esc)" onClick={onClose}>
+        <PixelIcon name="close" size={12} />
+      </PixelButton>
+    </>
+  );
+}
+
+function StandardDialogueContent({
+  avatarSprite,
+  chatError,
+  chatId,
+  choiceVoice,
+  choices,
+  displayText,
+  inputDisabled,
+  isAnimating,
+  isPanel,
+  isThinking,
+  onSelectChoice,
+  onSubmitInput,
+  playerName,
+  portraitIcon,
+  scrollRef,
+  showChoices,
+  showInput,
+  showNpcBox,
+  speakerId,
+  speakerName,
+  voiceLocale,
+}: {
+  avatarSprite?: string;
+  chatError?: string | null;
+  chatId?: string;
+  choiceVoice?: DialogueChoiceVoiceProps;
+  choices: DialogueChoice[];
+  displayText: string;
+  inputDisabled: boolean;
+  isAnimating: boolean;
+  isPanel: boolean;
+  isThinking: boolean;
+  onSelectChoice: (choiceId: string) => void;
+  onSubmitInput: (payload: { text: string }) => void;
+  playerName: string;
+  portraitIcon?: string;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  showChoices: boolean;
+  showInput: boolean;
+  showNpcBox: boolean;
+  speakerId: string;
+  speakerName: string;
+  voiceLocale?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain",
+        isPanel ? "p-2 sm:p-3" : "mt-auto p-4 sm:p-6"
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+        {chatError ? (
+          <p className="font-body text-[18px] text-alert" role="alert">
+            {chatError}
+          </p>
+        ) : null}
+
+        {showNpcBox ? (
+          <div className="flex items-start gap-2 sm:gap-3">
+            <DialoguePortrait
+              avatarSprite={avatarSprite}
+              icon={portraitIcon}
+              speakerId={speakerId}
+            />
+
+            <div className="min-w-0 flex-1">
+              <PixelDialogueBox scrollRef={scrollRef} speakerName={speakerName}>
+                {isThinking ? (
+                  <span className="advance-indicator text-pixel-text-muted">
+                    …
+                  </span>
+                ) : (
+                  <DialogueMarkdown
+                    content={displayText}
+                    isAnimating={isAnimating}
+                  />
+                )}
+              </PixelDialogueBox>
+            </div>
+          </div>
+        ) : null}
+
+        {showInput ? (
+          <div className="flex flex-row-reverse items-start gap-2 sm:gap-3">
+            <DialoguePortrait
+              className="bg-panel text-leaf-dark"
+              icon="human"
+              speakerId="boss"
+            />
+
+            <div className="min-w-0 flex-1">
+              <DialogueInput
+                chatId={chatId}
+                disabled={inputDisabled}
+                onSubmit={onSubmitInput}
+                playerName={playerName}
+                voiceDisabled={inputDisabled}
+                voiceLocale={voiceLocale}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {showChoices ? (
+        <DialogueChoiceVoiceSection
+          choices={choices}
+          choiceVoice={choiceVoice}
+          onSelectChoice={onSelectChoice}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function DialogueOverlayPanelView({
   speakerName,
   speakerId,
   portraitIcon,
   avatarSprite,
   displayText,
+  chatError,
+  chatId,
+  embedded = false,
   isThinking,
   isAnimating,
   showNpcBox,
@@ -108,18 +374,20 @@ export function DialogueOverlayPanelView({
   log,
   onSelectChoice,
   onSubmitInput,
-  chatId,
   voiceLocale,
   voiceOutputEnabled = false,
   onToggleVoiceOutput,
   choiceVoice,
 }: DialogueOverlayPanelViewProps) {
+  const useOppositeLayout = embedded && isPanel;
+
   return (
     <div
       aria-label={`Dialogue with ${speakerName}`}
+      aria-modal={isPanel ? undefined : "true"}
       className={cn(
-        "flex flex-col",
-        isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
+        "flex min-h-0 flex-col overflow-hidden",
+        isPanel ? "flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
       )}
       role="dialog"
     >
@@ -133,111 +401,92 @@ export function DialogueOverlayPanelView({
         />
       )}
 
-      <div
-        className={cn(
-          "z-10 flex gap-2",
-          isPanel
-            ? "shrink-0 justify-end border-wood border-b-2 bg-panel/80 p-2"
-            : "absolute top-3 right-3"
-        )}
-      >
-        <PixelButton onClick={onOpenLog}>
-          <span className="flex items-center gap-1">
-            <PixelIcon name="list" size={12} /> Log
-          </span>
-        </PixelButton>
-        {onToggleVoiceOutput ? (
-          <PixelButton
-            aria-label={
-              voiceOutputEnabled
-                ? "Disable NPC voice readback"
-                : "Enable NPC voice readback"
-            }
-            aria-pressed={voiceOutputEnabled}
-            onClick={onToggleVoiceOutput}
-          >
-            <PixelIcon
-              label={voiceOutputEnabled ? "Voice on" : "Voice off"}
-              name={voiceOutputEnabled ? "volume-high" : "volume-off"}
-              size={12}
-            />
-          </PixelButton>
-        ) : null}
-        <PixelButton aria-label="Close (Esc)" onClick={onClose}>
-          <PixelIcon name="close" size={12} />
-        </PixelButton>
-      </div>
-
-      <div
-        className={cn(
-          "relative flex min-h-0 flex-col gap-3 p-4 sm:p-6",
-          isPanel ? "flex-1 justify-end" : "mt-auto"
-        )}
-      >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
-          {showNpcBox ? (
-            <div className="flex items-end gap-3 sm:gap-4">
-              <DialoguePortrait
-                avatarSprite={avatarSprite}
-                icon={portraitIcon}
-                speakerId={speakerId}
-              />
-
-              <div className="min-w-0 flex-1">
-                <PixelDialogueBox
-                  scrollRef={scrollRef}
-                  speakerName={speakerName}
-                >
-                  {isThinking ? (
-                    <span className="advance-indicator text-pixel-text-muted">
-                      …
-                    </span>
-                  ) : (
-                    <DialogueMarkdown
-                      content={displayText}
-                      isAnimating={isAnimating}
-                    />
-                  )}
-                </PixelDialogueBox>
-              </div>
-            </div>
-          ) : null}
-
-          {showInput ? (
-            <div
-              className={cn(
-                "flex items-end gap-3 sm:gap-4",
-                showNpcBox && "flex-row-reverse"
-              )}
-            >
-              <DialoguePortrait
-                className="bg-panel text-leaf-dark"
-                icon="human"
-                speakerId="boss"
-              />
-
-              <div className="min-w-0 flex-1">
-                <DialogueInput
-                  chatId={chatId}
-                  disabled={inputDisabled}
-                  onSubmit={onSubmitInput}
-                  playerName={playerName}
-                  voiceDisabled={inputDisabled}
-                  voiceLocale={voiceLocale}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {showChoices ? (
-          <DialogueChoiceVoiceSection
-            choices={choices}
-            choiceVoice={choiceVoice}
-            onSelectChoice={onSelectChoice}
+      {isPanel && !embedded ? (
+        <div className="flex shrink-0 justify-end gap-2 border-wood border-b-2 bg-panel/80 p-2">
+          <DialogueChromeButtons
+            onClose={onClose}
+            onOpenLog={onOpenLog}
+            onToggleVoiceOutput={onToggleVoiceOutput}
+            voiceOutputEnabled={voiceOutputEnabled}
           />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+
+      {isPanel ? null : (
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
+          <DialogueChromeButtons
+            onClose={onClose}
+            onOpenLog={onOpenLog}
+            onToggleVoiceOutput={onToggleVoiceOutput}
+            voiceOutputEnabled={voiceOutputEnabled}
+          />
+        </div>
+      )}
+
+      {useOppositeLayout ? (
+        <EmbeddedOppositeDialogue
+          avatarSprite={avatarSprite}
+          chatId={chatId}
+          displayText={displayText}
+          inputDisabled={inputDisabled}
+          isAnimating={isAnimating}
+          isThinking={isThinking}
+          onSubmitInput={onSubmitInput}
+          playerName={playerName}
+          portraitIcon={portraitIcon}
+          scrollRef={scrollRef}
+          showInput={showInput}
+          showNpcBox={showNpcBox}
+          speakerId={speakerId}
+          speakerName={speakerName}
+          voiceLocale={voiceLocale}
+        />
+      ) : (
+        <StandardDialogueContent
+          avatarSprite={avatarSprite}
+          chatError={chatError}
+          chatId={chatId}
+          choices={choices}
+          choiceVoice={choiceVoice}
+          displayText={displayText}
+          inputDisabled={inputDisabled}
+          isAnimating={isAnimating}
+          isPanel={isPanel}
+          isThinking={isThinking}
+          onSelectChoice={onSelectChoice}
+          onSubmitInput={onSubmitInput}
+          playerName={playerName}
+          portraitIcon={portraitIcon}
+          scrollRef={scrollRef}
+          showChoices={showChoices}
+          showInput={showInput}
+          showNpcBox={showNpcBox}
+          speakerId={speakerId}
+          speakerName={speakerName}
+          voiceLocale={voiceLocale}
+        />
+      )}
+
+      {useOppositeLayout && showChoices ? (
+        <div className="shrink-0 border-wood border-t-2 p-2">
+          {choiceVoice?.isSupported ? (
+            <div className="mb-2 flex items-center justify-end gap-2">
+              <VoiceControl
+                disabled={choiceVoice.disabled}
+                isSupported
+                onToggle={choiceVoice.onToggle}
+                state={choiceVoice.state}
+              />
+            </div>
+          ) : null}
+          {choiceVoice?.error ? (
+            <p className="mb-2 text-right font-pixel text-[9px] text-alert">
+              {choiceVoice.error}
+            </p>
+          ) : null}
+          <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
+        </div>
+      ) : null}
 
       {logOpen ? <DialogueLog lines={log} onClose={onCloseLog} /> : null}
     </div>

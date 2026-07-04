@@ -134,7 +134,10 @@ export function EmailPasswordForm() {
         </div>
 
         {error ? (
-          <p className="border-[3px] border-pixel-alert bg-pixel-alert/10 px-3 py-2 text-center font-body text-[18px] text-pixel-alert">
+          <p
+            className="border-[3px] border-pixel-alert bg-pixel-alert/10 px-3 py-2 text-center font-body text-[18px] text-pixel-alert"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}

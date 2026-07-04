@@ -19,6 +19,7 @@ export const uiStrings = {
     close: "Close task board",
     empty:
       "No active tasks. Delegate work from the Assistant to see progress here.",
+    failedSection: "Failed tasks",
     loading: "Loading active tasks…",
     title: "Task Board",
   },
@@ -41,6 +42,8 @@ export const uiStrings = {
   workplace: {
     bannerCompleted: (staffName: string, title: string) =>
       `✨ ${staffName} completed: ${title}`,
+    bannerFailed: (staffName: string, title: string) =>
+      `⚠ ${staffName} failed: ${title}`,
     hireJoined: (name: string) => `✨ ${name} joined the team!`,
     activeTasksGreeting: (count: number, baseGreeting: string) => {
       const taskLabel = count === 1 ? "1 task" : `${count} tasks`;

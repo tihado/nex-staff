@@ -1,9 +1,7 @@
 "use client";
 
-import { Fragment, type ReactNode, useMemo } from "react";
-import { useAgentWander } from "@/hooks/use-agent-wander";
+import { Fragment, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { initialWanderAnchorForStaff } from "@/lib/workplace/wander";
 import { depthZ } from "./iso-projection";
 import {
   PixelMeetingTable,
@@ -17,12 +15,15 @@ import {
   PixelBookshelfIso,
   PixelCafeTableIso,
   PixelClockIso,
+  PixelDeskIso,
   PixelFilingCabinetIso,
   PixelFridgeIso,
   PixelLoungeChairIso,
   PixelMugIso,
   PixelPlantIso,
   PixelRoomPartitionIso,
+  PixelSofaIso,
+  PixelTeaTableIso,
   PixelVendingIso,
   PixelWaterCoolerIso,
   PixelWhiteboardIso,
@@ -32,18 +33,17 @@ import { WorkspaceAgent } from "./workspace-agent";
 import { WorkspaceDeskCell } from "./workspace-desk";
 import {
   ARCHIVE_ROOM,
-  type FloorAnchor,
+  MEETING_ROOM,
   PANTRY_CAFE_CLUSTERS,
   PANTRY_LOWER_PROPS,
   pantryAnchorForIndex,
-  RECEPTION_ANCHOR,
-  RECEPTION_EXTRA_PROPS,
-  RECEPTION_MEETING,
+  RECEPTION_ROOM,
   TASK_BOARD_ZONE,
   WORKSPACE_BOOKSHELVES,
   WORKSPACE_CORRIDOR_PROPS,
   WORKSPACE_DESK_SLOTS,
   type WorkspaceDesk,
+  workspaceDeskSlot,
 } from "./workspace-layout";
 import { WorkspaceOfficeCat } from "./workspace-office-cat";
 import {
@@ -53,7 +53,7 @@ import {
 } from "./workspace-scene";
 import { WorkspaceZoneCell } from "./workspace-zone-cell";
 
-export type WorkspaceZone = "archive" | "taskboard";
+export type WorkspaceZone = "archive" | "meeting" | "taskboard";
 
 interface WorkspaceFloorProps {
   assistantName: string;
@@ -73,6 +73,8 @@ const PANTRY_FLOOR =
   "repeating-linear-gradient(0deg, #FAF6EE 0px, #FAF6EE 15px, #E8DCC8 15px, #E8DCC8 16px), repeating-linear-gradient(90deg, #FAF6EE 0px, #FAF6EE 15px, #E8DCC8 15px, #E8DCC8 16px)";
 const RECEPTION_FLOOR =
   "repeating-linear-gradient(0deg, #3A7294 0px, #3A7294 15px, #2A5878 15px, #2A5878 16px), repeating-linear-gradient(90deg, #3A7294 0px, #3A7294 15px, #2A5878 15px, #2A5878 16px)";
+const MEETING_FLOOR =
+  "repeating-linear-gradient(0deg, #4A88A8 0px, #4A88A8 14px, #3A7294 14px, #3A7294 16px), repeating-linear-gradient(90deg, #4A88A8 0px, #4A88A8 14px, #3A7294 14px, #3A7294 16px)";
 
 interface FloorProp {
   children: ReactNode;
@@ -103,6 +105,20 @@ function pantryLowerPropSprite(type: "chair" | "mug" | "plant") {
   return <PixelPlantIso size={28} />;
 }
 
+function meetingPropSprite(type: "partition" | "plant") {
+  if (type === "plant") {
+    return <PixelPlantIso size={26} />;
+  }
+  return <PixelRoomPartitionIso size={36} />;
+}
+
+function receptionPropSprite(type: "bookshelf" | "plant") {
+  if (type === "bookshelf") {
+    return <PixelBookshelfIso size={44} />;
+  }
+  return <PixelPlantIso size={30} />;
+}
+
 function FloorProp({ children, className, left, top }: FloorProp) {
   return (
     <div
@@ -122,26 +138,6 @@ function FloorProp({ children, className, left, top }: FloorProp) {
   );
 }
 
-function resolveAgentAnchor(
-  desk: WorkspaceDesk,
-  slotIndex: number,
-  pantryIndex: number,
-  wanderAnchors: Record<string, FloorAnchor>,
-  reducedMotion: boolean
-) {
-  if (desk.location === "pantry") {
-    return pantryAnchorForIndex(pantryIndex);
-  }
-
-  if (desk.location === "roaming" && desk.staffId && !reducedMotion) {
-    return (
-      wanderAnchors[desk.staffId] ?? initialWanderAnchorForStaff(desk.staffId)
-    );
-  }
-
-  return WORKSPACE_DESK_SLOTS[slotIndex].agentAnchor;
-}
-
 export function WorkspaceFloor({
   assistantName,
   desks,
@@ -152,17 +148,6 @@ export function WorkspaceFloor({
   onSelectZone,
 }: WorkspaceFloorProps) {
   let pantryCounter = 0;
-
-  const roamingStaffIds = useMemo(
-    () =>
-      desks
-        .filter((desk) => desk.staffId && desk.location === "roaming")
-        .map((desk) => desk.staffId as string),
-    [desks]
-  );
-
-  const { onStaffArrived, reducedMotion, wanderAnchors } =
-    useAgentWander(roamingStaffIds);
 
   return (
     <WorkspaceScene>
@@ -180,6 +165,16 @@ export function WorkspaceFloor({
             left: `${ARCHIVE_ROOM.bounds.left}%`,
             top: `${ARCHIVE_ROOM.bounds.top}%`,
             width: `${ARCHIVE_ROOM.bounds.width}%`,
+          }}
+        />
+        <div
+          className="absolute shadow-[inset_0_0_20px_rgba(0,0,0,0.25)]"
+          style={{
+            background: MEETING_FLOOR,
+            height: `${MEETING_ROOM.bounds.height}%`,
+            left: `${MEETING_ROOM.bounds.left}%`,
+            top: `${MEETING_ROOM.bounds.top}%`,
+            width: `${MEETING_ROOM.bounds.width}%`,
           }}
         />
         <div
@@ -205,9 +200,6 @@ export function WorkspaceFloor({
         <FloorProp left={79} top={8}>
           <PixelWoodSign label="Pantry" />
         </FloorProp>
-        <FloorProp left={79} top={52}>
-          <PixelWoodSign label="Reception" />
-        </FloorProp>
 
         {/* Archive room props */}
         {ARCHIVE_ROOM.props.map((prop, index) => (
@@ -223,6 +215,32 @@ export function WorkspaceFloor({
           onClick={() => onSelectZone("archive")}
         >
           <PixelArchiveShelfIso size={40} />
+        </WorkspaceZoneCell>
+
+        {/* Meeting room — furniture first, zone sign at entrance (no duplicate table) */}
+        <FloorProp left={MEETING_ROOM.rug.left} top={MEETING_ROOM.rug.top}>
+          <PixelRug size={MEETING_ROOM.rug.size} />
+        </FloorProp>
+        <FloorProp left={MEETING_ROOM.table.left} top={MEETING_ROOM.table.top}>
+          <PixelMeetingTable size={56} />
+        </FloorProp>
+        {MEETING_ROOM.chairs.map((chair) => (
+          <FloorProp key={chair.id} left={chair.left} top={chair.top}>
+            <PixelOfficeChair size={24} />
+          </FloorProp>
+        ))}
+        {MEETING_ROOM.props.map((prop) => (
+          <FloorProp key={prop.id} left={prop.left} top={prop.top}>
+            {meetingPropSprite(prop.type)}
+          </FloorProp>
+        ))}
+        <WorkspaceZoneCell
+          anchor={MEETING_ROOM.anchor}
+          ariaLabel="Open the meeting room"
+          label="Meeting"
+          onClick={() => onSelectZone("meeting")}
+        >
+          <PixelWhiteboardIso size={36} />
         </WorkspaceZoneCell>
 
         {/* Task board whiteboard */}
@@ -255,7 +273,7 @@ export function WorkspaceFloor({
           </FloorProp>
         ))}
 
-        <WorkspaceOfficeCat motionEnabled={!reducedMotion} />
+        <WorkspaceOfficeCat motionEnabled />
 
         {/* Pantry upper */}
         <FloorProp left={68} top={12}>
@@ -293,94 +311,101 @@ export function WorkspaceFloor({
           </FloorProp>
         ))}
 
-        {/* Reception meeting area */}
-        <FloorProp
-          left={RECEPTION_MEETING.table.left}
-          top={RECEPTION_MEETING.table.top}
+        {/* Reception — centered desk + grouped waiting lounge */}
+        <div
+          className="absolute flex -translate-x-1/2 -translate-y-[78%] flex-col items-center gap-1"
+          style={{
+            left: `${RECEPTION_ROOM.desk.left}%`,
+            top: `${RECEPTION_ROOM.desk.top}%`,
+            zIndex: Math.round(
+              RECEPTION_ROOM.desk.left + RECEPTION_ROOM.desk.top
+            ),
+          }}
         >
-          <PixelMeetingTable size={72} />
-        </FloorProp>
-        {RECEPTION_MEETING.chairs.map((chair) => (
-          <FloorProp key={chair.id} left={chair.left} top={chair.top}>
-            <PixelOfficeChair size={28} />
-          </FloorProp>
-        ))}
-        {RECEPTION_EXTRA_PROPS.map((prop) => (
+          <PixelWoodSign className="relative z-20 shrink-0" label="Reception" />
+          <PixelDeskIso size={76} />
+          <button
+            aria-label={`Talk to ${assistantName} at reception`}
+            className="group relative z-10 mt-1 flex flex-col items-center gap-1 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
+            onClick={onSelectReception}
+            type="button"
+          >
+            <PixelAssistant
+              className="transition-transform group-hover:scale-110"
+              size={52}
+            />
+            <span className="border-2 border-wood bg-panel px-1 font-[family-name:var(--font-pixel)] text-[8px] text-ink uppercase tracking-wide">
+              {assistantName}
+            </span>
+          </button>
+        </div>
+
+        <div
+          className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+          style={{
+            left: `${RECEPTION_ROOM.waiting.anchor.left}%`,
+            top: `${RECEPTION_ROOM.waiting.anchor.top}%`,
+            zIndex: Math.round(
+              RECEPTION_ROOM.waiting.anchor.left +
+                RECEPTION_ROOM.waiting.anchor.top
+            ),
+          }}
+        >
+          <PixelRug
+            className="pointer-events-none absolute top-1/2 left-1/2 -z-10 -translate-x-1/2 -translate-y-[40%]"
+            size={RECEPTION_ROOM.waiting.rug.size}
+          />
+          <PixelTeaTableIso size={RECEPTION_ROOM.waiting.teaTable.size} />
+          <PixelSofaIso
+            className="mt-1"
+            size={RECEPTION_ROOM.waiting.sofa.size}
+          />
+        </div>
+
+        {RECEPTION_ROOM.props.map((prop) => (
           <FloorProp key={prop.id} left={prop.left} top={prop.top}>
-            {prop.type === "bookshelf" ? (
-              <PixelBookshelfIso size={48} />
-            ) : (
-              <PixelPlantIso size={32} />
-            )}
+            {receptionPropSprite(prop.type)}
           </FloorProp>
         ))}
 
         {/* Staff desks */}
-        {desks.map((desk, index) => (
-          <WorkspaceDeskCell
-            anchor={WORKSPACE_DESK_SLOTS[index].anchor}
-            desk={desk}
-            key={desk.id}
-            onHire={onHire}
-          />
-        ))}
-
-        {/* Agents */}
         {desks.map((desk, index) => {
-          if (!desk.staffId) {
+          const slot = workspaceDeskSlot(desk.id);
+
+          return (
+            <WorkspaceDeskCell
+              anchor={slot?.anchor ?? WORKSPACE_DESK_SLOTS[index].anchor}
+              desk={desk}
+              key={desk.id}
+              onHire={onHire}
+              onSelectAgent={onSelectAgent}
+              variant={index}
+            />
+          );
+        })}
+
+        {/* Pantry agents walk from their desk slot */}
+        {desks.map((desk, index) => {
+          if (!desk.staffId || desk.location !== "pantry") {
             return null;
           }
 
-          const anchor = resolveAgentAnchor(
-            desk,
-            index,
-            pantryCounter,
-            wanderAnchors,
-            reducedMotion
-          );
-
-          if (desk.location === "pantry") {
-            pantryCounter += 1;
-          }
+          const slot = workspaceDeskSlot(desk.id);
+          const anchor = pantryAnchorForIndex(pantryCounter);
+          pantryCounter += 1;
 
           return (
             <WorkspaceAgent
               anchor={anchor}
               desk={desk}
-              key={desk.id}
-              motionEnabled={!reducedMotion}
+              key={`${desk.id}-pantry`}
+              motionEnabled
               onSelect={onSelectAgent}
-              onStaffArrived={onStaffArrived}
               variant={index}
-              walkOriginAnchor={
-                desk.location === "roaming"
-                  ? WORKSPACE_DESK_SLOTS[index].agentAnchor
-                  : undefined
-              }
+              walkOriginAnchor={slot?.agentAnchor}
             />
           );
         })}
-
-        {/* Reception assistant */}
-        <button
-          aria-label={`Talk to ${assistantName} at reception`}
-          className="group absolute z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
-          onClick={onSelectReception}
-          style={{
-            left: `${RECEPTION_ANCHOR.left}%`,
-            top: `${RECEPTION_ANCHOR.top}%`,
-          }}
-          type="button"
-        >
-          <PixelRug className="absolute top-6 -z-10" size={80} />
-          <PixelAssistant
-            className="transition-transform group-hover:scale-110"
-            size={52}
-          />
-          <span className="border-2 border-wood bg-panel px-1 font-[family-name:var(--font-pixel)] text-[8px] text-ink uppercase tracking-wide">
-            {assistantName}
-          </span>
-        </button>
       </div>
     </WorkspaceScene>
   );

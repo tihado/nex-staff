@@ -1,30 +1,35 @@
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import type { DialogueChoice } from "@/lib/dialogue/types";
+import { uiStrings } from "@/lib/i18n/ui";
 
 const HIRE_PROPOSAL_RE =
-  /\b(hire|tuyển|recruit)\b[\s\S]*\b(content writer|writer|viết)\b/i;
+  /\b(hire|recruit)\b[\s\S]*\b(content writer|writer)\b/i;
 
-const HIRE_CONFIRM_RE = /\b(xác nhận|confirm|ready to hire|sẵn sàng hire)\b/i;
+const HIRE_CONFIRM_RE = /\b(confirm|ready to hire)\b/i;
 
 const STAFF_NAME_RE = /\b([A-Z][\w'-]+)\s*\(\s*content writer\s*\)/i;
 
 export const HIRE_PROPOSE_CHOICES: DialogueChoice[] = [
-  { id: "hire-accept", label: "Có, hire Content Writer", shortcut: "A" },
-  { id: "hire-decline", label: "Không, để sau", shortcut: "B" },
-  { id: "hire-explain", label: "Giải thích thêm", shortcut: "C" },
+  { id: "hire-accept", label: uiStrings.hire.yesHireWriter, shortcut: "A" },
+  { id: "hire-decline", label: uiStrings.hire.notNow, shortcut: "B" },
+  { id: "hire-explain", label: uiStrings.hire.explainMore, shortcut: "C" },
 ];
 
 export const HIRE_LIMIT_CHOICES: DialogueChoice[] = [
-  { id: "hire-limit-ok", label: "OK", shortcut: "A" },
+  { id: "hire-limit-ok", label: uiStrings.ok, shortcut: "A" },
 ];
 
 export const HIRE_SUCCESS_CHOICES: DialogueChoice[] = [
-  { id: "hire-done", label: "Tiếp tục", shortcut: "A" },
+  { id: "hire-done", label: uiStrings.hire.continue, shortcut: "A" },
 ];
 
 export const HIRE_DELEGATE_CHOICES: DialogueChoice[] = [
-  { id: "hire-delegate-now", label: "Giao việc ngay", shortcut: "A" },
-  { id: "hire-delegate-later", label: "Để sau", shortcut: "B" },
+  { id: "hire-delegate-now", label: uiStrings.hire.delegateNow, shortcut: "A" },
+  {
+    id: "hire-delegate-later",
+    label: uiStrings.hire.delegateLater,
+    shortcut: "B",
+  },
 ];
 
 function getMessageText(message: AssistantUIMessage): string {
@@ -112,11 +117,11 @@ export function extractHireProposalChoices(
       {
         id: "hire-confirm-final",
         label: name
-          ? `Xác nhận hire ${name} (Content Writer)`
-          : "Xác nhận hire Content Writer",
+          ? uiStrings.hire.confirmHireLabel(name)
+          : uiStrings.hire.confirmHireGeneric,
         shortcut: "A",
       },
-      { id: "hire-edit", label: "Sửa lại", shortcut: "B" },
+      { id: "hire-edit", label: uiStrings.hire.edit, shortcut: "B" },
     ];
   }
 

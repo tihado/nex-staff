@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { PixelDeskIso } from "./office-sprites-iso";
+import { PixelDeskIso, PixelHireDeskIso } from "./office-sprites-iso";
+import { WorkspaceAgent } from "./workspace-agent";
 import {
   type FloorAnchor,
   WORKSPACE_DESK_SPRITE_SIZE,
@@ -12,6 +13,8 @@ interface WorkspaceDeskCellProps {
   anchor: FloorAnchor;
   desk: WorkspaceDesk;
   onHire: (deskId: string) => void;
+  onSelectAgent: (desk: WorkspaceDesk) => void;
+  variant: number;
 }
 
 /**
@@ -22,6 +25,8 @@ export function WorkspaceDeskCell({
   anchor,
   desk,
   onHire,
+  onSelectAgent,
+  variant,
 }: WorkspaceDeskCellProps) {
   if (desk.state === "empty") {
     return (
@@ -35,13 +40,26 @@ export function WorkspaceDeskCell({
     zIndex: Math.round(anchor.left + anchor.top),
   };
 
+  const showAgentAtDesk = Boolean(desk.staffId) && desk.location === "desk";
+
   return (
     <div
-      aria-hidden
-      className={cn("absolute -translate-x-1/2 -translate-y-[78%]")}
+      className={cn(
+        "absolute flex -translate-x-1/2 -translate-y-[78%] flex-col items-center",
+        !showAgentAtDesk && "pointer-events-none"
+      )}
       style={positionStyle}
     >
       <PixelDeskIso size={WORKSPACE_DESK_SPRITE_SIZE} />
+      {showAgentAtDesk ? (
+        <WorkspaceAgent
+          anchor={anchor}
+          desk={desk}
+          layout="desk"
+          onSelect={onSelectAgent}
+          variant={variant}
+        />
+      ) : null}
     </div>
   );
 }
@@ -72,7 +90,7 @@ export function WorkspaceHireDeskCell({
       style={positionStyle}
       type="button"
     >
-      <PixelDeskIso
+      <PixelHireDeskIso
         className="opacity-70 transition-opacity group-hover:opacity-100"
         size={WORKSPACE_DESK_SPRITE_SIZE}
       />

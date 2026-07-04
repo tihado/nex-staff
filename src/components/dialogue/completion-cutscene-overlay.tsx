@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ChoiceMenu } from "@/components/dialogue/choice-menu";
 import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
 import { DialoguePortrait } from "@/components/dialogue/dialogue-portrait";
 import { PixelButton, PixelDialogueBox } from "@/components/pixel";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import {
   buildCompletionCutsceneGreeting,
   COMPLETION_CUTSCENE_CHOICES,
@@ -32,6 +33,9 @@ export function CompletionCutsceneOverlay({
     completion.staffName,
     completion.title
   );
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef);
 
   const handleSelectChoice = useCallback(
     (choiceId: string) => {
@@ -75,7 +79,9 @@ export function CompletionCutsceneOverlay({
   return (
     <div
       aria-label={`Task completion from ${completion.staffName}`}
+      aria-modal="true"
       className="fixed inset-0 z-50 flex flex-col"
+      ref={dialogRef}
       role="dialog"
     >
       <button

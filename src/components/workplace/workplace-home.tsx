@@ -109,6 +109,11 @@ export function WorkplaceHome({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [hireCelebration, setHireCelebration] =
     useState<HireCelebration | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const showActionError = useCallback((message: string) => {
+    setActionError(message);
+  }, []);
 
   const overlayOpen =
     dialogue !== null ||
@@ -169,28 +174,34 @@ export function WorkplaceHome({
 
   const openDeliverablePreview = useCallback(
     async (taskId: string, acknowledgeOnClose = false) => {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        headers: { Accept: "application/json" },
-      });
+      try {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+          headers: { Accept: "application/json" },
+        });
 
-      if (!response.ok) {
-        return;
+        if (!response.ok) {
+          showActionError("Could not load deliverable. Please try again.");
+          return;
+        }
+
+        const detail = (await response.json()) as TaskDetail;
+
+        if (!detail.deliverable) {
+          showActionError("This task has no deliverable to preview yet.");
+          return;
+        }
+
+        setDeliverablePreview({
+          title: detail.deliverable.title,
+          content: detail.deliverable.content,
+          contentType: detail.deliverable.contentType,
+          acknowledgeTaskId: acknowledgeOnClose ? taskId : undefined,
+        });
+      } catch {
+        showActionError("Could not load deliverable. Please try again.");
       }
-
-      const detail = (await response.json()) as TaskDetail;
-
-      if (!detail.deliverable) {
-        return;
-      }
-
-      setDeliverablePreview({
-        title: detail.deliverable.title,
-        content: detail.deliverable.content,
-        contentType: detail.deliverable.contentType,
-        acknowledgeTaskId: acknowledgeOnClose ? taskId : undefined,
-      });
     },
-    []
+    [showActionError]
   );
 
   const handleCloseDeliverablePreview = useCallback(async () => {
@@ -201,17 +212,19 @@ export function WorkplaceHome({
       try {
         await acknowledgeCompletion(taskId);
       } catch {
-        /* ignore acknowledge errors */
+        showActionError("Could not save your response. Please try again.");
       }
     }
-  }, [acknowledgeCompletion, deliverablePreview?.acknowledgeTaskId]);
+  }, [
+    acknowledgeCompletion,
+    deliverablePreview?.acknowledgeTaskId,
+    showActionError,
+  ]);
 
   const handleViewDeliverableFromCutscene = useCallback(
     (taskId: string) => {
       setCompletionCutscene(null);
-      openDeliverablePreview(taskId, true).catch(() => {
-        /* ignore fetch errors */
-      });
+      openDeliverablePreview(taskId, true);
     },
     [openDeliverablePreview]
   );
@@ -294,10 +307,10 @@ export function WorkplaceHome({
       try {
         await acknowledgeCompletion(taskId);
       } catch {
-        /* ignore acknowledge errors */
+        showActionError("Could not dismiss notification. Please try again.");
       }
     },
-    [acknowledgeCompletion]
+    [acknowledgeCompletion, showActionError]
   );
 
   const handleBannerClick = useCallback(() => {
@@ -373,6 +386,21 @@ export function WorkplaceHome({
         </div>
       ) : null}
 
+      {actionError ? (
+        <div
+          className={cn(
+            "pointer-events-auto absolute left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2",
+            banner || hireCelebration ? "top-44" : "top-20"
+          )}
+        >
+          <PixelNotification
+            message={actionError}
+            onDismiss={() => setActionError(null)}
+            title="Something went wrong"
+          />
+        </div>
+      ) : null}
+
       {taskBoardOpen ? (
         <TaskBoardOverlay
           assistantName={assistantName}
@@ -380,9 +408,7 @@ export function WorkplaceHome({
           loading={tasksLoading}
           onClose={() => setTaskBoardOpen(false)}
           onViewDeliverable={(taskId) => {
-            openDeliverablePreview(taskId).catch(() => {
-              /* ignore fetch errors */
-            });
+            openDeliverablePreview(taskId);
           }}
           tasks={tasks}
         />
@@ -411,9 +437,7 @@ export function WorkplaceHome({
           content={deliverablePreview.content}
           contentType={deliverablePreview.contentType}
           onClose={() => {
-            handleCloseDeliverablePreview().catch(() => {
-              /* ignore acknowledge errors */
-            });
+            handleCloseDeliverablePreview();
           }}
           title={deliverablePreview.title}
         />
@@ -429,9 +453,7 @@ export function WorkplaceHome({
           onClose={() => setDialogue(null)}
           onStaffHired={handleStaffHired}
           onViewDeliverable={(taskId) => {
-            openDeliverablePreview(taskId, true).catch(() => {
-              /* ignore fetch errors */
-            });
+            openDeliverablePreview(taskId, true);
           }}
           portraitIcon={dialogue.portraitIcon}
           speakerId={dialogue.speakerId}

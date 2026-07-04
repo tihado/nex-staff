@@ -42,6 +42,14 @@ export function TaskBoardOverlay({
     );
   }, [assistantName, selectedTask]);
 
+  const activeTasks = useMemo(
+    () =>
+      tasks.filter(
+        (task) => task.status === "running" || task.status === "pending"
+      ),
+    [tasks]
+  );
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
@@ -139,7 +147,7 @@ export function TaskBoardOverlay({
             </p>
           ) : null}
 
-          {!(loading || error) && tasks.length === 0 ? (
+          {!(loading || error) && activeTasks.length === 0 ? (
             <p
               className="font-body text-[20px] text-text-muted"
               id="task-board-title"
@@ -150,7 +158,7 @@ export function TaskBoardOverlay({
           ) : null}
 
           <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto overscroll-contain sm:grid-cols-2">
-            {tasks.map((task) => (
+            {activeTasks.map((task) => (
               <li key={task.id}>
                 <TaskStickyNote onSelect={handleSelectTask} task={task} />
               </li>

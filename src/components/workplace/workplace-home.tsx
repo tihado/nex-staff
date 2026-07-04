@@ -128,8 +128,6 @@ export function WorkplaceHome({
     [desks]
   );
 
-  const hasDoneDesk = desks.some((desk) => desk.state === "done");
-
   const hasWriterOnRoster = hasContentWriterOnRoster(staff);
 
   const sparkleAnchor = useMemo(() => {
@@ -370,11 +368,11 @@ export function WorkplaceHome({
           <WorkspaceFloor
             assistantName={assistantName}
             desks={desks}
-            hasDoneDesk={hasDoneDesk}
             onHire={openHireDialogue}
             onSelectAgent={openAgent}
             onSelectReception={openReception}
             onSelectZone={handleSelectZone}
+            pendingCompletionCount={pendingCompletions.length}
           />
         </main>
       </div>

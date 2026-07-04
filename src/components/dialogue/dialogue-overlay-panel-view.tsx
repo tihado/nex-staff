@@ -5,15 +5,61 @@ import { PixelButton, PixelDialogueBox, PixelIcon } from "@/components/pixel";
 import type { DialogueLine } from "@/hooks/use-dialogue-engine";
 import type { DialogueChoice } from "@/lib/dialogue/types";
 import { cn } from "@/lib/utils";
+import type { VoiceInputState } from "@/lib/voice/types";
 import { ChoiceMenu } from "./choice-menu";
 import { DialogueInput } from "./dialogue-input";
 import { DialogueLog } from "./dialogue-log";
 import { DialogueMarkdown } from "./dialogue-markdown";
 import { DialoguePortrait } from "./dialogue-portrait";
+import { VoiceControl } from "./voice-control";
+
+interface DialogueChoiceVoiceProps {
+  disabled?: boolean;
+  error?: string | null;
+  isSupported?: boolean;
+  onToggle: () => void;
+  state: VoiceInputState;
+}
+
+function DialogueChoiceVoiceSection({
+  choiceVoice,
+  choices,
+  onSelectChoice,
+}: {
+  choiceVoice?: DialogueChoiceVoiceProps;
+  choices: DialogueChoice[];
+  onSelectChoice: (choiceId: string) => void;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col items-end gap-2 pr-0 sm:pr-28">
+      {choiceVoice?.isSupported ? (
+        <div className="flex items-center gap-2">
+          <VoiceControl
+            disabled={choiceVoice.disabled}
+            isSupported
+            onToggle={choiceVoice.onToggle}
+            state={choiceVoice.state}
+          />
+          <span className="font-pixel text-[9px] text-ink-muted uppercase tracking-widest">
+            Tap to pick by voice
+          </span>
+        </div>
+      ) : null}
+      {choiceVoice?.error ? (
+        <p className="font-pixel text-[9px] text-alert">{choiceVoice.error}</p>
+      ) : null}
+      <div className="w-full sm:max-w-sm">
+        <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
+      </div>
+    </div>
+  );
+}
 
 interface DialogueOverlayPanelViewProps {
   avatarSprite?: string;
+  chatId?: string;
   choices: DialogueChoice[];
+  choiceVoice?: DialogueChoiceVoiceProps;
   displayText: string;
   inputDisabled: boolean;
   isAnimating: boolean;
@@ -26,6 +72,7 @@ interface DialogueOverlayPanelViewProps {
   onOpenLog: () => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmitInput: (payload: { text: string }) => void;
+  onToggleVoiceOutput?: () => void;
   playerName: string;
   portraitIcon?: string;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -34,6 +81,8 @@ interface DialogueOverlayPanelViewProps {
   showNpcBox: boolean;
   speakerId: string;
   speakerName: string;
+  voiceLocale?: string;
+  voiceOutputEnabled?: boolean;
 }
 
 export function DialogueOverlayPanelView({
@@ -59,6 +108,11 @@ export function DialogueOverlayPanelView({
   log,
   onSelectChoice,
   onSubmitInput,
+  chatId,
+  voiceLocale,
+  voiceOutputEnabled = false,
+  onToggleVoiceOutput,
+  choiceVoice,
 }: DialogueOverlayPanelViewProps) {
   return (
     <div
@@ -92,6 +146,23 @@ export function DialogueOverlayPanelView({
             <PixelIcon name="list" size={12} /> Log
           </span>
         </PixelButton>
+        {onToggleVoiceOutput ? (
+          <PixelButton
+            aria-label={
+              voiceOutputEnabled
+                ? "Disable NPC voice readback"
+                : "Enable NPC voice readback"
+            }
+            aria-pressed={voiceOutputEnabled}
+            onClick={onToggleVoiceOutput}
+          >
+            <PixelIcon
+              label={voiceOutputEnabled ? "Voice on" : "Voice off"}
+              name={voiceOutputEnabled ? "volume-high" : "volume-off"}
+              size={12}
+            />
+          </PixelButton>
+        ) : null}
         <PixelButton aria-label="Close (Esc)" onClick={onClose}>
           <PixelIcon name="close" size={12} />
         </PixelButton>
@@ -147,9 +218,12 @@ export function DialogueOverlayPanelView({
 
               <div className="min-w-0 flex-1">
                 <DialogueInput
+                  chatId={chatId}
                   disabled={inputDisabled}
                   onSubmit={onSubmitInput}
                   playerName={playerName}
+                  voiceDisabled={inputDisabled}
+                  voiceLocale={voiceLocale}
                 />
               </div>
             </div>
@@ -157,11 +231,11 @@ export function DialogueOverlayPanelView({
         </div>
 
         {showChoices ? (
-          <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
-            <div className="w-full sm:max-w-sm">
-              <ChoiceMenu choices={choices} onSelect={onSelectChoice} />
-            </div>
-          </div>
+          <DialogueChoiceVoiceSection
+            choices={choices}
+            choiceVoice={choiceVoice}
+            onSelectChoice={onSelectChoice}
+          />
         ) : null}
       </div>
 

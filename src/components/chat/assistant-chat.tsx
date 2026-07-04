@@ -129,6 +129,7 @@ function AssistantChatPanel({
     useChat<AssistantUIMessage>({
       id: chatId,
       messages: initialMessages,
+      generateId: () => crypto.randomUUID(),
       transport,
     });
 

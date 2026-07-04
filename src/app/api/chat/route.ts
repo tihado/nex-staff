@@ -84,6 +84,7 @@ export async function POST(req: Request) {
     agent,
     uiMessages: messages,
     originalMessages: messages,
+    generateMessageId: () => crypto.randomUUID(),
     onEnd: async ({ messages: persistedMessages }) => {
       try {
         await persistChatMessages(chatId, persistedMessages);

@@ -49,12 +49,20 @@ function messageRowToUiMessage(row: typeof message.$inferSelect): UIMessage {
   };
 }
 
-function assertMessageId(messageId: string): string {
-  if (!isUuid(messageId)) {
-    throw new Error(`Invalid message id: ${messageId}`);
+function resolveMessageId(uiMessage: UIMessage): {
+  id: string;
+  message: UIMessage;
+} {
+  if (isUuid(uiMessage.id)) {
+    return { id: uiMessage.id, message: uiMessage };
   }
 
-  return messageId;
+  const id = crypto.randomUUID();
+
+  return {
+    id,
+    message: { ...uiMessage, id },
+  };
 }
 
 export async function ensureAssistantChat(
@@ -86,21 +94,21 @@ export async function persistChatMessage(
   chatId: string,
   uiMessage: UIMessage
 ): Promise<void> {
-  const messageId = assertMessageId(uiMessage.id);
+  const { id: messageId, message: storedMessage } = resolveMessageId(uiMessage);
 
   await db
     .insert(message)
     .values({
       id: messageId,
       chatId,
-      role: uiMessage.role,
-      content: uiMessage,
+      role: storedMessage.role,
+      content: storedMessage,
     })
     .onConflictDoUpdate({
       target: message.id,
       set: {
-        role: uiMessage.role,
-        content: uiMessage,
+        role: storedMessage.role,
+        content: storedMessage,
       },
     });
 

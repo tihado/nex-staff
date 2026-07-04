@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
 import { PixelCloseButton, PixelPanel } from "@/components/pixel";
 import { TaskDetailPanel } from "@/components/task-board/task-detail-panel";
 import { TaskStickyNote } from "@/components/task-board/task-sticky-note";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import {
   buildTaskDialogueContextFromSummary,
   buildTaskDialogueGreeting,
@@ -31,6 +32,9 @@ export function TaskBoardOverlay({
   onViewDeliverable,
 }: TaskBoardOverlayProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef);
 
   const taskDialogueGreeting = useMemo(() => {
     if (!selectedTask) {
@@ -127,6 +131,7 @@ export function TaskBoardOverlay({
       aria-labelledby="task-board-title"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)] p-4"
+      ref={dialogRef}
       role="dialog"
     >
       <PixelPanel

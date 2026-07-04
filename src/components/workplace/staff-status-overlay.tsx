@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PixelButton,
   PixelCloseButton,
@@ -11,6 +11,7 @@ import { StaffAvatar } from "@/components/staff/staff-avatar";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskOutputList } from "@/components/task-board/task-output-list";
 import type { WorkspaceDesk } from "@/components/workplace/workspace-layout";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useTaskDetail } from "@/hooks/use-task-detail";
 import { uiStrings } from "@/lib/i18n/ui";
 import type { TaskCheckpoint } from "@/lib/tasks/checkpoints";
@@ -298,6 +299,9 @@ export function StaffStatusOverlay({
     task?.id ?? null
   );
   const [previewItem, setPreviewItem] = useState<TaskOutputItem | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -330,6 +334,7 @@ export function StaffStatusOverlay({
         aria-labelledby="staff-status-title"
         aria-modal="true"
         className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)] p-4"
+        ref={dialogRef}
         role="dialog"
       >
         <PixelPanel

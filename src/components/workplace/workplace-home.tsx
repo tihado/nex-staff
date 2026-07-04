@@ -69,8 +69,7 @@ export function WorkplaceHome({
   const [zone, setZone] = useState<ActiveZone | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
 
-  const overlayOpen =
-    dialogue !== null || zone !== null || taskBoardOpen;
+  const overlayOpen = dialogue !== null || zone !== null || taskBoardOpen;
 
   const hasDoneDesk = desks.some((desk) => desk.state === "done");
 

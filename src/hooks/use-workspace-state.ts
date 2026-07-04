@@ -164,7 +164,7 @@ interface UseWorkspaceStateResult {
   dismissBanner: () => void;
   error: string | null;
   loading: boolean;
-  refresh: () => void;
+  refresh: () => Promise<void>;
   tasks: TaskSummary[];
 }
 

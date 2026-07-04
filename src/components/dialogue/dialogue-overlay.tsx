@@ -9,7 +9,7 @@ import { useHireFlow } from "@/hooks/use-hire-flow";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import {
   fetchAssistantChatHistory,
-  getOrCreateAssistantChatId,
+  getOrCreateDialogueChatId,
 } from "@/lib/chat/assistant-session";
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
@@ -243,7 +243,7 @@ export function DialogueOverlay({
     let cancelled = false;
 
     async function loadSession() {
-      const id = chatIdProp ?? getOrCreateAssistantChatId();
+      const id = chatIdProp ?? getOrCreateDialogueChatId({ speakerId, taskId });
       const messages = await fetchAssistantChatHistory(id);
 
       if (cancelled) {
@@ -254,12 +254,14 @@ export function DialogueOverlay({
       setChatId(id);
     }
 
+    setChatId(null);
+    setInitialMessages(null);
     loadSession();
 
     return () => {
       cancelled = true;
     };
-  }, [chatIdProp]);
+  }, [chatIdProp, speakerId, taskId]);
 
   if (!chatId || initialMessages === null) {
     return (

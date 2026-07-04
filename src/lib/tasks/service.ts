@@ -11,8 +11,13 @@ import {
   taskEvent,
   taskPreview,
 } from "@/db/schema";
+import { mergePullRequest } from "@/lib/github/merge-pull-request";
 import { createNotification } from "@/lib/notifications/service";
-import { getCoderWebsitePreviewUrl } from "@/lib/tasks/coder-preview";
+import {
+  getCoderPrUrl,
+  getCoderWebsitePreviewUrl,
+  isCoderPrMerged,
+} from "@/lib/tasks/coder-preview";
 import {
   DEFAULT_TASK_EVENTS_LIMIT,
   DEFAULT_TASK_LIST_LIMIT,
@@ -24,6 +29,7 @@ import {
   TaskCancelError,
   TaskCancelledError,
   TaskDispatchError,
+  TaskMergeError,
   TaskNotFoundError,
   TaskValidationError,
 } from "@/lib/tasks/errors";
@@ -472,6 +478,65 @@ export async function updateTaskCoderMetadata(
     .where(eq(task.id, taskId));
 }
 
+export interface MergeCoderPullRequestResult {
+  mergedAt: string;
+  message: string;
+  prUrl: string;
+  taskId: string;
+}
+
+export async function mergeCoderPullRequestForUser(
+  userId: string,
+  taskId: string
+): Promise<MergeCoderPullRequestResult> {
+  const taskRow = await getOwnedTaskRow(userId, taskId);
+
+  if (taskRow.status !== "completed") {
+    throw new TaskMergeError("Only completed tasks can be merged.");
+  }
+
+  const metadata = (taskRow.metadata ?? {}) as TaskMetadata;
+  const coder = metadata.coder;
+
+  if (!(coder?.repoUrl && coder.prUrl)) {
+    throw new TaskMergeError("This task has no pull request to merge.");
+  }
+
+  if (coder.prMergedAt) {
+    throw new TaskMergeError("Pull request was already merged.");
+  }
+
+  await mergePullRequest({
+    repoUrl: coder.repoUrl,
+    prUrl: coder.prUrl,
+  });
+
+  const mergedAt = new Date().toISOString();
+  const updatedCoder = {
+    ...coder,
+    prMergedAt: mergedAt,
+  };
+
+  await updateTaskCoderMetadata(taskId, updatedCoder);
+
+  await db.insert(taskEvent).values({
+    taskId,
+    type: "deliverable.saved",
+    payload: {
+      label: "Changes published",
+      prUrl: coder.prUrl,
+      mergedAt,
+    },
+  });
+
+  return {
+    taskId,
+    prUrl: coder.prUrl,
+    mergedAt,
+    message: "Changes published to your live website.",
+  };
+}
+
 const NON_CANCELLABLE_STATUSES = new Set<TaskStatus>([
   "completed",
   "failed",
@@ -583,6 +648,7 @@ export async function createTaskCompletedNotification(
   const websitePreviewUrl = getCoderWebsitePreviewUrl(
     (taskRow.metadata ?? {}) as TaskMetadata
   );
+  const prUrl = getCoderPrUrl((taskRow.metadata ?? {}) as TaskMetadata);
 
   await createNotification({
     userId: taskRow.userId,
@@ -594,6 +660,8 @@ export async function createTaskCompletedNotification(
       deliverableId: deliverableRow?.id ?? null,
       deliverableTitle: deliverableRow?.title ?? null,
       websitePreviewUrl: websitePreviewUrl ?? null,
+      prUrl: prUrl ?? null,
+      prMerged: isCoderPrMerged((taskRow.metadata ?? {}) as TaskMetadata),
     },
   });
 }

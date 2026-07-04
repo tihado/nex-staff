@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChoiceMenu } from "@/components/dialogue/choice-menu";
 import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
 import { DialoguePortrait } from "@/components/dialogue/dialogue-portrait";
 import { PixelButton, PixelDialogueBox } from "@/components/pixel";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import {
+  buildCompletionCutsceneChoices,
   buildCompletionCutsceneGreeting,
-  COMPLETION_CUTSCENE_CHOICES,
-  COMPLETION_CUTSCENE_PREVIEW_CHOICES,
 } from "@/lib/dialogue/completion-choices";
+import { uiStrings } from "@/lib/i18n/ui";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 
 interface CompletionCutsceneOverlayProps {
@@ -36,15 +36,49 @@ export function CompletionCutsceneOverlay({
     completion.websitePreviewUrl
   );
   const dialogRef = useRef<HTMLDivElement>(null);
+  const [prMerged, setPrMerged] = useState(completion.prMerged);
+  const [mergeAwaitingConfirm, setMergeAwaitingConfirm] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
 
   useFocusTrap(dialogRef);
 
-  const choices = completion.websitePreviewUrl
-    ? COMPLETION_CUTSCENE_PREVIEW_CHOICES
-    : COMPLETION_CUTSCENE_CHOICES;
+  const choices = buildCompletionCutsceneChoices({
+    websitePreviewUrl: completion.websitePreviewUrl,
+    prUrl: completion.prUrl,
+    prMerged,
+    mergeAwaitingConfirm,
+  });
+
+  const mergePullRequest = useCallback(async (): Promise<boolean> => {
+    if (!(completion.prUrl && !prMerged)) {
+      return false;
+    }
+
+    setMergeError(null);
+
+    try {
+      const response = await fetch(`/api/tasks/${completion.taskId}/merge-pr`, {
+        method: "POST",
+      });
+      const body = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(body.error ?? uiStrings.coder.mergeFailed);
+      }
+
+      setPrMerged(true);
+      setMergeAwaitingConfirm(false);
+      return true;
+    } catch (error) {
+      setMergeError(
+        error instanceof Error ? error.message : uiStrings.coder.mergeFailed
+      );
+      return false;
+    }
+  }, [completion.prUrl, completion.taskId, prMerged]);
 
   const handleSelectChoice = useCallback(
-    (choiceId: string) => {
+    async (choiceId: string) => {
       if (choiceId === "completion-preview" && completion.websitePreviewUrl) {
         window.open(
           completion.websitePreviewUrl,
@@ -53,6 +87,21 @@ export function CompletionCutsceneOverlay({
         );
         onAcknowledge(completion.taskId);
         onClose();
+        return;
+      }
+
+      if (choiceId === "completion-merge") {
+        setMergeAwaitingConfirm(true);
+        setMergeError(null);
+        return;
+      }
+
+      if (choiceId === "completion-merge-confirm") {
+        const merged = await mergePullRequest();
+        if (merged) {
+          onAcknowledge(completion.taskId);
+          onClose();
+        }
         return;
       }
 
@@ -74,6 +123,7 @@ export function CompletionCutsceneOverlay({
     [
       completion.taskId,
       completion.websitePreviewUrl,
+      mergePullRequest,
       onAcknowledge,
       onClose,
       onDelegateMore,
@@ -133,6 +183,16 @@ export function CompletionCutsceneOverlay({
             <div className="min-w-0 flex-1">
               <PixelDialogueBox speakerName={assistantName}>
                 <DialogueMarkdown content={greeting} />
+                {mergeAwaitingConfirm ? (
+                  <p className="mt-2 font-body text-[16px] text-ink-muted">
+                    {uiStrings.coder.mergeConfirm}
+                  </p>
+                ) : null}
+                {mergeError ? (
+                  <p className="mt-2 font-body text-[16px] text-alert">
+                    {mergeError}
+                  </p>
+                ) : null}
               </PixelDialogueBox>
             </div>
           </div>
@@ -140,7 +200,14 @@ export function CompletionCutsceneOverlay({
 
         <div className="mx-auto flex w-full max-w-3xl justify-end pr-0 sm:pr-28">
           <div className="w-full sm:max-w-sm">
-            <ChoiceMenu choices={choices} onSelect={handleSelectChoice} />
+            <ChoiceMenu
+              choices={choices}
+              onSelect={(choiceId) => {
+                handleSelectChoice(choiceId).catch(() => {
+                  /* handled in handleSelectChoice */
+                });
+              }}
+            />
           </div>
         </div>
       </div>

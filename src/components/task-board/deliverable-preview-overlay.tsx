@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
 import { PixelButton, PixelCloseButton, PixelPanel } from "@/components/pixel";
+import { CoderPrActionButtons } from "@/components/task-board/coder-pr-action-buttons";
 
 import { uiStrings } from "@/lib/i18n/ui";
 
@@ -10,6 +11,9 @@ interface DeliverablePreviewOverlayProps {
   content: string;
   contentType: string;
   onClose: () => void;
+  prMerged?: boolean;
+  prUrl?: string | null;
+  taskId?: string;
   title: string;
   websitePreviewUrl?: string | null;
 }
@@ -66,7 +70,10 @@ export function DeliverablePreviewOverlay({
   content,
   contentType,
   onClose,
+  taskId,
   websitePreviewUrl,
+  prUrl,
+  prMerged,
 }: DeliverablePreviewOverlayProps) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
     "idle"
@@ -151,21 +158,13 @@ export function DeliverablePreviewOverlay({
             <DialogueMarkdown content={previewBody} />
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-wood border-t-[3px] pt-3">
-            {websitePreviewUrl ? (
-              <PixelButton
-                onClick={() => {
-                  window.open(
-                    websitePreviewUrl,
-                    "_blank",
-                    "noopener,noreferrer"
-                  );
-                }}
-                type="button"
-              >
-                {uiStrings.deliverable.openWebsitePreview}
-              </PixelButton>
-            ) : null}
+          <div className="pixel-button-row shrink-0 border-wood border-t-[3px] pt-3">
+            <CoderPrActionButtons
+              prMerged={prMerged}
+              prUrl={prUrl}
+              taskId={taskId}
+              websitePreviewUrl={websitePreviewUrl}
+            />
             <PixelButton onClick={handleCopy} type="button">
               {copyButtonLabel(copyState)}
             </PixelButton>

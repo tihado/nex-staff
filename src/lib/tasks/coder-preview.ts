@@ -20,6 +20,28 @@ function readCoderMetadata(
   return coder as TaskMetadata["coder"];
 }
 
+export function getCoderPrUrl(
+  metadata: Record<string, unknown> | TaskMetadata | null | undefined
+): string | undefined {
+  const coder = readCoderMetadata(metadata);
+  const prUrl = coder?.prUrl;
+
+  return isHttpUrl(prUrl) ? prUrl : undefined;
+}
+
+export function isCoderPrMerged(
+  metadata: Record<string, unknown> | TaskMetadata | null | undefined
+): boolean {
+  const coder = readCoderMetadata(metadata);
+  return typeof coder?.prMergedAt === "string" && coder.prMergedAt.length > 0;
+}
+
+export function canMergeCoderPr(
+  metadata: Record<string, unknown> | TaskMetadata | null | undefined
+): boolean {
+  return Boolean(getCoderPrUrl(metadata) && !isCoderPrMerged(metadata));
+}
+
 export function getCoderWebsitePreviewUrl(
   metadata: Record<string, unknown> | TaskMetadata | null | undefined
 ): string | undefined {

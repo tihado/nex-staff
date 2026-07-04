@@ -29,7 +29,7 @@ export const uiStrings = {
     copy: "Copy",
     copyFailed: "Copy failed",
     download: "Download .md",
-    openWebsitePreview: "Open website preview",
+    openWebsitePreview: "View website",
     title: "Deliverable",
   },
   dialogue: {
@@ -78,11 +78,21 @@ export const uiStrings = {
       `${staffName} just finished "${title}"!`,
     greetingWithPreview: (staffName: string, title: string) =>
       `${staffName} just finished "${title}"! The website preview is ready — open the link to review it.`,
-    openWebsitePreview: "Open website preview",
+    openWebsitePreview: "View website",
+    mergeToMain: "Publish changes",
     viewResult: "View result",
     viewDetails: "View details",
     delegateMore: "Delegate more",
     close: "Close",
+  },
+  coder: {
+    confirmMerge: "Yes, publish",
+    mergeConfirm:
+      "This will publish the changes to your live website. Select Yes, publish to continue.",
+    mergeFailed: "Could not publish changes",
+    mergeToMain: "Publish changes",
+    merging: "Publishing…",
+    prMerged: "Published",
   },
   hire: {
     writerExplain:

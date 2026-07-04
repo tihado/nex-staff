@@ -36,7 +36,11 @@ import { uiStrings } from "@/lib/i18n/ui";
 import type { PendingTaskCompletion } from "@/lib/notifications/service";
 import { assignNewStaffToDesk } from "@/lib/staff/desk-assignments";
 import type { HireStaffResult } from "@/lib/staff/types";
-import { getCoderWebsitePreviewUrl } from "@/lib/tasks/coder-preview";
+import {
+  getCoderPrUrl,
+  getCoderWebsitePreviewUrl,
+  isCoderPrMerged,
+} from "@/lib/tasks/coder-preview";
 import type { TaskDetail, TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
@@ -72,6 +76,9 @@ interface DeliverablePreviewState {
   acknowledgeTaskId?: string;
   content: string;
   contentType: string;
+  prMerged?: boolean;
+  prUrl?: string | null;
+  taskId?: string;
   title: string;
   websitePreviewUrl?: string | null;
 }
@@ -361,7 +368,10 @@ export function WorkplaceHome({
           content: detail.deliverable.content,
           contentType: detail.deliverable.contentType,
           acknowledgeTaskId: acknowledgeOnClose ? taskId : undefined,
+          taskId,
           websitePreviewUrl: getCoderWebsitePreviewUrl(detail.metadata),
+          prUrl: getCoderPrUrl(detail.metadata),
+          prMerged: isCoderPrMerged(detail.metadata),
         });
       } catch {
         showActionError(uiStrings.errors.loadDeliverable);
@@ -669,6 +679,9 @@ export function WorkplaceHome({
               onClose={() => {
                 handleCloseDeliverablePreview();
               }}
+              prMerged={deliverablePreview.prMerged}
+              prUrl={deliverablePreview.prUrl}
+              taskId={deliverablePreview.taskId}
               title={deliverablePreview.title}
               websitePreviewUrl={deliverablePreview.websitePreviewUrl}
             />

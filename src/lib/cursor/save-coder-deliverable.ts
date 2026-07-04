@@ -15,30 +15,42 @@ function getCloudflarePreviewUrl(
   return input.previewUrls.find((url) => url !== input.prUrl);
 }
 
+const TECHNICAL_SUMMARY_LINE =
+  /^(pull request:|pr:|preview:|branch:|repository:|-\s*(pr|preview|branch|repository):)/i;
+
+function sanitizeCoderSummary(summary: string): string {
+  return summary
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        return true;
+      }
+
+      if (TECHNICAL_SUMMARY_LINE.test(trimmed)) {
+        return false;
+      }
+
+      return !(trimmed.includes("github.com") && trimmed.includes("/pull/"));
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function buildCoderDeliverableMarkdown(
   input: CoderDeliverableInput
 ): string {
-  const lines = [
-    `## ${input.title}`,
-    "",
-    input.summary.trim() || "Task completed.",
-    "",
-  ];
+  const summary =
+    sanitizeCoderSummary(input.summary.trim()) || "Task completed.";
 
-  if (input.prUrl) {
-    lines.push(`- PR: ${input.prUrl}`);
-  }
+  const lines = [`## ${input.title}`, "", summary];
 
   const cloudflarePreviewUrl = getCloudflarePreviewUrl(input);
   if (cloudflarePreviewUrl) {
-    lines.push(`- Preview: ${cloudflarePreviewUrl}`);
+    lines.push("", `- Website preview: ${cloudflarePreviewUrl}`);
   }
-
-  if (input.branch) {
-    lines.push(`- Branch: \`${input.branch}\``);
-  }
-
-  lines.push(`- Repository: ${input.repoUrl}`);
 
   return lines.join("\n");
 }

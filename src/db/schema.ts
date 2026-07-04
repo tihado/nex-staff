@@ -183,6 +183,7 @@ export interface TaskMetadata {
     branch?: string;
     cloudflarePreviewUrl?: string;
     previewUrls: string[];
+    prMergedAt?: string;
     prUrl?: string;
     repoUrl: string;
   };

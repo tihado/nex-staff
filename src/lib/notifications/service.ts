@@ -21,6 +21,8 @@ export interface NotificationRecord {
 export interface PendingTaskCompletion {
   deliverableId: string | null;
   notificationId: string;
+  prMerged: boolean;
+  prUrl: string | null;
   staffId: string;
   staffName: string;
   taskId: string;
@@ -156,6 +158,7 @@ export async function listPendingTaskCompletions(
       "Task deliverable";
     const deliverableId = readPayloadString(payload, "deliverableId");
     const websitePreviewUrl = readPayloadString(payload, "websitePreviewUrl");
+    const prUrl = readPayloadString(payload, "prUrl");
 
     return [
       {
@@ -166,6 +169,8 @@ export async function listPendingTaskCompletions(
         title,
         deliverableId,
         websitePreviewUrl,
+        prUrl,
+        prMerged: payload.prMerged === true,
       },
     ];
   });

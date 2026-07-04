@@ -32,6 +32,7 @@ export interface HireDialogueContext {
 interface DialogueOverlayProps {
   avatarSprite?: string;
   chatId?: string;
+  embedded?: boolean;
   greeting: string;
   hasWriterOnRoster?: boolean;
   hireContext?: HireDialogueContext;
@@ -93,6 +94,7 @@ function DialogueOverlayPanel({
   onViewDeliverable,
   taskId,
   layout = "overlay",
+  embedded = false,
 }: DialogueOverlayPanelProps) {
   const transport = useMemo(() => createAssistantTransport(taskId), [taskId]);
 
@@ -182,7 +184,8 @@ function DialogueOverlayPanel({
 
   const { logOpen, scrollRef, setLogOpen } = useDialoguePanelChrome(
     onClose,
-    displayText
+    displayText,
+    !embedded
   );
 
   const showInput = state === "player-input";
@@ -195,6 +198,7 @@ function DialogueOverlayPanel({
       chatError={chat.error?.message ?? null}
       choices={choices}
       displayText={displayText}
+      embedded={embedded}
       inputDisabled={engine.isBusy || hireFlow.phase === "submitting"}
       isAnimating={!useScriptedUi && engine.isStreaming}
       isPanel={layout === "panel"}
@@ -234,6 +238,7 @@ export function DialogueOverlay({
   onViewDeliverable,
   taskId,
   layout = "overlay",
+  embedded = false,
 }: DialogueOverlayProps) {
   const [chatId, setChatId] = useState<string | null>(chatIdProp ?? null);
   const [initialMessages, setInitialMessages] = useState<
@@ -287,6 +292,7 @@ export function DialogueOverlay({
     <DialogueOverlayPanel
       avatarSprite={avatarSprite}
       chatId={chatId}
+      embedded={embedded}
       greeting={greeting}
       hasWriterOnRoster={hasWriterOnRoster}
       hireContext={hireContext}

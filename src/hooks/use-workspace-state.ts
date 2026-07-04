@@ -14,6 +14,7 @@ import type { DeskAssignments } from "@/lib/staff/desk-assignments";
 import {
   pruneDeskAssignments,
   readDeskAssignments,
+  writeDeskAssignments,
 } from "@/lib/staff/desk-assignments";
 import type { StaffSummary } from "@/lib/staff/types";
 import type {
@@ -104,7 +105,7 @@ function deriveAgent(
 
   return {
     state: "idle",
-    location: "roaming",
+    location: "desk",
     pendingTaskId: null,
     progress: 0,
     emote: null,
@@ -325,6 +326,39 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Persist auto-filled desk slots so staff stay on the same workstation across reloads. */
+  useEffect(() => {
+    if (staff.length === 0) {
+      return;
+    }
+
+    const assignments = readDeskAssignments();
+    const occupied = new Set(Object.values(assignments));
+    const unassigned = staff.filter((member) => !assignments[member.id]);
+    let unassignedIndex = 0;
+    let changed = false;
+
+    for (const slot of WORKSPACE_DESK_SLOTS) {
+      if (occupied.has(slot.id)) {
+        continue;
+      }
+
+      if (unassignedIndex >= unassigned.length) {
+        break;
+      }
+
+      assignments[unassigned[unassignedIndex].id] = slot.id;
+      occupied.add(slot.id);
+      unassignedIndex += 1;
+      changed = true;
+    }
+
+    if (changed) {
+      writeDeskAssignments(assignments);
+      setDeskAssignments({ ...assignments });
+    }
+  }, [staff]);
 
   const handleProgress = useCallback(
     (payload: TaskProgressSsePayload) => {

@@ -45,6 +45,24 @@
   animation: pixel-slide-from-top 300ms step-end forwards;
 }
 
+@keyframes hire-sparkle-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -24px);
+  }
+}
+
+.hire-sparkle-animate {
+  animation: hire-sparkle-rise 2s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-cursor-blink,
   .pixel-advance-indicator {
@@ -55,6 +73,11 @@
   .pixel-notification-enter {
     opacity: 1;
     transform: none;
+    animation: none;
+  }
+
+  .hire-sparkle-animate {
+    opacity: 1;
     animation: none;
   }
 }

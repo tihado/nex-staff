@@ -21,7 +21,9 @@ export interface CreateAssistantOptions {
 
 type AssistantAgentTools = AssistantTools;
 
-function buildToolsContext(userId: string) {
+function buildToolsContext(userId: string, chatId?: string) {
+  const taskContext = { userId, chatId };
+
   return {
     list_documents: { userId },
     create_document: { userId },
@@ -29,6 +31,12 @@ function buildToolsContext(userId: string) {
     list_staff: { userId },
     get_staff: { userId },
     update_staff: { userId },
+    delegate_task: taskContext,
+    check_task_status: taskContext,
+    list_active_tasks: taskContext,
+    get_task_events: taskContext,
+    get_task_preview: taskContext,
+    get_deliverable: taskContext,
   } as const;
 }
 
@@ -56,7 +64,7 @@ export async function createAssistant(
     chatId: options.chatId,
   };
 
-  const toolsContext = buildToolsContext(userId);
+  const toolsContext = buildToolsContext(userId, options.chatId);
 
   return new ToolLoopAgent<never, AssistantAgentTools, AssistantRuntimeContext>(
     {

@@ -113,6 +113,12 @@ Set these environment variables on Vercel:
 
 Enable **Sandbox OIDC** in the Vercel project settings so `@ai-sdk/sandbox-vercel` can authenticate in preview/production. Verify with `GET /api/staging/sandbox-oidc` after deploy (remove that route once confirmed).
 
+For **local development**, set `SANDBOX_DISABLED=true` in `.env.local` so staff tasks use an in-memory workspace instead of Vercel Sandbox (no OIDC required). Delegate a task to a Writer staff member to exercise the full `staffTaskWorkflow` + `DurableAgent` path.
+
+| Command | Purpose |
+| ------- | ------- |
+| `pnpm exec tsx scripts/test-delegate-workflow.ts` | Sign in, delegate to staff, poll task status (local smoke test) |
+
 ## Đối tượng
 
 Solo founder — một người quản lý nhiều AI agent như đội ngũ nhân viên ảo.

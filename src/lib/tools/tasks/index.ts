@@ -1,28 +1,16 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { pendingToolExecute } from "@/lib/tools/pending";
-
-export const delegateTaskTool = tool({
-  description:
-    "Delegate a task to a staff member. They will work in the background.",
-  inputSchema: z.object({
-    staffId: z.string().uuid(),
-    brief: z.string(),
-    acceptanceCriteria: z.string().optional(),
-    checkpoints: z
-      .array(
-        z.object({
-          label: z.string(),
-          criteria: z.string(),
-          order: z.number(),
-        })
-      )
-      .optional(),
-    parentGroupId: z.string().uuid().optional(),
-    dependsOn: z.array(z.string().uuid()).optional(),
-  }),
-  execute: pendingToolExecute,
-});
+import {
+  getDeliverableForUser,
+  getTaskEventsForUser,
+  getTaskPreviewForUser,
+  getTaskStatusForUser,
+  listActiveTasksForUser,
+} from "@/lib/tasks/service";
+import {
+  delegateTaskTool,
+  taskToolContextSchema,
+} from "@/lib/tools/tasks/delegate-task";
 
 export const checkTaskStatusTool = tool({
   description:
@@ -30,14 +18,25 @@ export const checkTaskStatusTool = tool({
   inputSchema: z.object({
     taskId: z.string().uuid(),
   }),
-  execute: pendingToolExecute,
+  contextSchema: taskToolContextSchema,
+  execute: async ({ taskId }, { context }) => {
+    const status = await getTaskStatusForUser(context.userId, taskId);
+
+    if (!status) {
+      throw new Error("Task not found for this user.");
+    }
+
+    return status;
+  },
 });
 
 export const listActiveTasksTool = tool({
   description:
     "List all running tasks and recently completed tasks awaiting notification",
   inputSchema: z.object({}),
-  execute: pendingToolExecute,
+  contextSchema: taskToolContextSchema,
+  execute: async (_input, { context }) =>
+    listActiveTasksForUser(context.userId),
 });
 
 export const getTaskEventsTool = tool({
@@ -46,7 +45,16 @@ export const getTaskEventsTool = tool({
     taskId: z.string().uuid(),
     limit: z.number().int().positive().default(20),
   }),
-  execute: pendingToolExecute,
+  contextSchema: taskToolContextSchema,
+  execute: async ({ taskId, limit }, { context }) => {
+    const events = await getTaskEventsForUser(context.userId, taskId, limit);
+
+    if (!events) {
+      throw new Error("Task not found for this user.");
+    }
+
+    return { taskId, events };
+  },
 });
 
 export const getTaskPreviewTool = tool({
@@ -54,7 +62,16 @@ export const getTaskPreviewTool = tool({
   inputSchema: z.object({
     taskId: z.string().uuid(),
   }),
-  execute: pendingToolExecute,
+  contextSchema: taskToolContextSchema,
+  execute: async ({ taskId }, { context }) => {
+    const preview = await getTaskPreviewForUser(context.userId, taskId);
+
+    if (!preview) {
+      throw new Error("Task not found for this user.");
+    }
+
+    return { taskId, ...preview };
+  },
 });
 
 export const getDeliverableTool = tool({
@@ -62,7 +79,16 @@ export const getDeliverableTool = tool({
   inputSchema: z.object({
     taskId: z.string().uuid(),
   }),
-  execute: pendingToolExecute,
+  contextSchema: taskToolContextSchema,
+  execute: async ({ taskId }, { context }) => {
+    const deliverable = await getDeliverableForUser(context.userId, taskId);
+
+    if (!deliverable) {
+      throw new Error("Deliverable not found for this task.");
+    }
+
+    return deliverable;
+  },
 });
 
 export const taskTools = {

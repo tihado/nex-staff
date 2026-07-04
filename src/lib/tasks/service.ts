@@ -259,7 +259,7 @@ export async function saveDeliverable(
 
     await reportProgress(taskId, {
       type: "deliverable.saved",
-      label: "Đã lưu kết quả",
+      label: "Result saved",
       payload: { deliverableId: existing.id },
     });
 
@@ -282,7 +282,7 @@ export async function saveDeliverable(
 
   await reportProgress(taskId, {
     type: "deliverable.saved",
-    label: "Đã lưu kết quả",
+    label: "Result saved",
     payload: { deliverableId: row.id },
   });
 

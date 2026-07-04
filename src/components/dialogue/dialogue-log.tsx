@@ -32,9 +32,13 @@ export function DialogueLog({ lines, onClose }: DialogueLogProps) {
             className="font-pixel text-[10px] text-pixel-text-muted"
             id={titleId}
           >
-            Lịch sử hội thoại
+            Dialogue history
           </span>
-          <PixelButton aria-label="Đóng log" className="px-2" onClick={onClose}>
+          <PixelButton
+            aria-label="Close log"
+            className="px-2"
+            onClick={onClose}
+          >
             X
           </PixelButton>
         </div>

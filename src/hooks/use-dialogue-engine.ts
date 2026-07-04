@@ -117,17 +117,21 @@ interface ToolPartLike {
 
 const CHOICE_MAP: Record<string, DialogueChoice[]> = {
   hire_staff: [
-    { id: "hire-confirm", label: "Có, hire ngay!", shortcut: "A" },
-    { id: "hire-more", label: "Hỏi thêm trước", shortcut: "B" },
-    { id: "hire-cancel", label: "Không, để sau", shortcut: "C" },
+    { id: "hire-confirm", label: "Yes, hire now!", shortcut: "A" },
+    { id: "hire-more", label: "Ask more first", shortcut: "B" },
+    { id: "hire-cancel", label: "No, maybe later", shortcut: "C" },
   ],
   delegate_task: [
-    { id: "delegate-status", label: "Xem task status", shortcut: "A" },
-    { id: "delegate-continue", label: "Tiếp tục làm việc khác", shortcut: "B" },
+    { id: "delegate-status", label: "View task status", shortcut: "A" },
+    {
+      id: "delegate-continue",
+      label: "Continue with something else",
+      shortcut: "B",
+    },
   ],
   create_document: [
-    { id: "doc-open", label: "Mở tài liệu", shortcut: "A" },
-    { id: "doc-continue", label: "Tiếp tục", shortcut: "B" },
+    { id: "doc-open", label: "Open document", shortcut: "A" },
+    { id: "doc-continue", label: "Continue", shortcut: "B" },
   ],
 };
 

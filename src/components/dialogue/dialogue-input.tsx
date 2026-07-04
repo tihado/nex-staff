@@ -56,23 +56,23 @@ export function DialogueInput({
               submit();
             }
           }}
-          placeholder="Bạn muốn nói gì?..."
+          placeholder="What do you want to say?..."
           ref={textareaRef}
           rows={2}
           value={value}
         />
         <div className="flex items-center justify-end gap-2 pt-2">
           <PixelButton
-            aria-label="Đính kèm tệp"
+            aria-label="Attach file"
             className="px-2"
             disabled
-            title="Đính kèm (sắp có)"
+            title="Attach (coming soon)"
           >
             <PixelIcon name="paperclip" size={14} />
           </PixelButton>
           <PixelButton disabled={disabled || !value.trim()} onClick={submit}>
             <span className="flex items-center gap-1">
-              Gửi <PixelIcon name="send" size={14} />
+              Send <PixelIcon name="send" size={14} />
             </span>
           </PixelButton>
         </div>

@@ -54,6 +54,7 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 | [Data Model](docs/DATA-MODEL.md)     | Database schema                               |
 | [API](docs/API.md)                   | REST endpoints, tools, events                 |
 | [UI/UX](docs/UI-UX.md)               | Workspace tilemap + NPC dialogue 8-bit          |
+| [Voice Chat](docs/VOICE-CHAT.md)     | Voice STT/TTS plan for RPG dialogue (Phase 2+)  |
 | [Roadmap](docs/ROADMAP.md)           | Lộ trình MVP → v2                             |
 
 ## Trạng thái

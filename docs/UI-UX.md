@@ -585,6 +585,33 @@ Embedded input trong dialogue box (state `player-input`).
 - Không có input bar tách riêng ở bottom
 - `📎` attach trong dialogue box corner
 - Enter submit, Shift+Enter newline
+- **Voice (planned):** push-to-talk mic `[🎤]` — xem [Voice in Dialogue](#voice-in-dialogue-planned)
+
+### Voice in Dialogue (planned)
+
+Voice bổ sung RPG dialogue — **không** thay scroll chat. Chi tiết: [VOICE-CHAT.md](VOICE-CHAT.md).
+
+| Mode | Input | Output |
+| ---- | ----- | ------ |
+| V1 (Phase 2) | Hold mic → STT → text trong box → Gửi | NPC line TTS sau typewriter (toggle) |
+| V2 (Phase 3) | Streaming partial transcript; voice choices | Sentence-chunk TTS + chiptune mic SFX |
+
+**States:**
+
+```
+player-input + mic hold  →  listening (pulse border)
+release                  →  transcribing (mic spinner)
+success                  →  text in dialogue box → user confirms Gửi
+npc-speaking + TTS on    →  play audio after typewriter; skip on advance
+```
+
+**Rules:**
+
+- Mic **disabled** khi `isBusy` (Assistant streaming)
+- Task Board / Archive overlays **text-only** in V1
+- Transcript luôn visible trong dialogue box / Log (captions)
+
+**Component (planned):** `VoiceControl` — pixel mic button, composes into `DialogueInput`.
 
 ### 6. DialogueLog (overlay)
 

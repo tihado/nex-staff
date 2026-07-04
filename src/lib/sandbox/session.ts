@@ -23,16 +23,16 @@ function wrapVercelSession(session: VercelSession): SandboxSessionAdapter {
   const restricted = session.restricted();
 
   return {
-    readTextFile(path: string): Promise<string | null> {
-      return restricted.readTextFile({ path });
+    async readTextFile(path: string): Promise<string | null> {
+      return await restricted.readTextFile({ path });
     },
 
     async writeTextFile(path: string, content: string): Promise<void> {
       await restricted.writeTextFile({ path, content });
     },
 
-    run(command: string, workingDirectory?: string) {
-      return restricted.run({ command, workingDirectory });
+    async run(command: string, workingDirectory?: string) {
+      return await restricted.run({ command, workingDirectory });
     },
 
     async destroy(): Promise<void> {

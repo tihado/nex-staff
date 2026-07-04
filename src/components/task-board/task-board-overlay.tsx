@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DialogueOverlay } from "@/components/dialogue/dialogue-overlay";
 import { PixelCloseButton, PixelPanel } from "@/components/pixel";
 import { TaskDetailPanel } from "@/components/task-board/task-detail-panel";
 import { TaskStickyNote } from "@/components/task-board/task-sticky-note";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import {
   buildTaskDialogueContextFromSummary,
   buildTaskDialogueGreeting,
@@ -31,6 +32,9 @@ export function TaskBoardOverlay({
   onViewDeliverable,
 }: TaskBoardOverlayProps) {
   const [selectedTask, setSelectedTask] = useState<TaskSummary | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef);
 
   const taskDialogueGreeting = useMemo(() => {
     if (!selectedTask) {
@@ -48,6 +52,11 @@ export function TaskBoardOverlay({
       tasks.filter(
         (task) => task.status === "running" || task.status === "pending"
       ),
+    [tasks]
+  );
+
+  const failedTasks = useMemo(
+    () => tasks.filter((task) => task.status === "failed"),
     [tasks]
   );
 
@@ -122,6 +131,7 @@ export function TaskBoardOverlay({
       aria-labelledby="task-board-title"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay-backdrop)] p-4"
+      ref={dialogRef}
       role="dialog"
     >
       <PixelPanel
@@ -139,6 +149,10 @@ export function TaskBoardOverlay({
             />
           </div>
 
+          <h2 className="sr-only" id="task-board-title">
+            {uiStrings.taskBoard.title}
+          </h2>
+
           {loading ? (
             <p className="font-body text-[20px] text-text-muted">
               {uiStrings.taskBoard.loading}
@@ -151,22 +165,38 @@ export function TaskBoardOverlay({
             </p>
           ) : null}
 
-          {!(loading || error) && activeTasks.length === 0 ? (
-            <p
-              className="font-body text-[20px] text-text-muted"
-              id="task-board-title"
-            >
+          {!(loading || error) &&
+          activeTasks.length === 0 &&
+          failedTasks.length === 0 ? (
+            <p className="font-body text-[20px] text-text-muted">
               {uiStrings.taskBoard.empty}
             </p>
           ) : null}
 
-          <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto overscroll-contain sm:grid-cols-2">
-            {activeTasks.map((task) => (
-              <li key={task.id}>
-                <TaskStickyNote onSelect={handleSelectTask} task={task} />
-              </li>
-            ))}
-          </ul>
+          {!(loading || error) && activeTasks.length > 0 ? (
+            <ul className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto overscroll-contain sm:grid-cols-2">
+              {activeTasks.map((task) => (
+                <li key={task.id}>
+                  <TaskStickyNote onSelect={handleSelectTask} task={task} />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {!(loading || error) && failedTasks.length > 0 ? (
+            <section className="flex min-h-0 flex-col gap-3">
+              <h3 className="font-[family-name:var(--font-pixel)] text-[9px] text-alert uppercase tracking-wide">
+                {uiStrings.taskBoard.failedSection}
+              </h3>
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {failedTasks.map((task) => (
+                  <li key={task.id}>
+                    <TaskStickyNote onSelect={handleSelectTask} task={task} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </PixelPanel>
     </div>

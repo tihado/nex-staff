@@ -17,6 +17,7 @@ const EMOTE_ICON = {
   idea: "lightbulb-on",
   done: "check",
   notify: "warning-box",
+  failed: "warning-box",
 } as const;
 
 const EMOTE_LABEL = {
@@ -24,12 +25,14 @@ const EMOTE_LABEL = {
   idea: "Got an idea",
   done: "Done",
   notify: "Task ready",
+  failed: "Task failed",
 } as const;
 
 const STATUS_DOT: Record<WorkspaceDesk["state"], string> = {
   idle: "bg-leaf",
   working: "bg-sun",
   done: "bg-success",
+  failed: "bg-pixel-alert",
   empty: "bg-ink-muted",
   offline: "bg-ink-muted",
 };

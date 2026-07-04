@@ -11,6 +11,7 @@ import {
   fetchDocuments,
   mapDocumentsToChoices,
 } from "@/lib/documents/list-client";
+import { uiStrings } from "@/lib/i18n/ui";
 import { resolveStaffDeskSlotId } from "@/lib/staff/desk-slots";
 import { hireStaffFromDraft } from "@/lib/staff/hire-client";
 import { applyScriptedChoice } from "@/lib/staff/hire-flow-handlers";
@@ -35,8 +36,11 @@ const TONE_CHOICES: DialogueChoice[] = [
   { id: "tone-technical", label: "Technical — developers", shortcut: "C" },
 ];
 
-const WRITER_EXPLAIN_LINE =
-  "Content Writer viết blog, bài dài, và adapt tone theo brief. Có sandbox để draft file deliverable.";
+const NONE_DOCUMENT_CHOICE: DialogueChoice = {
+  id: "docs-none",
+  label: uiStrings.notNeeded,
+  shortcut: "A",
+};
 
 export interface UseHireFlowOptions {
   occupiedDeskSlotIds?: string[];
@@ -76,7 +80,7 @@ export function useHireFlow(
   const [phase, setPhase] = useState<HireFlowPhase>("idle");
   const [draft, setDraft] = useState<HireFlowDraft>(DEFAULT_DRAFT);
   const [documentChoices, setDocumentChoices] = useState<DialogueChoice[]>([
-    { id: "docs-none", label: "Không cần", shortcut: "A" },
+    NONE_DOCUMENT_CHOICE,
   ]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hiredResult, setHiredResult] = useState<HireStaffResult | null>(null);
@@ -155,9 +159,7 @@ export function useHireFlow(
       })
       .catch(() => {
         if (!cancelled) {
-          setDocumentChoices([
-            { id: "docs-none", label: "Không cần", shortcut: "A" },
-          ]);
+          setDocumentChoices([NONE_DOCUMENT_CHOICE]);
         }
       });
 
@@ -222,112 +224,129 @@ export function useHireFlow(
     switch (phase) {
       case "task_propose":
         return {
-          line: `Chưa có Writer — muốn hire ${draft.name} để ${summarizeTaskBrief(draft.pendingTaskBrief ?? "")} không?`,
+          line: uiStrings.hire.taskPropose(
+            draft.name,
+            summarizeTaskBrief(draft.pendingTaskBrief ?? "")
+          ),
           choices: [
             {
               id: "hire-accept",
-              label: `Có, hire ${draft.name}`,
+              label: uiStrings.hire.yesHireName(draft.name),
               shortcut: "A",
             },
-            { id: "hire-decline", label: "Không, để sau", shortcut: "B" },
+            { id: "hire-decline", label: uiStrings.hire.notNow, shortcut: "B" },
           ],
           dialogueState: "player-choice",
         };
 
       case "propose":
         return {
-          line: "Muốn hire Content Writer cho bàn này? Họ sẽ viết blog và nội dung dài theo tone bạn chọn.",
+          line: uiStrings.hire.proposeDesk,
           choices: [
             {
               id: "hire-accept",
-              label: "Có, hire Content Writer",
+              label: uiStrings.hire.yesHireWriter,
               shortcut: "A",
             },
-            { id: "hire-decline", label: "Không, để sau", shortcut: "B" },
-            { id: "hire-explain", label: "Giải thích thêm", shortcut: "C" },
+            { id: "hire-decline", label: uiStrings.hire.notNow, shortcut: "B" },
+            {
+              id: "hire-explain",
+              label: uiStrings.hire.explainMore,
+              shortcut: "C",
+            },
           ],
           dialogueState: "player-choice",
         };
 
       case "explain":
         return {
-          line: WRITER_EXPLAIN_LINE,
+          line: uiStrings.hire.writerExplain,
           choices: [
             {
               id: "hire-accept",
-              label: "Có, hire Content Writer",
+              label: uiStrings.hire.yesHireWriter,
               shortcut: "A",
             },
-            { id: "hire-decline", label: "Không, để sau", shortcut: "B" },
+            { id: "hire-decline", label: uiStrings.hire.notNow, shortcut: "B" },
           ],
           dialogueState: "player-choice",
         };
 
       case "gather_name":
         return {
-          line: "Tên staff là gì? (ví dụ: Alex)",
+          line: uiStrings.hire.gatherName,
           choices: [],
           dialogueState: "player-input",
         };
 
       case "gather_tone":
         return {
-          line: `Tone viết cho ${draft.name || "staff"} thế nào?`,
+          line: uiStrings.hire.gatherTone(draft.name),
           choices: TONE_CHOICES,
           dialogueState: "player-choice",
         };
 
       case "gather_docs":
         return {
-          line: "Link tài liệu tham khảo nào?",
+          line: uiStrings.hire.gatherDocs,
           choices: documentChoices,
           dialogueState: "player-choice",
         };
 
       case "confirm":
         return {
-          line: `Xác nhận hire ${draft.name} (Content Writer) với tone ${draft.tone}?`,
+          line: uiStrings.hire.confirmHire(draft.name, draft.tone),
           choices: [
             {
               id: "hire-confirm-final",
-              label: `Xác nhận hire ${draft.name} (Content Writer)`,
+              label: uiStrings.hire.confirmHireLabel(draft.name),
               shortcut: "A",
             },
-            { id: "hire-edit", label: "Sửa lại", shortcut: "B" },
+            { id: "hire-edit", label: uiStrings.hire.edit, shortcut: "B" },
           ],
           dialogueState: "player-choice",
         };
 
       case "error":
         return {
-          line:
-            errorMessage ??
-            "Không thể hire thêm staff. Bạn đã đạt giới hạn tối đa.",
-          choices: [{ id: "hire-limit-ok", label: "OK", shortcut: "A" }],
+          line: errorMessage ?? uiStrings.hire.staffLimit,
+          choices: [
+            { id: "hire-limit-ok", label: uiStrings.ok, shortcut: "A" },
+          ],
           dialogueState: "player-choice",
         };
 
       case "celebrate":
         return {
           line: hiredResult
-            ? `${hiredResult.name} đã sẵn sàng tại bàn! ✨`
-            : "Staff đã join team!",
-          choices: [{ id: "hire-done", label: "Tiếp tục", shortcut: "A" }],
+            ? uiStrings.hire.celebrateAtDesk(hiredResult.name)
+            : uiStrings.hire.staffJoined,
+          choices: [
+            { id: "hire-done", label: uiStrings.hire.continue, shortcut: "A" },
+          ],
           dialogueState: "player-choice",
         };
 
       case "delegate_offer": {
         const taskSummary = draft.pendingTaskBrief
           ? summarizeTaskBrief(draft.pendingTaskBrief)
-          : "việc này";
+          : uiStrings.hire.thisTask;
 
         return {
           line: hiredResult
-            ? `${hiredResult.name} đã sẵn sàng! Giao việc ${taskSummary} ngay không?`
-            : "Giao việc ngay?",
+            ? uiStrings.hire.delegateOffer(hiredResult.name, taskSummary)
+            : uiStrings.hire.delegatePrompt,
           choices: [
-            { id: "hire-delegate-now", label: "Giao việc ngay", shortcut: "A" },
-            { id: "hire-delegate-later", label: "Để sau", shortcut: "B" },
+            {
+              id: "hire-delegate-now",
+              label: uiStrings.hire.delegateNow,
+              shortcut: "A",
+            },
+            {
+              id: "hire-delegate-later",
+              label: uiStrings.hire.delegateLater,
+              shortcut: "B",
+            },
           ],
           dialogueState: "player-choice",
         };

@@ -33,3 +33,19 @@ export class TaskCancelError extends Error {
     this.name = "TaskCancelError";
   }
 }
+
+export class TaskCancelledError extends Error {
+  readonly code = "cancelled" as const;
+
+  constructor(message = "Task was cancelled.") {
+    super(message);
+    this.name = "TaskCancelledError";
+  }
+}
+
+export function isTaskCancelledError(error: unknown): boolean {
+  return (
+    error instanceof TaskCancelledError ||
+    (error instanceof Error && error.name === "TaskCancelledError")
+  );
+}

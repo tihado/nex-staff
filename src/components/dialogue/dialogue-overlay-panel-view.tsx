@@ -13,6 +13,7 @@ import { DialoguePortrait } from "./dialogue-portrait";
 
 interface DialogueOverlayPanelViewProps {
   avatarSprite?: string;
+  chatError?: string | null;
   choices: DialogueChoice[];
   displayText: string;
   inputDisabled: boolean;
@@ -42,6 +43,7 @@ export function DialogueOverlayPanelView({
   portraitIcon,
   avatarSprite,
   displayText,
+  chatError,
   isThinking,
   isAnimating,
   showNpcBox,
@@ -63,6 +65,7 @@ export function DialogueOverlayPanelView({
   return (
     <div
       aria-label={`Dialogue with ${speakerName}`}
+      aria-modal={isPanel ? undefined : "true"}
       className={cn(
         "flex flex-col",
         isPanel ? "min-h-0 flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
@@ -104,6 +107,12 @@ export function DialogueOverlayPanelView({
         )}
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+          {chatError ? (
+            <p className="font-body text-[18px] text-alert" role="alert">
+              {chatError}
+            </p>
+          ) : null}
+
           {showNpcBox ? (
             <div className="flex items-end gap-3 sm:gap-4">
               <DialoguePortrait

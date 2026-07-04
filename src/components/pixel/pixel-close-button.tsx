@@ -16,7 +16,7 @@ export function PixelCloseButton({
     <button
       aria-label="Close"
       className={cn(
-        "inline-flex size-8 min-h-8 min-w-8 cursor-pointer items-center justify-center border-2 border-border-dialogue bg-choice-bg font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] text-text-primary hover:bg-choice-hover hover:text-bg-dialogue focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2 active:translate-x-px active:translate-y-px",
+        "pixel-wood-btn inline-flex size-9 min-h-9 min-w-9 cursor-pointer items-center justify-center font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
         className
       )}
       type={type}

@@ -16,10 +16,10 @@ export function PixelChoice({
   return (
     <button
       className={cn(
-        "flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] transition-none focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-1",
+        "flex w-full cursor-pointer items-center gap-2 border-2 border-wood px-3 py-2 text-left font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] text-ink transition-none focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-1",
         selected
-          ? "bg-choice-hover text-bg-dialogue"
-          : "bg-choice-bg text-text-primary hover:bg-choice-hover/60",
+          ? "bg-choice-hover text-ink shadow-[inset_0_2px_0_rgba(255,255,255,0.4)]"
+          : "bg-choice-bg hover:bg-choice-hover/70",
         className
       )}
       data-selected={selected || undefined}

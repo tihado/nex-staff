@@ -1,11 +1,13 @@
 "use client";
 
-import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
+import { useState } from "react";
 import {
   PixelButton,
   PixelCloseButton,
   PixelProgressBar,
 } from "@/components/pixel";
+import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
+import { TaskOutputList } from "@/components/task-board/task-output-list";
 import { useTaskDetail } from "@/hooks/use-task-detail";
 import type { TaskDialogueContext } from "@/lib/dialogue/task-context";
 import type { TaskCheckpoint } from "@/lib/tasks/checkpoints";
@@ -14,6 +16,10 @@ import {
   formatTaskEventLabel,
   shouldShowTaskEvent,
 } from "@/lib/tasks/event-label";
+import {
+  buildTaskOutputItems,
+  type TaskOutputItem,
+} from "@/lib/tasks/output-items";
 import type {
   TaskDetail,
   TaskEventRecord,
@@ -34,25 +40,6 @@ function formatEventTime(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(iso));
-}
-
-function resolveTaskOutput(
-  detailContent: string | null | undefined,
-  previewContent: string | null | undefined
-): { content: string; source: "deliverable" | "preview" | null } {
-  const deliverable = detailContent?.trim();
-
-  if (deliverable) {
-    return { content: deliverable, source: "deliverable" };
-  }
-
-  const preview = previewContent?.trim();
-
-  if (preview) {
-    return { content: preview, source: "preview" };
-  }
-
-  return { content: "", source: null };
 }
 
 function TaskDetailToolbar({
@@ -189,29 +176,18 @@ function TaskProgressSection({ events }: { events: TaskEventRecord[] }) {
 }
 
 function TaskOutputSection({
-  output,
+  items,
+  onSelectItem,
 }: {
-  output: { content: string; source: "deliverable" | "preview" | null };
+  items: TaskOutputItem[];
+  onSelectItem: (item: TaskOutputItem) => void;
 }) {
   return (
     <section className="flex flex-col gap-2">
       <h3 className="font-[family-name:var(--font-pixel)] text-[9px] text-ink uppercase tracking-wide">
         Output
       </h3>
-      {output.source ? (
-        <div className="max-h-64 overflow-y-auto border-2 border-wood bg-panel p-3">
-          <p className="mb-2 font-[family-name:var(--font-pixel)] text-[7px] text-ink-muted uppercase">
-            {output.source === "deliverable"
-              ? "Final deliverable"
-              : "Live preview"}
-          </p>
-          <DialogueMarkdown content={output.content} />
-        </div>
-      ) : (
-        <p className="font-body text-[18px] text-text-muted">
-          No output yet. Progress will appear here as the task runs.
-        </p>
-      )}
+      <TaskOutputList items={items} onSelectItem={onSelectItem} />
     </section>
   );
 }
@@ -226,15 +202,13 @@ export function TaskDetailPanel({
   const { detail, events, preview, loading, error, refresh } = useTaskDetail(
     task.id
   );
+  const [previewItem, setPreviewItem] = useState<TaskOutputItem | null>(null);
 
   const checkpoints = detail ? parseTaskCheckpoints(detail.metadata) : [];
   const visibleEvents = events.filter((event) =>
     shouldShowTaskEvent(event.type)
   );
-  const output = resolveTaskOutput(
-    detail?.deliverable?.content,
-    preview?.content
-  );
+  const outputItems = buildTaskOutputItems(task, detail, preview);
 
   const handleAskAssistant = () => {
     onAskAssistant?.({
@@ -247,48 +221,62 @@ export function TaskDetailPanel({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
-      <div className="shrink-0">
-        <TaskDetailToolbar
-          loading={loading}
-          onBack={onBack}
-          onClose={onClose}
-          onRefresh={() => {
-            refresh().catch(() => {
-              /* handled in hook */
-            });
-          }}
-        />
+    <>
+      <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
+        <div className="shrink-0">
+          <TaskDetailToolbar
+            loading={loading}
+            onBack={onBack}
+            onClose={onClose}
+            onRefresh={() => {
+              refresh().catch(() => {
+                /* handled in hook */
+              });
+            }}
+          />
+        </div>
+
+        {loading ? (
+          <p className="font-body text-[20px] text-text-muted">Loading task…</p>
+        ) : null}
+
+        {error ? (
+          <p className="font-body text-[20px] text-alert" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        {loading || error ? null : (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+            <div className="flex flex-col gap-5 pb-2">
+              <TaskDetailSummary detail={detail} task={task} />
+              <TaskCheckpointsSection checkpoints={checkpoints} />
+              <TaskProgressSection events={visibleEvents} />
+              <TaskOutputSection
+                items={outputItems}
+                onSelectItem={setPreviewItem}
+              />
+
+              {variant === "modal" && onAskAssistant ? (
+                <div className="pt-1">
+                  <PixelButton onClick={handleAskAssistant}>
+                    Ask Assistant about this task
+                  </PixelButton>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <p className="font-body text-[20px] text-text-muted">Loading task…</p>
+      {previewItem ? (
+        <DeliverablePreviewOverlay
+          content={previewItem.content}
+          contentType={previewItem.contentType}
+          onClose={() => setPreviewItem(null)}
+          title={previewItem.title}
+        />
       ) : null}
-
-      {error ? (
-        <p className="font-body text-[20px] text-alert" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      {loading || error ? null : (
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-          <div className="flex flex-col gap-5 pb-2">
-            <TaskDetailSummary detail={detail} task={task} />
-            <TaskCheckpointsSection checkpoints={checkpoints} />
-            <TaskProgressSection events={visibleEvents} />
-            <TaskOutputSection output={output} />
-
-            {variant === "modal" && onAskAssistant ? (
-              <div className="pt-1">
-                <PixelButton onClick={handleAskAssistant}>
-                  Ask Assistant about this task
-                </PixelButton>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

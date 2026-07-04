@@ -47,15 +47,17 @@ function deriveAgent(
   staffMember: StaffSummary,
   tasks: TaskSummary[]
 ): DerivedAgent {
-  const runningTask = tasks.find((task) => task.status === "running");
+  const activeTask = tasks.find(
+    (task) => task.status === "running" || task.status === "pending"
+  );
 
-  if (runningTask) {
+  if (activeTask) {
     return {
       state: "working",
       location: "desk",
-      progress: runningTask.progressPercent,
+      progress: activeTask.progressPercent,
       emote:
-        runningTask.progressPercent >= IDEA_PROGRESS_THRESHOLD
+        activeTask.progressPercent >= IDEA_PROGRESS_THRESHOLD
           ? "idea"
           : "thinking",
     };
@@ -68,7 +70,7 @@ function deriveAgent(
       state: "done",
       location: "pantry",
       progress: 100,
-      emote: "done",
+      emote: "notify",
     };
   }
 
@@ -180,7 +182,7 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
       const [staffResult, tasksResult] = await Promise.all([
         fetchJson<{ staff: StaffSummary[] }>("/api/staff"),
         fetchJson<{ tasks: TaskSummary[] }>(
-          "/api/tasks?status=running,completed"
+          "/api/tasks?status=running,pending,completed"
         ),
       ]);
 
@@ -219,10 +221,17 @@ export function useWorkspaceState(): UseWorkspaceStateResult {
   );
 
   const handleCompleted = useCallback((payload: TaskCompletedSsePayload) => {
+    const completedAt = new Date().toISOString();
+
     setTasks((current) =>
       current.map((task) =>
         task.id === payload.taskId
-          ? { ...task, status: "completed" as const, progressPercent: 100 }
+          ? {
+              ...task,
+              status: "completed" as const,
+              progressPercent: 100,
+              completedAt,
+            }
           : task
       )
     );

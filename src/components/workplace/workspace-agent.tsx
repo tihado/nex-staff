@@ -9,12 +9,14 @@ const EMOTE_ICON = {
   thinking: "more-horizontal",
   idea: "lightbulb-on",
   done: "check",
+  notify: "warning-box",
 } as const;
 
 const EMOTE_LABEL = {
   thinking: "Thinking",
   idea: "Got an idea",
   done: "Done",
+  notify: "Task ready",
 } as const;
 
 const STATUS_DOT: Record<WorkspaceDesk["state"], string> = {
@@ -60,13 +62,16 @@ export function WorkspaceAgent({
       {/* Head emote bubble */}
       {emote ? (
         <span
-          className="advance-indicator absolute -top-5 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center border-2 border-wood bg-panel text-ink"
+          className={cn(
+            "advance-indicator absolute -top-5 left-1/2 flex size-6 -translate-x-1/2 items-center justify-center border-2 border-wood bg-panel text-ink",
+            emote === "notify" && "animate-bounce"
+          )}
           title={EMOTE_LABEL[emote]}
         >
           <PixelIcon
             className={cn(
               emote === "idea" && "text-pixel-accent",
-              emote === "done" && "text-success"
+              (emote === "done" || emote === "notify") && "text-success"
             )}
             label={EMOTE_LABEL[emote]}
             name={EMOTE_ICON[emote]}

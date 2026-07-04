@@ -1,12 +1,14 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type FileUIPart } from "ai";
 import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { cn } from "@/lib/utils";
+import { FileAttachmentChip } from "./file-attachment-chip";
+import { MessageMarkdown } from "./message-markdown";
 
 const ASSISTANT_CHAT_STORAGE_KEY = "nex-staff-assistant-chat-id";
 
@@ -29,6 +31,18 @@ function getMessageText(message: AssistantUIMessage): string {
     .join("");
 }
 
+function getMessageFileParts(message: AssistantUIMessage): FileUIPart[] {
+  return message.parts.filter(
+    (part): part is FileUIPart => part.type === "file"
+  );
+}
+
+function hasMessageContent(message: AssistantUIMessage): boolean {
+  const hasText = getMessageText(message).trim().length > 0;
+  const hasFiles = getMessageFileParts(message).length > 0;
+  return hasText || hasFiles;
+}
+
 function getOrCreateChatId(): string {
   const existingId = sessionStorage.getItem(ASSISTANT_CHAT_STORAGE_KEY);
 
@@ -44,8 +58,10 @@ function getOrCreateChatId(): string {
 function ChatMessage({ message }: { message: AssistantUIMessage }) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
+  const files = getMessageFileParts(message);
+  const variant = isUser ? "user" : "assistant";
 
-  if (!text) {
+  if (!hasMessageContent(message)) {
     return null;
   }
 
@@ -59,7 +75,16 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
             : "border border-border bg-card text-card-foreground"
         )}
       >
-        <p className="whitespace-pre-wrap">{text}</p>
+        <MessageMarkdown content={text} variant={variant} />
+        {files.map((file) => (
+          <FileAttachmentChip
+            filename={file.filename}
+            key={file.url}
+            mediaType={file.mediaType}
+            url={file.url}
+            variant={variant}
+          />
+        ))}
       </div>
     </div>
   );

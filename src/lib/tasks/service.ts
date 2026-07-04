@@ -21,6 +21,7 @@ import {
 } from "@/lib/tasks/constants";
 import {
   TaskCancelError,
+  TaskCancelledError,
   TaskDispatchError,
   TaskNotFoundError,
   TaskValidationError,
@@ -265,6 +266,21 @@ export async function getTaskForWorkflow(taskId: string): Promise<{
   return { task: taskRow, staff: staffRow };
 }
 
+export async function assertTaskNotCancelled(taskId: string): Promise<void> {
+  const taskRow = await db.query.task.findFirst({
+    where: eq(task.id, taskId),
+    columns: { status: true },
+  });
+
+  if (!taskRow) {
+    throw new Error(`Task ${taskId} not found.`);
+  }
+
+  if (taskRow.status === "cancelled") {
+    throw new TaskCancelledError();
+  }
+}
+
 export async function reportProgress(
   taskId: string,
   event: ProgressInput
@@ -276,6 +292,10 @@ export async function reportProgress(
 
   if (!taskRow) {
     throw new Error(`Task ${taskId} not found.`);
+  }
+
+  if (taskRow.status === "cancelled") {
+    throw new TaskCancelledError();
   }
 
   const payload: Record<string, unknown> = {
@@ -349,6 +369,8 @@ export async function saveDeliverable(
   taskId: string,
   input: { content: string; contentType?: string; title: string }
 ): Promise<string> {
+  await assertTaskNotCancelled(taskId);
+
   const existing = await db.query.deliverable.findFirst({
     where: eq(deliverable.taskId, taskId),
     columns: { id: true },
@@ -400,13 +422,17 @@ export async function markTaskFailed(
   taskId: string,
   error: unknown
 ): Promise<void> {
-  const message =
-    error instanceof Error ? error.message : "Task execution failed.";
-
   const taskRow = await db.query.task.findFirst({
     where: eq(task.id, taskId),
-    columns: { metadata: true },
+    columns: { metadata: true, status: true },
   });
+
+  if (taskRow?.status === "cancelled") {
+    return;
+  }
+
+  const message =
+    error instanceof Error ? error.message : "Task execution failed.";
 
   const metadata: TaskMetadata = {
     ...(taskRow?.metadata ?? {}),

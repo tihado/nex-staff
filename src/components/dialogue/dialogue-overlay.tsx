@@ -177,6 +177,7 @@ export function DialogueOverlay({
 
               <div className="min-w-0 flex-1">
                 <DialogueInput
+                  disabled={engine.isBusy}
                   onSubmit={engine.submitInput}
                   playerName={PLAYER_NAME}
                 />

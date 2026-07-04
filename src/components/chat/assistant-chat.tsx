@@ -6,6 +6,7 @@ import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
+import { uploadDocument } from "@/lib/documents/upload-client";
 import { cn } from "@/lib/utils";
 import { FileAttachmentChip } from "./file-attachment-chip";
 import { MessageMarkdown } from "./message-markdown";
@@ -21,13 +22,6 @@ interface AssistantChatProps {
 interface PendingFileAttachment {
   file: File;
   id: string;
-}
-
-interface UploadedDocument {
-  blobUrl: string;
-  filename: string;
-  id: string;
-  mimeType: string;
 }
 
 function getMessageText(message: AssistantUIMessage): string {
@@ -94,31 +88,6 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
       </div>
     </div>
   );
-}
-
-async function uploadDocument(file: File): Promise<UploadedDocument> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/documents", {
-    method: "POST",
-    body: formData,
-  });
-
-  const payload = (await response.json()) as UploadedDocument & {
-    error?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(payload.error ?? "Failed to upload document.");
-  }
-
-  return {
-    id: payload.id,
-    filename: payload.filename,
-    mimeType: payload.mimeType,
-    blobUrl: payload.blobUrl,
-  };
 }
 
 async function fetchChatHistory(chatId: string): Promise<AssistantUIMessage[]> {

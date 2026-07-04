@@ -2,25 +2,35 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PixelButton, PixelIcon } from "@/components/pixel";
+import type { DialogueSubmitPayload } from "@/hooks/use-dialogue-engine";
+import { uploadDocument } from "@/lib/documents/upload-client";
 import { DialogueMarkdown } from "./dialogue-markdown";
 
 const MARKDOWN_SYNTAX_PATTERN =
   /(\*\*|__|`+|^#{1,6}\s|^\s*[-*+]\s|^\s*\d+\.\s|\[.+\]\(.+\)|^>\s)/m;
+
+const ACCEPTED_FILE_TYPES =
+  ".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain";
 
 /** Show live preview only when markdown would render differently from plain text. */
 function hasMarkdownSyntax(text: string): boolean {
   return MARKDOWN_SYNTAX_PATTERN.test(text);
 }
 
+interface PendingFileAttachment {
+  file: File;
+  id: string;
+}
+
 interface DialogueInputProps {
   disabled?: boolean;
-  onSubmit: (text: string) => void;
+  onSubmit: (payload: DialogueSubmitPayload) => void | Promise<void>;
   playerName: string;
 }
 
 /**
  * Free-text input embedded inside the dialogue box (state `player-input`).
- * Supports Markdown — live preview appears only when markdown syntax is used.
+ * Supports Markdown preview and document attachments.
  */
 export function DialogueInput({
   playerName,
@@ -28,24 +38,103 @@ export function DialogueInput({
   onSubmit,
 }: DialogueInputProps) {
   const [value, setValue] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<PendingFileAttachment[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
 
-  const submit = () => {
-    const text = value.trim();
+  const isBusy = disabled || isUploading;
+  const canSend =
+    (value.trim().length > 0 || pendingFiles.length > 0) && !isBusy;
+  const showPreview = value.trim().length > 0 && hasMarkdownSyntax(value);
 
-    if (!text || disabled) {
+  const removePendingFile = (id: string) => {
+    setPendingFiles((current) => current.filter((item) => item.id !== id));
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const selectedFiles = input.files;
+
+    if (!selectedFiles || selectedFiles.length === 0 || isBusy) {
+      input.value = "";
       return;
     }
 
-    onSubmit(text);
-    setValue("");
+    const newAttachments = Array.from(selectedFiles).map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+    }));
+
+    input.value = "";
+    setUploadError(null);
+    setPendingFiles((current) => [...current, ...newAttachments]);
   };
 
-  const showPreview = value.trim().length > 0 && hasMarkdownSyntax(value);
+  const submit = async () => {
+    const text = value.trim();
+    const filesToUpload = pendingFiles;
+
+    if ((!text && filesToUpload.length === 0) || isBusy) {
+      return;
+    }
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      const uploadedFiles =
+        filesToUpload.length > 0
+          ? await Promise.all(
+              filesToUpload.map((item) => uploadDocument(item.file))
+            )
+          : [];
+
+      const messageText =
+        text ||
+        (uploadedFiles.length > 0 ? "Review the attached file(s)." : "");
+
+      if (!messageText) {
+        return;
+      }
+
+      await onSubmit({
+        text: messageText,
+        ...(uploadedFiles.length > 0
+          ? {
+              files: uploadedFiles.map((uploaded) => ({
+                type: "file" as const,
+                filename: uploaded.filename,
+                mediaType: uploaded.mimeType,
+                url: uploaded.blobUrl,
+              })),
+            }
+          : {}),
+      });
+
+      setValue("");
+      setPendingFiles([]);
+    } catch (submitFailure) {
+      setUploadError(
+        submitFailure instanceof Error
+          ? submitFailure.message
+          : "Failed to send message with attachments."
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    submit().catch(() => {
+      // submit() already surfaces errors via uploadError state.
+    });
+  };
 
   return (
     <div className="relative">
@@ -53,9 +142,45 @@ export function DialogueInput({
         <PixelIcon name="chevron-down" size={12} /> {playerName}
       </div>
       <div className="pixel-frame bg-bg-dialogue px-5 pt-6 pb-4">
+        <input
+          accept={ACCEPTED_FILE_TYPES}
+          className="sr-only"
+          disabled={isBusy}
+          id="dialogue-file-input"
+          multiple
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          type="file"
+        />
+
         <label className="sr-only" htmlFor="dialogue-input">
           Message {playerName}
         </label>
+
+        {pendingFiles.length > 0 ? (
+          <div className="mb-3 flex flex-wrap gap-2 border-border-dialogue border-b-[2px] pb-3">
+            {pendingFiles.map((attachment) => (
+              <span
+                className="inline-flex max-w-full items-center gap-1 border-2 border-border-dialogue bg-panel px-2 py-1 font-pixel text-[9px] text-ink"
+                key={attachment.id}
+              >
+                <PixelIcon aria-hidden name="file" size={12} />
+                <span className="max-w-[12rem] truncate">
+                  {attachment.file.name}
+                </span>
+                <button
+                  aria-label={`Remove ${attachment.file.name}`}
+                  className="inline-flex size-4 items-center justify-center text-ink-muted hover:text-ink disabled:opacity-50"
+                  disabled={isBusy}
+                  onClick={() => removePendingFile(attachment.id)}
+                  type="button"
+                >
+                  <PixelIcon name="close" size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         {showPreview ? (
           <section
@@ -67,14 +192,14 @@ export function DialogueInput({
         ) : null}
 
         <textarea
-          className="min-h-[4rem] w-full resize-none bg-transparent font-pixel text-[11px] text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted"
-          disabled={disabled}
+          className="min-h-[4rem] w-full resize-none bg-transparent font-pixel text-[11px] text-pixel-text leading-[1.8] outline-none placeholder:text-pixel-text-muted disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isBusy}
           id="dialogue-input"
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              submit();
+              handleSubmit();
             }
           }}
           placeholder="What do you want to say?..."
@@ -82,18 +207,25 @@ export function DialogueInput({
           rows={2}
           value={value}
         />
+
+        {uploadError ? (
+          <p className="pt-2 font-pixel text-[9px] text-alert">{uploadError}</p>
+        ) : null}
+
         <div className="flex items-center justify-end gap-2 pt-2">
           <PixelButton
-            aria-label="Attach file"
+            aria-label="Attach document"
             className="px-2"
-            disabled
-            title="Attach (coming soon)"
+            disabled={isBusy}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
           >
             <PixelIcon name="paperclip" size={14} />
           </PixelButton>
-          <PixelButton disabled={disabled || !value.trim()} onClick={submit}>
+          <PixelButton disabled={!canSend} onClick={handleSubmit}>
             <span className="flex items-center gap-1">
-              Send <PixelIcon name="send" size={14} />
+              {isUploading ? "Uploading..." : "Send"}{" "}
+              <PixelIcon name="send" size={14} />
             </span>
           </PixelButton>
         </div>

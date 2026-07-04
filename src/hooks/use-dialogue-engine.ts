@@ -39,15 +39,28 @@ export interface UseDialogueEngineOptions {
   speakerRole?: string;
 }
 
+export interface DialogueMessageFile {
+  filename: string;
+  mediaType: string;
+  type: "file";
+  url: string;
+}
+
+export interface DialogueSubmitPayload {
+  files?: DialogueMessageFile[];
+  text: string;
+}
+
 export interface DialogueEngine {
   choices: DialogueChoice[];
   displayText: string;
+  isBusy: boolean;
   isStreaming: boolean;
   isThinking: boolean;
   log: DialogueLine[];
   selectChoice: (choiceId: string) => void;
   state: DialogueState;
-  submitInput: (text: string) => void;
+  submitInput: (payload: DialogueSubmitPayload) => void;
 }
 
 const PLAYER_LINE: Omit<DialogueLine, "text"> = {
@@ -231,15 +244,18 @@ export function useDialogueEngine(
     state = "player-input";
   }
 
-  const send = useCallback(
-    (text: string) => {
-      const trimmed = text.trim();
+  const submitInput = useCallback(
+    (payload: DialogueSubmitPayload) => {
+      const trimmed = payload.text.trim();
 
       if (!trimmed) {
         return;
       }
 
-      sendMessage({ text: trimmed });
+      sendMessage({
+        text: trimmed,
+        ...(payload.files?.length ? { files: payload.files } : {}),
+      });
     },
     [sendMessage]
   );
@@ -249,20 +265,21 @@ export function useDialogueEngine(
       const choice = choices.find((entry) => entry.id === choiceId);
 
       if (choice) {
-        send(choice.label);
+        submitInput({ text: choice.label });
       }
     },
-    [choices, send]
+    [choices, submitInput]
   );
 
   return {
     state,
     displayText,
+    isBusy,
     isStreaming,
     isThinking,
     choices,
     log,
     selectChoice,
-    submitInput: send,
+    submitInput,
   };
 }

@@ -10,7 +10,7 @@ import {
   type HireDialogueContext,
 } from "@/components/dialogue/dialogue-overlay";
 import { GameShell } from "@/components/layout";
-import { PixelHUD, PixelNotification } from "@/components/pixel";
+import { PixelButton, PixelHUD, PixelNotification } from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
 import { HireSparkle } from "@/components/workplace/hire-sparkle";
@@ -156,10 +156,10 @@ export function WorkplaceHome({
   useEffect(() => {
     if (taskBoardOpen) {
       reloadWorkspace().catch(() => {
-        /* ignore refresh errors */
+        showActionError("Could not refresh tasks. Please try again.");
       });
     }
-  }, [taskBoardOpen, reloadWorkspace]);
+  }, [taskBoardOpen, reloadWorkspace, showActionError]);
 
   const openCompletionCutscene = useCallback(
     (taskId: string) => {
@@ -322,6 +322,12 @@ export function WorkplaceHome({
     dismissBanner();
   }, [banner, dismissBanner, openCompletionCutscene]);
 
+  const handleRetryWorkspaceLoad = useCallback(() => {
+    reloadWorkspace().catch(() => {
+      showActionError("Could not reload workspace. Please try again.");
+    });
+  }, [reloadWorkspace, showActionError]);
+
   return (
     <GameShell>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -335,6 +341,20 @@ export function WorkplaceHome({
           <SignOutButton />
         </PixelHUD>
 
+        {tasksError ? (
+          <div
+            className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-wood border-b-[3px] bg-pixel-alert/10 px-4 py-3"
+            role="alert"
+          >
+            <p className="font-body text-[18px] text-alert leading-snug">
+              {tasksError}
+            </p>
+            <PixelButton onClick={handleRetryWorkspaceLoad} type="button">
+              Retry
+            </PixelButton>
+          </div>
+        ) : null}
+
         <main
           className={cn(
             "relative min-h-0 flex-1 overflow-hidden transition-opacity",
@@ -346,6 +366,14 @@ export function WorkplaceHome({
               anchor={sparkleAnchor}
               visible={Boolean(hireCelebration)}
             />
+          ) : null}
+
+          {tasksLoading ? (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/30">
+              <p className="border-[3px] border-wood bg-panel px-4 py-3 font-[family-name:var(--font-pixel)] text-[10px] text-ink uppercase tracking-widest">
+                Loading workspace…
+              </p>
+            </div>
           ) : null}
 
           <WorkspaceFloor

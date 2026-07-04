@@ -9,7 +9,7 @@ import {
   DialogueOverlay,
   type HireDialogueContext,
 } from "@/components/dialogue/dialogue-overlay";
-import { GameShell } from "@/components/layout";
+import { GameShell, OverlayStack } from "@/components/layout";
 import { PixelButton, PixelHUD, PixelNotification } from "@/components/pixel";
 import { DeliverablePreviewOverlay } from "@/components/task-board/deliverable-preview-overlay";
 import { TaskBoardOverlay } from "@/components/task-board/task-board-overlay";
@@ -108,12 +108,12 @@ export function WorkplaceHome({
     setActionError(message);
   }, []);
 
-  const overlayOpen =
-    dialogue !== null ||
-    taskBoardOpen ||
-    archiveOpen ||
-    completionCutscene !== null ||
-    deliverablePreview !== null;
+  const hasOverlayLayer = dialogue !== null || taskBoardOpen || archiveOpen;
+  const hasModalLayer =
+    completionCutscene !== null || deliverablePreview !== null;
+  const hasNotificationLayer = Boolean(
+    banner || hireCelebration || actionError
+  );
 
   const staffOptions = useMemo(
     () =>
@@ -320,166 +320,169 @@ export function WorkplaceHome({
 
   return (
     <GameShell>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <PixelHUD subtitle={viewerLabel} title="Nex Staff — Workspace">
-          <Link
-            className="pixel-wood-btn inline-flex min-h-9 items-center justify-center px-4 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase no-underline"
-            href="/reception"
-          >
-            ◀ Reception
-          </Link>
-          <SignOutButton />
-        </PixelHUD>
+      <OverlayStack className="flex min-h-0 flex-1 flex-col">
+        <OverlayStack.Layer id="scene">
+          <PixelHUD subtitle={viewerLabel} title="Nex Staff — Workspace">
+            <Link
+              className="pixel-wood-btn inline-flex min-h-9 items-center justify-center px-4 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase no-underline"
+              href="/reception"
+            >
+              ◀ Reception
+            </Link>
+            <SignOutButton />
+          </PixelHUD>
 
-        {tasksError ? (
-          <div
-            className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-wood border-b-[3px] bg-pixel-alert/10 px-4 py-3"
-            role="alert"
-          >
-            <p className="font-body text-[18px] text-alert leading-snug">
-              {tasksError}
-            </p>
-            <PixelButton onClick={handleRetryWorkspaceLoad} type="button">
-              {uiStrings.retry}
-            </PixelButton>
-          </div>
-        ) : null}
-
-        <main
-          className={cn(
-            "relative min-h-0 flex-1 overflow-hidden transition-opacity",
-            overlayOpen && "pointer-events-none opacity-50"
-          )}
-        >
-          {sparkleAnchor ? (
-            <HireSparkle
-              anchor={sparkleAnchor}
-              visible={Boolean(hireCelebration)}
-            />
-          ) : null}
-
-          {tasksLoading ? (
-            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/30">
-              <p className="border-[3px] border-wood bg-panel px-4 py-3 font-[family-name:var(--font-pixel)] text-[10px] text-ink uppercase tracking-widest">
-                {uiStrings.loadingWorkspace}
+          {tasksError ? (
+            <div
+              className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-wood border-b-[3px] bg-pixel-alert/10 px-4 py-3"
+              role="alert"
+            >
+              <p className="font-body text-[18px] text-alert leading-snug">
+                {tasksError}
               </p>
+              <PixelButton onClick={handleRetryWorkspaceLoad} type="button">
+                {uiStrings.retry}
+              </PixelButton>
             </div>
           ) : null}
 
-          <WorkspaceFloor
-            assistantName={assistantName}
-            desks={desks}
-            onHire={openHireDialogue}
-            onSelectAgent={openAgent}
-            onSelectReception={openReception}
-            onSelectZone={handleSelectZone}
-            pendingCompletionCount={pendingCompletions.length}
-          />
-        </main>
-      </div>
+          <main className="relative min-h-0 flex-1 overflow-hidden">
+            {sparkleAnchor ? (
+              <HireSparkle
+                anchor={sparkleAnchor}
+                visible={Boolean(hireCelebration)}
+              />
+            ) : null}
 
-      {banner ? (
-        <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
-          <button
-            className="w-full cursor-pointer border-0 bg-transparent p-0 text-left"
-            onClick={handleBannerClick}
-            type="button"
-          >
-            <PixelNotification
-              autoDismissMs={0}
-              message={`✨ ${banner.staffName} hoàn thành: ${banner.title}`}
-              title={uiStrings.questComplete}
+            {tasksLoading ? (
+              <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/30">
+                <p className="border-[3px] border-wood bg-panel px-4 py-3 font-[family-name:var(--font-pixel)] text-[10px] text-ink uppercase tracking-widest">
+                  {uiStrings.loadingWorkspace}
+                </p>
+              </div>
+            ) : null}
+
+            <WorkspaceFloor
+              assistantName={assistantName}
+              desks={desks}
+              onHire={openHireDialogue}
+              onSelectAgent={openAgent}
+              onSelectReception={openReception}
+              onSelectZone={handleSelectZone}
+              pendingCompletionCount={pendingCompletions.length}
             />
-          </button>
-        </div>
-      ) : null}
+          </main>
+        </OverlayStack.Layer>
 
-      {hireCelebration ? (
-        <div className="pointer-events-auto absolute top-20 left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2">
-          <PixelNotification
-            message={`✨ ${hireCelebration.name} đã gia nhập đội!`}
-            onDismiss={() => setHireCelebration(null)}
-            title={uiStrings.newHire}
-          />
-        </div>
-      ) : null}
+        <OverlayStack.Layer active={hasNotificationLayer} id="notification">
+          {banner ? (
+            <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
+              <button
+                className="w-full cursor-pointer border-0 bg-transparent p-0 text-left"
+                onClick={handleBannerClick}
+                type="button"
+              >
+                <PixelNotification
+                  autoDismissMs={0}
+                  message={`✨ ${banner.staffName} hoàn thành: ${banner.title}`}
+                  title={uiStrings.questComplete}
+                />
+              </button>
+            </div>
+          ) : null}
 
-      {actionError ? (
-        <div
-          className={cn(
-            "pointer-events-auto absolute left-1/2 z-40 w-[min(92vw,420px)] -translate-x-1/2",
-            banner || hireCelebration ? "top-44" : "top-20"
-          )}
-        >
-          <PixelNotification
-            message={actionError}
-            onDismiss={() => setActionError(null)}
-            title={uiStrings.somethingWentWrong}
-          />
-        </div>
-      ) : null}
+          {hireCelebration ? (
+            <div className="pointer-events-auto absolute top-20 left-1/2 w-[min(92vw,420px)] -translate-x-1/2">
+              <PixelNotification
+                message={`✨ ${hireCelebration.name} đã gia nhập đội!`}
+                onDismiss={() => setHireCelebration(null)}
+                title={uiStrings.newHire}
+              />
+            </div>
+          ) : null}
 
-      {taskBoardOpen ? (
-        <TaskBoardOverlay
-          assistantName={assistantName}
-          error={tasksError}
-          loading={tasksLoading}
-          onClose={() => setTaskBoardOpen(false)}
-          onViewDeliverable={(taskId) => {
-            openDeliverablePreview(taskId);
-          }}
-          tasks={tasks}
-        />
-      ) : null}
+          {actionError ? (
+            <div
+              className={cn(
+                "pointer-events-auto absolute left-1/2 w-[min(92vw,420px)] -translate-x-1/2",
+                banner || hireCelebration ? "top-44" : "top-20"
+              )}
+            >
+              <PixelNotification
+                message={actionError}
+                onDismiss={() => setActionError(null)}
+                title={uiStrings.somethingWentWrong}
+              />
+            </div>
+          ) : null}
+        </OverlayStack.Layer>
 
-      {archiveOpen ? (
-        <ArchiveRoomOverlay
-          onClose={() => setArchiveOpen(false)}
-          staffOptions={staffOptions}
-        />
-      ) : null}
+        <OverlayStack.Layer active={hasOverlayLayer} id="overlay">
+          {dialogue ? (
+            <DialogueOverlay
+              avatarSprite={dialogue.avatarSprite}
+              greeting={dialogue.greeting}
+              hasWriterOnRoster={hasWriterOnRoster}
+              hireContext={dialogue.hireContext}
+              occupiedDeskSlotIds={occupiedDeskSlotIds}
+              onClose={() => setDialogue(null)}
+              onStaffHired={handleStaffHired}
+              onViewDeliverable={(taskId) => {
+                openDeliverablePreview(taskId, true);
+              }}
+              portraitIcon={dialogue.portraitIcon}
+              speakerId={dialogue.speakerId}
+              speakerName={dialogue.speakerName}
+              speakerRole={dialogue.speakerRole}
+              taskId={dialogue.taskId}
+            />
+          ) : null}
 
-      {completionCutscene ? (
-        <CompletionCutsceneOverlay
-          assistantName={assistantName}
-          completion={completionCutscene}
-          onAcknowledge={handleAcknowledgeCompletion}
-          onClose={() => setCompletionCutscene(null)}
-          onDelegateMore={openReception}
-          onViewDeliverable={handleViewDeliverableFromCutscene}
-        />
-      ) : null}
+          {taskBoardOpen ? (
+            <TaskBoardOverlay
+              assistantName={assistantName}
+              error={tasksError}
+              loading={tasksLoading}
+              onClose={() => setTaskBoardOpen(false)}
+              onViewDeliverable={(taskId) => {
+                openDeliverablePreview(taskId);
+              }}
+              tasks={tasks}
+            />
+          ) : null}
 
-      {deliverablePreview ? (
-        <DeliverablePreviewOverlay
-          content={deliverablePreview.content}
-          contentType={deliverablePreview.contentType}
-          onClose={() => {
-            handleCloseDeliverablePreview();
-          }}
-          title={deliverablePreview.title}
-        />
-      ) : null}
+          {archiveOpen ? (
+            <ArchiveRoomOverlay
+              onClose={() => setArchiveOpen(false)}
+              staffOptions={staffOptions}
+            />
+          ) : null}
+        </OverlayStack.Layer>
 
-      {dialogue ? (
-        <DialogueOverlay
-          avatarSprite={dialogue.avatarSprite}
-          greeting={dialogue.greeting}
-          hasWriterOnRoster={hasWriterOnRoster}
-          hireContext={dialogue.hireContext}
-          occupiedDeskSlotIds={occupiedDeskSlotIds}
-          onClose={() => setDialogue(null)}
-          onStaffHired={handleStaffHired}
-          onViewDeliverable={(taskId) => {
-            openDeliverablePreview(taskId, true);
-          }}
-          portraitIcon={dialogue.portraitIcon}
-          speakerId={dialogue.speakerId}
-          speakerName={dialogue.speakerName}
-          speakerRole={dialogue.speakerRole}
-          taskId={dialogue.taskId}
-        />
-      ) : null}
+        <OverlayStack.Layer active={hasModalLayer} id="modal">
+          {completionCutscene ? (
+            <CompletionCutsceneOverlay
+              assistantName={assistantName}
+              completion={completionCutscene}
+              onAcknowledge={handleAcknowledgeCompletion}
+              onClose={() => setCompletionCutscene(null)}
+              onDelegateMore={openReception}
+              onViewDeliverable={handleViewDeliverableFromCutscene}
+            />
+          ) : null}
+
+          {deliverablePreview ? (
+            <DeliverablePreviewOverlay
+              content={deliverablePreview.content}
+              contentType={deliverablePreview.contentType}
+              onClose={() => {
+                handleCloseDeliverablePreview();
+              }}
+              title={deliverablePreview.title}
+            />
+          ) : null}
+        </OverlayStack.Layer>
+      </OverlayStack>
     </GameShell>
   );
 }

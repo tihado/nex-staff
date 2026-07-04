@@ -2,8 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { Loader2, SendHorizontal } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { AssistantUIMessage } from "@/lib/agents/assistant";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,11 @@ import { cn } from "@/lib/utils";
 interface AssistantChatProps {
   assistantName: string;
   greeting: string;
+}
+
+interface UploadedDocument {
+  filename: string;
+  id: string;
 }
 
 function getMessageText(message: AssistantUIMessage): string {
@@ -44,9 +49,35 @@ function ChatMessage({ message }: { message: AssistantUIMessage }) {
   );
 }
 
+async function uploadDocument(file: File): Promise<UploadedDocument> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/documents", {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = (await response.json()) as UploadedDocument & {
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Failed to upload document.");
+  }
+
+  return {
+    id: payload.id,
+    filename: payload.filename,
+  };
+}
+
 export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
   const chatId = useMemo(() => crypto.randomUUID(), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [input, setInput] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const { messages, sendMessage, status, error, stop } =
     useChat<AssistantUIMessage>({
@@ -56,7 +87,8 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
       }),
     });
 
-  const isBusy = status === "submitted" || status === "streaming";
+  const isBusy =
+    status === "submitted" || status === "streaming" || isUploading;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,6 +100,34 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
 
     sendMessage({ text });
     setInput("");
+  }
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    event.target.value = "";
+
+    if (!file || isBusy) {
+      return;
+    }
+
+    setUploadError(null);
+    setIsUploading(true);
+
+    try {
+      const uploaded = await uploadDocument(file);
+      await sendMessage({
+        text: `Đã upload ${uploaded.filename}. File đã được lưu vào archive.`,
+      });
+    } catch (uploadFailure) {
+      setUploadError(
+        uploadFailure instanceof Error
+          ? uploadFailure.message
+          : "Failed to upload document."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   return (
@@ -86,13 +146,23 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
           {isBusy ? (
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="size-4 animate-spin" />
-              <span>{assistantName} is thinking...</span>
+              <span>
+                {isUploading
+                  ? "Uploading document..."
+                  : `${assistantName} is thinking...`}
+              </span>
             </div>
           ) : null}
 
           {error ? (
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive text-sm">
               {error.message}
+            </div>
+          ) : null}
+
+          {uploadError ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive text-sm">
+              {uploadError}
             </div>
           ) : null}
 
@@ -110,12 +180,33 @@ export function AssistantChat({ assistantName, greeting }: AssistantChatProps) {
           className="mx-auto flex w-full max-w-3xl items-end gap-3"
           onSubmit={handleSubmit}
         >
+          <input
+            accept=".pdf,.md,.markdown,.txt,application/pdf,text/markdown,text/plain"
+            className="sr-only"
+            disabled={isBusy}
+            id="assistant-chat-file-input"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            type="file"
+          />
+
+          <Button
+            aria-label="Upload document"
+            disabled={isBusy}
+            onClick={() => fileInputRef.current?.click()}
+            size="icon-lg"
+            type="button"
+            variant="outline"
+          >
+            <Paperclip />
+          </Button>
+
           <label className="sr-only" htmlFor="assistant-chat-input">
             Message {assistantName}
           </label>
           <textarea
             className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm leading-6 shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={status === "submitted"}
+            disabled={status === "submitted" || isUploading}
             id="assistant-chat-input"
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {

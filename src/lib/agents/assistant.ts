@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { assistant } from "@/db/schema";
 import { getGeminiModel } from "@/lib/ai/google";
 import { DEFAULT_ASSISTANT_CONFIG } from "@/lib/assistant-defaults";
+import { documentTools } from "@/lib/tools/documents";
 
 export interface AssistantRuntimeContext extends Record<string, unknown> {
   assistantId: string;
@@ -15,7 +16,14 @@ export interface CreateAssistantOptions {
   chatId?: string;
 }
 
-type AssistantTools = Record<string, never>;
+type AssistantTools = typeof documentTools;
+
+function buildDocumentToolsContext(userId: string) {
+  return {
+    list_documents: { userId },
+    create_document: { userId },
+  } as const;
+}
 
 export async function createAssistant(
   userId: string,
@@ -37,13 +45,17 @@ export async function createAssistant(
     chatId: options.chatId,
   };
 
+  const toolsContext = buildDocumentToolsContext(userId);
+
   return new ToolLoopAgent<never, AssistantTools, AssistantRuntimeContext>({
     model: getGeminiModel(modelId),
     instructions: assistantRow.instructions,
-    tools: {},
+    tools: documentTools,
+    toolsContext,
     prepareCall: async (call) => ({
       ...call,
       runtimeContext,
+      toolsContext,
     }),
   });
 }

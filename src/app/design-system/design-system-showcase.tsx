@@ -147,7 +147,6 @@ export function DesignSystemShowcase() {
                 🤖
               </div>
             }
-            showAdvancePrompt
             speakerName="Assistant"
           >
             Hi boss! What do you need today?

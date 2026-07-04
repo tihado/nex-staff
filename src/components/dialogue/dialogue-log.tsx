@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { PixelButton, PixelPanel } from "@/components/pixel";
 import type { DialogueLine } from "@/hooks/use-dialogue-engine";
+import { DialogueMarkdown } from "./dialogue-markdown";
 
 interface DialogueLogProps {
   lines: DialogueLine[];
@@ -42,15 +43,20 @@ export function DialogueLog({ lines, onClose }: DialogueLogProps) {
             X
           </PixelButton>
         </div>
-        <ul className="flex flex-col gap-2 overflow-y-auto px-4 py-3">
+        <ul className="flex flex-col gap-3 overflow-y-auto px-4 py-3">
           {lines.map((line, index) => (
             <li
               className="font-pixel text-[11px] text-pixel-text leading-[1.8]"
               // biome-ignore lint/suspicious/noArrayIndexKey: log lines are append-only and have no stable id
               key={`${line.speakerId}-${index}`}
             >
-              <span className="text-pixel-accent">{line.speakerName}:</span>{" "}
-              {line.text}
+              <span className="text-pixel-accent">{line.speakerName}:</span>
+              <div className="mt-1">
+                <DialogueMarkdown
+                  content={line.text}
+                  variant={line.speakerId === "boss" ? "user" : "assistant"}
+                />
+              </div>
             </li>
           ))}
         </ul>

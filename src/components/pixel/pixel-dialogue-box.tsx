@@ -1,14 +1,12 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { cn } from "@/lib/utils";
-import { PixelAdvancePrompt } from "./pixel-advance-prompt";
 import { PixelPanel } from "./pixel-panel";
 
 interface PixelDialogueBoxProps {
-  advanceLabel?: string;
   children: ReactNode;
   className?: string;
   portrait?: ReactNode;
-  showAdvancePrompt?: boolean;
+  scrollRef?: Ref<HTMLDivElement>;
   speakerName: string;
 }
 
@@ -16,8 +14,7 @@ export function PixelDialogueBox({
   speakerName,
   children,
   portrait,
-  showAdvancePrompt = false,
-  advanceLabel,
+  scrollRef,
   className,
 }: PixelDialogueBoxProps) {
   return (
@@ -40,14 +37,17 @@ export function PixelDialogueBox({
               ▼ {speakerName}
             </div>
 
-            <div className="min-h-[4.5rem] font-[family-name:var(--font-pixel)] text-[11px] text-text-primary leading-[1.9] tracking-tight">
+            <div
+              className={cn(
+                "max-h-[min(40vh,18rem)] min-h-[4.5rem] overflow-y-auto",
+                "font-[family-name:var(--font-pixel)] text-[11px] text-text-primary leading-[1.9] tracking-tight",
+                "transition-[max-height] duration-200 ease-out",
+                "max-sm:max-h-[min(50vh,18rem)]"
+              )}
+              ref={scrollRef}
+            >
               {children}
             </div>
-
-            <PixelAdvancePrompt
-              label={advanceLabel}
-              visible={showAdvancePrompt}
-            />
           </div>
         </PixelPanel>
       </div>

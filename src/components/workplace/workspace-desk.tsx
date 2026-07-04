@@ -66,7 +66,7 @@ export function WorkspaceHireDeskCell({
 
   return (
     <button
-      aria-label="Hire a new agent for this empty desk"
+      aria-label="Open Assistant to hire for this empty desk"
       className="group absolute flex -translate-x-1/2 -translate-y-[78%] flex-col items-center gap-1 focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2"
       onClick={() => onHire(deskId)}
       style={positionStyle}

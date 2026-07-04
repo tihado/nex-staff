@@ -1,5 +1,6 @@
 import type { DialogueChoice } from "@/lib/dialogue/types";
 import type { DocumentSummary } from "@/lib/documents/types";
+import { uiStrings } from "@/lib/i18n/ui";
 
 interface DocumentListResponse {
   documents: DocumentSummary[];
@@ -35,7 +36,7 @@ export function mapDocumentsToChoices(
 
   choices.push({
     id: "docs-none",
-    label: "Không cần",
+    label: uiStrings.notNeeded,
     shortcut: choices.length === 0 ? "A" : undefined,
   });
 

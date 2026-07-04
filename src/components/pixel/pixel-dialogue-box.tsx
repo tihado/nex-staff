@@ -18,12 +18,7 @@ export function PixelDialogueBox({
   className,
 }: PixelDialogueBoxProps) {
   return (
-    <div
-      aria-label={`Dialogue with ${speakerName}`}
-      aria-live="polite"
-      className={cn("relative", className)}
-      role="dialog"
-    >
+    <div className={cn("relative", className)}>
       <div className="flex items-end gap-0">
         {portrait ? (
           <div className="portrait relative z-10 -mr-4 mb-2 shrink-0">
@@ -38,6 +33,7 @@ export function PixelDialogueBox({
             </div>
 
             <div
+              aria-live="polite"
               className={cn(
                 "max-h-[min(40vh,18rem)] min-h-[4.5rem] overflow-y-auto",
                 "font-[family-name:var(--font-pixel)] text-[11px] text-text-primary leading-[1.9] tracking-tight",

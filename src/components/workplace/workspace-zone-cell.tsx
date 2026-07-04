@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface WorkspaceZoneCellProps {
   anchor: FloorAnchor;
   ariaLabel: string;
-  badge?: boolean;
+  badgeCount?: number;
   children: ReactNode;
   label: string;
   onClick: () => void;
@@ -21,7 +21,7 @@ interface WorkspaceZoneCellProps {
 export function WorkspaceZoneCell({
   anchor,
   ariaLabel,
-  badge = false,
+  badgeCount = 0,
   children,
   label,
   onClick,
@@ -43,12 +43,12 @@ export function WorkspaceZoneCell({
     >
       <span className="relative transition-transform group-hover:scale-105">
         {children}
-        {badge ? (
+        {badgeCount > 0 ? (
           <span
             aria-hidden
             className="absolute -top-1 -right-1 flex size-5 animate-bounce items-center justify-center rounded-full border-2 border-wood bg-alert font-[family-name:var(--font-pixel)] text-[10px] text-white"
           >
-            !
+            {badgeCount > 9 ? "9+" : badgeCount}
           </span>
         ) : null}
       </span>

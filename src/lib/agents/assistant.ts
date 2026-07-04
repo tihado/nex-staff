@@ -2,6 +2,7 @@ import { type InferAgentUIMessage, isStepCount, ToolLoopAgent } from "ai";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { assistant } from "@/db/schema";
+import { ensureEnglishResponseRule } from "@/lib/agents/language";
 import { getGeminiModel } from "@/lib/ai/google";
 import {
   ASSISTANT_MAX_STEPS,
@@ -127,6 +128,8 @@ export async function createAssistant(
       instructions = `${instructions}\n\n${taskFocus}`;
     }
   }
+
+  instructions = ensureEnglishResponseRule(instructions);
 
   const runtimeContext: AssistantRuntimeContext = {
     userId,

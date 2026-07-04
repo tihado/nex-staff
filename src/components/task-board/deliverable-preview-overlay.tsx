@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { DialogueMarkdown } from "@/components/dialogue/dialogue-markdown";
 import { PixelButton, PixelCloseButton, PixelPanel } from "@/components/pixel";
 
+import { uiStrings } from "@/lib/i18n/ui";
+
 interface DeliverablePreviewOverlayProps {
   content: string;
   contentType: string;
@@ -28,14 +30,14 @@ function downloadFilename(title: string, contentType: string): string {
 
 function copyButtonLabel(state: "idle" | "copied" | "error"): string {
   if (state === "copied") {
-    return "Copied!";
+    return uiStrings.deliverable.copied;
   }
 
   if (state === "error") {
-    return "Copy failed";
+    return uiStrings.deliverable.copyFailed;
   }
 
-  return "Copy";
+  return uiStrings.deliverable.copy;
 }
 
 export function DeliverablePreviewOverlay({
@@ -68,6 +70,18 @@ export function DeliverablePreviewOverlay({
     }
   }, [content]);
 
+  useEffect(() => {
+    if (copyState === "idle") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setCopyState("idle");
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
   const handleDownload = useCallback(() => {
     const blob = new Blob([content], { type: contentType });
     const url = URL.createObjectURL(blob);
@@ -88,7 +102,7 @@ export function DeliverablePreviewOverlay({
       <PixelPanel
         className="flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-3xl flex-col overflow-hidden p-4 sm:p-6"
         contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-4"
-        title="Deliverable"
+        title={uiStrings.deliverable.title}
       >
         <div className="flex shrink-0 items-start justify-between gap-3">
           <h2
@@ -98,7 +112,7 @@ export function DeliverablePreviewOverlay({
             {title}
           </h2>
           <PixelCloseButton
-            aria-label="Close deliverable preview"
+            aria-label={uiStrings.deliverable.closePreview}
             onClick={onClose}
           />
         </div>
@@ -112,10 +126,10 @@ export function DeliverablePreviewOverlay({
             {copyButtonLabel(copyState)}
           </PixelButton>
           <PixelButton onClick={handleDownload} type="button">
-            Download .md
+            {uiStrings.deliverable.download}
           </PixelButton>
           <PixelButton onClick={onClose} type="button">
-            Close
+            {uiStrings.close}
           </PixelButton>
         </div>
       </PixelPanel>

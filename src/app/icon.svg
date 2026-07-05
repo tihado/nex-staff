@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 1 10 10" shape-rendering="crispEdges">
+  <title>Nex Staff</title>
+  <rect x="4" y="1" width="10" height="10" fill="#CDEEFB" />
+  <rect fill="#7A4A24" height="2" width="6" x="6" y="3" />
+  <rect fill="#E8A56E" height="4" width="6" x="6" y="5" />
+  <rect fill="#C67C4A" height="1" width="6" x="6" y="8" />
+  <rect fill="#2B2B2B" height="1" width="1" x="7" y="6" />
+  <rect fill="#2B2B2B" height="1" width="1" x="10" y="6" />
+</svg>

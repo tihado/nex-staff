@@ -49,4 +49,4 @@ Run `pnpm dev` and open `/design-system` (dev only, hidden in production).
 
 ## Anti-patterns
 
-See [UI-UX.md — Anti-patterns](../../docs/UI-UX.md#anti-patterns-tránh). PRs for #5, #8, #9, #14, #15 must pass this checklist.
+See [UI-UX.md — Anti-patterns](../../docs/UI-UX.md#anti-patterns). PRs for #5, #8, #9, #14, #15 must pass this checklist.

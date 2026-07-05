@@ -1,4 +1,4 @@
-# Hệ thống Agent — Nex Staff
+# Agent System — Nex Staff
 
 ## Agent Types
 
@@ -9,17 +9,17 @@
 
 ### Assistant
 
-- Cửa ngõ duy nhất giữa user và hệ thống
-- Biết toàn bộ staff roster, documents, task history
-- Quyết định: tự xử lý, delegate, hoặc đề xuất hire
-- Không thực hiện công việc nặng — delegate cho Staff
+- Sole gateway between the Boss and the system
+- Knows the full staff roster, Documents, and task history
+- Decides: handle directly, Delegate, or propose Hire
+- Does not perform heavy work — Delegates to Staff
 
 ### Staff
 
-- Chuyên gia theo role (Writer, Researcher, Analyst...)
-- Làm việc async trong background workflow
-- Có instructions, skills, tools, document access riêng
-- Một staff có thể nhận nhiều tasks (queue khi đang busy)
+- Specialist by role (Writer, Researcher, Analyst...)
+- Works async in a background workflow
+- Has its own instructions, skills, tools, and document access
+- A Staff member can take multiple tasks (queued when busy)
 
 ---
 
@@ -42,41 +42,41 @@ stateDiagram-v2
     Idle --> Delegate: New task assigned
 ```
 
-### Chi tiết từng bước
+### Step-by-step details
 
 **1. DetectNeed**
 
-- User mô tả nhu cầu: "tôi cần viết blog", "research thị trường X"
-- Assistant phân loại intent: `write`, `research`, `analyze`, `code`, `marketing`
+- Boss describes a need: "I need to write a blog", "research market X"
+- Assistant classifies intent: `write`, `research`, `analyze`, `code`, `marketing`
 
-**2. ProposeHire** (khi không có staff phù hợp)
+**2. ProposeHire** (when no matching Staff exists)
 
-- Assistant đề xuất role cụ thể: "Bạn cần hire Content Writer không?"
-- Giải thích ngắn staff sẽ làm gì
+- Assistant proposes a specific role: "Do you want to Hire a Content Writer?"
+- Briefly explains what the Staff member will do
 
 **3. GatherRequirements**
 
-- Assistant hỏi qua chat (không form):
+- Assistant asks via chat (no form):
   - Tone/style (casual, formal, technical)
   - Target audience
-  - Tài liệu tham khảo cần link
-  - Constraints đặc biệt
+  - Reference Documents to link
+  - Special constraints
 
 **4. ConfigureProfile**
 
-- Assistant map requirements → staff profile
-- Chọn preset template hoặc custom
+- Assistant maps requirements → staff profile
+- Chooses preset template or custom
 - Set `useSandbox` based on role
 
 **5. CreateStaff**
 
-- `hire_staff` tool lưu vào DB
+- `hire_staff` tool saves to DB
 - Assign 8-bit avatar sprite
-- Notify user: "Alex (Content Writer) đã join team!"
+- Notify Boss: "Alex (Content Writer) has joined the team!"
 
-**6. Delegate** (nếu có task pending)
+**6. Delegate** (if a task is pending)
 
-- Ngay sau hire, delegate task ban đầu nếu user đã mô tả
+- Right after Hire, Delegate the initial task if the Boss already described it
 
 ---
 
@@ -86,7 +86,7 @@ stateDiagram-v2
 interface StaffProfile {
   id: string;
   userId: string;
-  name: string; // "Alex" — tên hiển thị
+  name: string; // "Alex" — display name
   role: string; // "Content Writer"
   avatar: string; // 8-bit sprite ID
   model?: string; // Override model, default gateway default
@@ -124,13 +124,13 @@ interface ToolDef {
 | `reviewer`   | Code Reviewer        | true       | Code review, security check           |
 | `social`     | Social Media Manager | false      | Post drafting, hashtag research       |
 
-> **MVP:** Chỉ ship template `writer` với `useSandbox: true` — seed docs từ Archive, ghi deliverable trong sandbox.
+> **MVP:** Only ship the `writer` template with `useSandbox: true` — seed Documents from Archive Room, write Deliverable in sandbox.
 
 ---
 
 ## Delegation Logic
 
-Assistant quyết định delegate theo thứ tự:
+The Assistant decides whether to Delegate in this order:
 
 ```mermaid
 flowchart TD
@@ -148,70 +148,70 @@ flowchart TD
 
 ### 1. Intent Classification
 
-Phân loại yêu cầu user:
+Classify the Boss's request:
 
 | Intent      | Keywords / signals             | Preferred role       |
 | ----------- | ------------------------------ | -------------------- |
-| `write`     | viết, blog, content, bài       | Content Writer       |
-| `research`  | research, tìm hiểu, thị trường | Researcher           |
-| `analyze`   | phân tích, data, số liệu       | Data Analyst         |
+| `write`     | write, blog, content, article  | Content Writer       |
+| `research`  | research, learn about, market  | Researcher           |
+| `analyze`   | analyze, data, metrics         | Data Analyst         |
 | `code`      | code, review, bug, PR          | Code Reviewer        |
 | `marketing` | social, post, campaign         | Social Media Manager |
 
 ### 2. Staff Matching
 
-So khớp `staff.role` + `staff.skills` với intent:
+Match `staff.role` + `staff.skills` to intent:
 
 - Exact role match → highest priority
 - Skill overlap → secondary
-- Generalist staff (nếu có) → fallback
+- Generalist staff (if any) → fallback
 
 ### 3. Availability
 
 | Status    | Behavior                                    |
 | --------- | ------------------------------------------- |
 | `idle`    | Delegate immediately                        |
-| `working` | Queue task hoặc hỏi user có muốn chờ        |
-| `offline` | Không delegate; thông báo staff unavailable |
+| `working` | Queue task or ask the Boss if they want to wait |
+| `offline` | Do not Delegate; notify that Staff is unavailable |
 
 ### 4. Fallback
 
-Không match → đề xuất hire với role phù hợp nhất.
+No match → propose Hire with the best-fit role.
 
 ---
 
 ## Supervision & Multi-worker Control
 
-Assistant không chỉ **delegate** mà còn **giám sát** worker: kiểm tra checkpoint, đánh giá deliverable, và điều phối nhiều worker song song.
+The Assistant does not only **Delegate** but also **supervises** workers: checks checkpoints, reviews Deliverables, and coordinates multiple workers in parallel.
 
-### Hub-and-spoke (đã có)
+### Hub-and-spoke (existing)
 
-| Thành phần | Chức năng |
-|------------|-----------|
-| 1 Assistant per user | Coordinator duy nhất — user không nói trực tiếp với worker |
-| N Staff per user | Specialist workers chạy async trong workflow riêng |
-| `delegate_task` | Fire-and-forget — nhiều staff chạy **song song** |
-| `list_active_tasks` | Assistant thấy tất cả task đang chạy cùng lúc |
-| `list_staff` | Roster + status idle/working |
-| Notification queue | Assistant biết task xong để báo user |
-| Retry policy (max 3) | Xử lý worker fail |
+| Component | Function |
+|-----------|-----------|
+| 1 Assistant per user | Sole coordinator — the Boss does not talk directly to workers |
+| N Staff per user | Specialist workers run async in separate workflows |
+| `delegate_task` | Fire-and-forget — multiple Staff run **in parallel** |
+| `list_active_tasks` | Assistant sees all tasks running at once |
+| `list_staff` | Roster + idle/working status |
+| Notification queue | Assistant knows when a task finishes to notify the Boss |
+| Retry policy (max 3) | Handles worker failures |
 
 ### Task queue semantics
 
-Khi staff đang `working`, task mới được **queue** thay vì reject.
+When Staff is `working`, new tasks are **queued** instead of rejected.
 
-| Rule | Giá trị |
+| Rule | Value |
 |------|---------|
 | Queue order | **FIFO** per staff |
-| Concurrency per staff | **1 running** + tối đa **3 pending** (default) |
-| Cross-staff parallelism | **Unlimited** (bounded bởi Vercel Workflow concurrency) |
-| Queue full | Assistant thông báo user; đề xuất staff khác hoặc chờ |
+| Concurrency per staff | **1 running** + up to **3 pending** (default) |
+| Cross-staff parallelism | **Unlimited** (bounded by Vercel Workflow concurrency) |
+| Queue full | Assistant notifies the Boss; suggests another Staff member or waiting |
 
-Assistant tool **`list_queued_tasks`** — backlog per staff (pending tasks chưa start workflow).
+Assistant tool **`list_queued_tasks`** — backlog per staff (pending tasks that have not started a workflow).
 
 ### Supervisor Loop
 
-Assistant verify worker **trong suốt task lifecycle**, không chỉ khi complete:
+The Assistant verifies workers **throughout the task lifecycle**, not only on completion:
 
 ```mermaid
 sequenceDiagram
@@ -223,7 +223,7 @@ sequenceDiagram
     W->>DB: checkpoint.reached / reportProgress
     A->>DB: check_task_status / verify_checkpoint
     alt checkpoint failed
-        A->>A: revise_task hoặc re-delegate
+        A->>A: revise_task or re-delegate
     end
     W->>DB: workflow.completed
     A->>A: review_deliverable
@@ -232,43 +232,43 @@ sequenceDiagram
     end
 ```
 
-**Khi delegate**, Assistant (hoặc pre-processing) set:
+**When Delegating**, the Assistant (or pre-processing) sets:
 
-- `metadata.acceptanceCriteria` — rubric ngắn để `review_deliverable` chấm output
-- `checkpoints[]` — milestones planned (xem § Task Checkpoints)
+- `metadata.acceptanceCriteria` — short rubric for `review_deliverable` to score output
+- `checkpoints[]` — planned milestones (see § Task Checkpoints)
 
-**Assistant tools giám sát:**
+**Assistant supervision tools:**
 
-| Tool | Mục đích |
-|------|----------|
-| `verify_checkpoint` | So checkpoint status vs plan; trả pass/fail + evidence |
-| `review_deliverable` | LLM chấm deliverable vs `acceptanceCriteria` |
-| `revise_task` | Gửi feedback cho worker (workflow signal) hoặc spawn task mới |
-| `list_queued_tasks` | Xem backlog pending per staff |
+| Tool | Purpose |
+|------|---------|
+| `verify_checkpoint` | Compare checkpoint status vs plan; return pass/fail + evidence |
+| `review_deliverable` | LLM scores Deliverable vs `acceptanceCriteria` |
+| `revise_task` | Send feedback to worker (workflow signal) or spawn a new task |
+| `list_queued_tasks` | View pending backlog per staff |
 
-Chi tiết tool schemas: [API.md](API.md).
+Tool schema details: [API.md](API.md).
 
 ### Multi-task orchestration
 
-Khi một user request cần **nhiều worker**:
+When a Boss request needs **multiple workers**:
 
-1. Assistant **decompose** brief → tạo `task_group` (`metadata.parentGroupId`)
-2. Delegate parallel (ví dụ Researcher + Writer) hoặc sequential với dependency
-3. Task phụ thuộc: `metadata.dependsOn: [taskId]` — workflow chỉ start khi dependency `completed` **và** Assistant `verify_checkpoint` pass
-4. Assistant dùng `list_active_tasks` + filter `parentGroupId` để báo cáo tổng thể cho user
+1. Assistant **decomposes** the brief → creates `task_group` (`metadata.parentGroupId`)
+2. Delegate in parallel (e.g. Researcher + Writer) or sequentially with dependencies
+3. Dependent tasks: `metadata.dependsOn: [taskId]` — workflow starts only when dependency is `completed` **and** Assistant `verify_checkpoint` passes
+4. Assistant uses `list_active_tasks` + filter `parentGroupId` to report overall progress to the Boss
 
-Ví dụ: "Research thị trường X rồi viết blog"
+Example: "Research market X then write a blog"
 
 ```
 Group: blog-about-market-X
 ├── Task 1: Researcher — research + citations     (no deps)
-└── Task 2: Writer — viết blog                      (dependsOn: Task 1)
+└── Task 2: Writer — write blog                   (dependsOn: Task 1)
 ```
 
 Assistant behavior:
-- Start Task 1 ngay
-- Poll Task 1 checkpoints; khi research verified → start Task 2
-- Báo user progress theo group: "Research 100%, Writer đang draft 30%"
+- Start Task 1 immediately
+- Poll Task 1 checkpoints; when research is verified → start Task 2
+- Report group progress to the Boss: "Research 100%, Writer drafting 30%"
 
 ### Assistant behavior — supervision
 
@@ -294,9 +294,9 @@ When task completes:
 
 ### Skills
 
-Skills là markdown documents mô tả domain knowledge và workflow.
+Skills are markdown Documents describing domain knowledge and workflow.
 
-**Inline trong DurableAgent:**
+**Inline in DurableAgent:**
 
 ```typescript
 const agent = new DurableAgent({
@@ -332,19 +332,19 @@ const { providerReference } = await uploadSkill({
 | `search_documents`  | RAG across user docs |
 | `web_research`      | Internet search      |
 | `list_staff`        | Roster query                                       |
-| `check_task_status` | Trạng thái + tiến độ + kết quả tạm của một task   |
-| `list_active_tasks` | Tasks đang chạy + vừa xong chưa thông báo        |
-| `get_task_events`   | Nhật ký chi tiết từng bước                         |
-| `get_task_preview`  | Draft output tạm thời                              |
+| `check_task_status` | Status + progress + interim result for a task      |
+| `list_active_tasks` | Running tasks + recently completed, not yet notified |
+| `get_task_events`   | Detailed step-by-step log                          |
+| `get_task_preview`  | Temporary draft output                             |
 | `get_deliverable`   | Fetch result                                       |
 | `verify_checkpoint` | Verify planned checkpoint vs evidence              |
-| `review_deliverable`| Chấm deliverable vs acceptanceCriteria             |
-| `revise_task`       | Gửi feedback / spawn revision task                 |
+| `review_deliverable`| Score Deliverable vs acceptanceCriteria            |
+| `revise_task`       | Send feedback / spawn revision task                |
 | `list_queued_tasks` | Pending backlog per staff                          |
 
 **Staff tools** (per-staff, from DB + sandbox):
 
-| Handler        | Mô tả                  | Requires sandbox |
+| Handler        | Description            | Requires sandbox |
 | -------------- | ---------------------- | ---------------- |
 | `rag`          | Query linked documents | No               |
 | `http`         | Templated HTTP call    | No               |
@@ -385,30 +385,30 @@ function buildSandboxTools(sandbox: SandboxSession) {
 
 ### Documents (RAG)
 
-User documents → chunked → embedded → pgvector.
+Boss Documents → chunked → embedded → pgvector.
 
-Staff access documents qua:
+Staff access Documents via:
 
-1. `documents` array trong staff profile (linked doc IDs)
-2. `search_documents` tool trong staff toolset (scoped to linked docs)
+1. `documents` array in staff profile (linked doc IDs)
+2. `search_documents` tool in staff toolset (scoped to linked docs)
 
 ---
 
-## Task Observability — Theo dõi tiến độ & thông báo
+## Task Observability — Progress tracking & notifications
 
-Sau khi `delegate_task`, Assistant **không block** nhưng vẫn có thể (và nên) biết staff đang làm đến đâu, trạng thái hiện tại, kết quả tạm, và **khi nào xong** để thông báo user.
+After `delegate_task`, the Assistant **does not block** but can (and should) know how far Staff has progressed, current status, interim results, and **when finished** to notify the Boss.
 
-### Vấn đề cần giải quyết
+### Problems to solve
 
-| Nhu cầu | Ai cần | Cách đáp ứng |
-|---------|--------|--------------|
-| Task đang chạy hay đã xong? | Assistant + User | `task.status` + SSE |
-| Đang ở bước nào? | Assistant + User | `task_event` log + `currentStep` |
-| Có kết quả tạm chưa? | Assistant + User | `task_preview` + events `agent.text_delta` |
-| Khi nào xong để báo user? | Assistant | `notification` queue + SSE `task.completed` |
-| User hỏi "Alex làm đến đâu?" | Assistant | Tool `check_task_status` / `get_task_events` |
+| Need | Who needs it | How it's addressed |
+|------|--------------|-------------------|
+| Is the task running or done? | Assistant + Boss | `task.status` + SSE |
+| Which step is it on? | Assistant + Boss | `task_event` log + `currentStep` |
+| Any interim result yet? | Assistant + Boss | `task_preview` + `agent.text_delta` events |
+| When done to notify Boss? | Assistant | `notification` queue + SSE `task.completed` |
+| Boss asks "How far is Alex?" | Assistant | Tool `check_task_status` / `get_task_events` |
 
-### Kiến trúc tổng quan
+### Architecture overview
 
 ```mermaid
 flowchart TB
@@ -430,12 +430,12 @@ flowchart TB
         Workspace[Task Board / Desk state]
     end
 
-    Agent -->|mỗi bước| Report
+    Agent -->|each step| Report
     Report --> Events
     Report --> Task
     Report --> Preview
     Report --> SSE
-    Agent -->|hoàn thành| Notif
+    Agent -->|on completion| Notif
     Notif --> Assistant
     Notif --> SSE
     Events --> Assistant
@@ -444,24 +444,24 @@ flowchart TB
 
 ### Task Event Log (`task_event`)
 
-Append-only log — mỗi bước trong workflow/agent ghi một event.
+Append-only log — each step in the workflow/agent writes one event.
 
-| Event type | Khi nào | Payload ví dụ |
-|------------|---------|---------------|
-| `workflow.started` | Workflow bắt đầu | `{ workflowRunId }` |
-| `sandbox.created` | Sandbox spin-up xong | `{ durationMs }` |
-| `agent.step_started` | DurableAgent bắt đầu step N | `{ step, maxSteps, label }` |
-| `agent.tool_called` | Staff gọi tool | `{ toolName, inputSummary }` |
-| `agent.tool_result` | Tool trả về | `{ toolName, resultSummary }` |
-| `agent.text_delta` | Có text output tạm | `{ chunk }` — append vào preview |
-| `agent.step_completed` | Step kết thúc | `{ step, durationMs }` |
-| `checkpoint.reached` | Worker báo đạt milestone | `{ checkpointId, label, evidence }` |
+| Event type | When | Example payload |
+|------------|------|-----------------|
+| `workflow.started` | Workflow starts | `{ workflowRunId }` |
+| `sandbox.created` | Sandbox spin-up complete | `{ durationMs }` |
+| `agent.step_started` | DurableAgent starts step N | `{ step, maxSteps, label }` |
+| `agent.tool_called` | Staff calls tool | `{ toolName, inputSummary }` |
+| `agent.tool_result` | Tool returns | `{ toolName, resultSummary }` |
+| `agent.text_delta` | Interim text output | `{ chunk }` — append to preview |
+| `agent.step_completed` | Step ends | `{ step, durationMs }` |
+| `checkpoint.reached` | Worker reports milestone reached | `{ checkpointId, label, evidence }` |
 | `checkpoint.verified` | Assistant verify pass | `{ checkpointId, score, reasoning }` |
-| `checkpoint.failed` | Worker hoặc verify fail | `{ checkpointId, reason }` |
-| `worker.query_response` | Phase 2: trả lời query_worker | `{ question, answer }` |
-| `deliverable.saved` | Lưu kết quả cuối | `{ deliverableId, title }` |
-| `workflow.completed` | Thành công | `{ deliverableId }` |
-| `workflow.failed` | Lỗi | `{ error, step }` |
+| `checkpoint.failed` | Worker or verify fail | `{ checkpointId, reason }` |
+| `worker.query_response` | Phase 2: answer to query_worker | `{ question, answer }` |
+| `deliverable.saved` | Final result saved | `{ deliverableId, title }` |
+| `workflow.completed` | Success | `{ deliverableId }` |
+| `workflow.failed` | Error | `{ error, step }` |
 
 ```typescript
 interface TaskEvent {
@@ -473,24 +473,24 @@ interface TaskEvent {
 }
 ```
 
-### Progress trên `task` (denormalized)
+### Progress on `task` (denormalized)
 
-Cập nhật mỗi khi có event quan trọng — Assistant đọc nhanh không cần scan toàn bộ events.
+Updated whenever an important event occurs — Assistant reads quickly without scanning all events.
 
 ```typescript
 interface TaskProgress {
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  progressPercent: number;      // 0-100, ước lượng từ step/maxSteps
-  currentStep: string;          // "Đang research trên web..."
+  progressPercent: number;      // 0-100, estimated from step/maxSteps
+  currentStep: string;          // "Researching on the web..."
   lastEventAt: Date;
   lastEventType: TaskEventType;
   workflowRunId: string;
 }
 ```
 
-**Công thức `progressPercent`:** `Math.round((currentStep / maxSteps) * 100)` — cap 95% cho đến khi `workflow.completed`.
+**`progressPercent` formula:** `Math.round((currentStep / maxSteps) * 100)` — cap at 95% until `workflow.completed`.
 
-### Workflow — ghi progress
+### Workflow — writing progress
 
 ```typescript
 // lib/workflows/staff-task.ts
@@ -499,7 +499,7 @@ export async function staffTaskWorkflow(taskId: string) {
 
   await reportProgress(taskId, {
     type: "workflow.started",
-    label: "Bắt đầu công việc",
+    label: "Starting work",
     progressPercent: 0,
   });
 
@@ -507,9 +507,9 @@ export async function staffTaskWorkflow(taskId: string) {
   const staff = await loadStaff(task.staffId);
 
   if (staff.useSandbox) {
-    await reportProgress(taskId, { type: "sandbox.creating", label: "Chuẩn bị workspace..." });
+    await reportProgress(taskId, { type: "sandbox.creating", label: "Preparing Workspace..." });
     const sandbox = await createStaffSandbox(staff, task);
-    await reportProgress(taskId, { type: "sandbox.created", label: "Workspace sẵn sàng" });
+    await reportProgress(taskId, { type: "sandbox.created", label: "Workspace ready" });
   }
 
   const agent = new DurableAgent({ /* ... */ });
@@ -531,7 +531,7 @@ export async function staffTaskWorkflow(taskId: string) {
   const deliverableId = await saveDeliverable(taskId, result);
   await reportProgress(taskId, {
     type: "workflow.completed",
-    label: "Hoàn thành",
+    label: "Complete",
     progressPercent: 100,
     payload: { deliverableId },
   });
@@ -559,7 +559,7 @@ async function reportProgress(taskId: string, event: ProgressInput) {
 
 #### `check_task_status`
 
-Trả về snapshot đầy đủ cho Assistant trả lời user.
+Returns a full snapshot for the Assistant to answer the Boss.
 
 ```typescript
 // Response example
@@ -569,12 +569,12 @@ Trả về snapshot đầy đủ cho Assistant trả lời user.
   staffRole: "Content Writer",
   status: "running",
   progressPercent: 45,
-  currentStep: "Đang viết phần mở đầu...",
+  currentStep: "Writing the introduction...",
   startedAt: "2026-07-04T10:05:00Z",
   lastEventAt: "2026-07-04T10:08:30Z",
   recentEvents: [
     { type: "agent.tool_called", label: "web_research", at: "..." },
-    { type: "agent.step_completed", label: "Research xong", at: "..." },
+    { type: "agent.step_completed", label: "Research complete", at: "..." },
   ],
   hasPreview: true,
   previewExcerpt: "AI agents are transforming how solo founders..."
@@ -583,7 +583,7 @@ Trả về snapshot đầy đủ cho Assistant trả lời user.
 
 #### `list_active_tasks`
 
-Tất cả tasks chưa terminal (`pending`, `running`) + tasks `completed` trong 1h chưa notify.
+All non-terminal tasks (`pending`, `running`) + `completed` tasks in the last hour not yet notified.
 
 ```typescript
 {
@@ -596,19 +596,19 @@ Tất cả tasks chưa terminal (`pending`, `running`) + tasks `completed` trong
 }
 ```
 
-Assistant dùng khi user hỏi chung: "Mọi người đang làm gì?"
+Assistant uses this when the Boss asks generally: "What is everyone working on?"
 
 #### `get_task_events`
 
-Full event log (paginated) — khi user muốn chi tiết.
+Full event log (paginated) — when the Boss wants details.
 
 #### `get_task_preview`
 
-Draft output tạm thời — staff đã generate text nhưng chưa finalize deliverable.
+Temporary draft output — Staff has generated text but not yet finalized the Deliverable.
 
-### Notification — Assistant biết khi task xong
+### Notification — Assistant knows when a task finishes
 
-Hai kênh song song: **push cho UI** và **queue cho Assistant**.
+Two parallel channels: **push for UI** and **queue for Assistant**.
 
 ```mermaid
 sequenceDiagram
@@ -623,9 +623,9 @@ sequenceDiagram
     W->>SSE: task.completed
     SSE->>UI: Desk ! emote + Task Board update
 
-    Note over A: Khi user mở dialogue hoặc hỏi
+    Note over A: When Boss opens dialogue or asks
     A->>DB: list_active_tasks / check pending notifications
-    A->>UI: Cutscene dialogue "Alex đã xong!"
+    A->>UI: Cutscene dialogue "Alex is done!"
 ```
 
 **`notification` table:**
@@ -637,32 +637,32 @@ interface Notification {
   type: "task.completed" | "task.failed" | "staff.hired";
   taskId?: string;
   payload: Record<string, unknown>;
-  status: "pending" | "delivered";  // delivered = Assistant đã báo user
+  status: "pending" | "delivered";  // delivered = Assistant has notified the Boss
   createdAt: Date;
   deliveredAt?: Date;
 }
 ```
 
-**Luồng thông báo user:**
+**Boss notification flow:**
 
-1. Workflow xong → `notification` status `pending` + SSE `task.completed`
-2. **Workspace UI** ngay lập tức: desk `done` state, `!` emote, Task Board cập nhật
-3. **Assistant proactive** (một trong hai):
-   - **Option A (MVP):** Khi user click Reception hoặc gửi message tiếp, Assistant gọi `list_active_tasks`, thấy `recentlyCompleted` chưa `delivered` → cutscene dialogue
-   - **Option B (Phase 2):** SSE trigger dialogue overlay tự động nếu user đang trong app
-4. Sau khi Assistant thông báo → `notification.status = delivered`
+1. Workflow completes → `notification` status `pending` + SSE `task.completed`
+2. **Workspace UI** immediately: desk `done` state, `!` emote, Task Board updates
+3. **Assistant proactive** (one of two):
+   - **Option A (MVP):** When the Boss clicks Reception or sends another message, Assistant calls `list_active_tasks`, sees `recentlyCompleted` not yet `delivered` → cutscene dialogue
+   - **Option B (Phase 2):** SSE triggers dialogue overlay automatically if the Boss is in the app
+4. After Assistant notifies → `notification.status = delivered`
 
 ### Assistant behavior guidelines
 
 ```markdown
 When a task is running:
 - If user asks about progress, use check_task_status or list_active_tasks
-- Summarize in plain language: "Alex đang viết phần mở đầu, khoảng 45% xong"
+- Summarize in plain language: "Alex is writing the introduction, about 45% done"
 - Offer to show preview if hasPreview is true
 
 When a task completes (pending notification):
 - Proactively mention it at the start of the next interaction
-- Trigger cutscene-style announcement with [Xem kết quả] choice
+- Trigger cutscene-style announcement with [View result] choice
 - Mark notification as delivered after informing user
 
 Never block waiting for tasks — always use tools to check current state.
@@ -683,60 +683,60 @@ Never block waiting for tasks — always use tools to check current state.
 |-------|-----------|
 | Workspace UI | SSE `task.progress`, `task.completed` — real-time |
 | Assistant | Tools on-demand; `list_active_tasks` at conversation start |
-| Workflow → DB | `reportProgress` step sau mỗi agent step |
-| Fallback | `GET /api/tasks/[id]` nếu SSE disconnect |
+| Workflow → DB | `reportProgress` step after each agent step |
+| Fallback | `GET /api/tasks/[id]` if SSE disconnects |
 
 ---
 
 ## Task Checkpoints
 
-Progress **planned** — Assistant tạo checkpoint khi lên kế hoạch (trong `delegate_task`), thay vì chỉ reactive theo `agent.step_completed`.
+**Planned** progress — the Assistant creates checkpoints when planning (in `delegate_task`), instead of only reacting to `agent.step_completed`.
 
-### So sánh với step progress (đã có)
+### Comparison with step progress (existing)
 
-| Mechanism | Ai định nghĩa | Khi nào update | Dùng cho |
-|-----------|---------------|----------------|----------|
-| **Step progress** | Workflow (`maxSteps`) | Mỗi `agent.step_completed` | UI progress bar ước lượng |
-| **Planned checkpoints** | Assistant khi delegate | Worker báo `checkpoint.reached` → Assistant `verify_checkpoint` | Quality gate, meaningful milestones |
+| Mechanism | Who defines | When updated | Used for |
+|-----------|-------------|--------------|----------|
+| **Step progress** | Workflow (`maxSteps`) | Each `agent.step_completed` | Estimated UI progress bar |
+| **Planned checkpoints** | Assistant when delegating | Worker reports `checkpoint.reached` → Assistant `verify_checkpoint` | Quality gate, meaningful milestones |
 
-Cả hai chạy song song; `progressPercent` ưu tiên checkpoint khi có (xem công thức bên dưới).
+Both run in parallel; `progressPercent` prefers checkpoints when present (see formula below).
 
-### Khi nào tạo checkpoint
+### When to create checkpoints
 
-Trong `delegate_task`, Assistant sinh `checkpoints[]` từ brief:
+In `delegate_task`, the Assistant generates `checkpoints[]` from the brief:
 
 ```typescript
 interface TaskCheckpoint {
   id: string;
-  label: string;           // "Hoàn thành research 3 nguồn"
-  criteria: string;        // Rubric ngắn để verify
+  label: string;           // "Completed research from 3 sources"
+  criteria: string;        // Short rubric for verify
   order: number;
   status: "pending" | "reached" | "verified" | "failed";
   reachedAt?: Date;
   verifiedAt?: Date;
-  evidence?: string;       // excerpt từ preview hoặc tool output
+  evidence?: string;       // excerpt from preview or tool output
 }
 ```
 
-**Ví dụ** brief "viết blog về AI agents":
+**Example** brief "write a blog about AI agents":
 
 | Order | Label | Criteria |
 |-------|-------|----------|
-| 1 | Research sources | ≥ 3 nguồn có citation |
-| 2 | Outline | Có outline với ≥ 4 sections |
+| 1 | Research sources | ≥ 3 sources with citations |
+| 2 | Outline | Outline with ≥ 4 sections |
 | 3 | Draft | ≥ 800 words |
 | 4 | Final deliverable | Saved to deliverable table |
 
-### Worker báo cáo checkpoint
+### Worker checkpoint reporting
 
-Staff workflow gọi tool **`report_checkpoint`** (worker-side) hoặc `reportProgress` với event type:
+Staff workflow calls tool **`report_checkpoint`** (worker-side) or `reportProgress` with event type:
 
-| Event | Khi nào |
-|-------|---------|
-| `checkpoint.reached` | Worker tự đánh dấu đạt milestone |
-| `checkpoint.failed` | Worker không đạt sau N attempts |
+| Event | When |
+|-------|------|
+| `checkpoint.reached` | Worker marks milestone reached |
+| `checkpoint.failed` | Worker did not reach it after N attempts |
 
-Worker instructions template (append vào staff system prompt):
+Worker instructions template (append to staff system prompt):
 
 ```markdown
 Before moving to the next phase of work:
@@ -747,7 +747,7 @@ Before moving to the next phase of work:
 
 ### Assistant verify checkpoint
 
-**`verify_checkpoint(checkpointId)`** — đọc evidence + criteria, LLM judge pass/fail:
+**`verify_checkpoint(checkpointId)`** — reads evidence + criteria, LLM judge pass/fail:
 
 ```typescript
 // Response example
@@ -760,22 +760,22 @@ Before moving to the next phase of work:
 }
 ```
 
-Luồng:
+Flow:
 1. Worker → `checkpoint.reached` event
-2. Assistant (proactive hoặc on user ask) → `verify_checkpoint`
-3. Pass → status `verified`; Fail → `revise_task` hoặc notify user
+2. Assistant (proactive or on Boss ask) → `verify_checkpoint`
+3. Pass → status `verified`; Fail → `revise_task` or notify Boss
 
-### progressPercent — công thức mới
+### progressPercent — updated formula
 
-Khi task có checkpoints:
+When a task has checkpoints:
 
 ```
 progressPercent = Math.round((verifiedCheckpoints / totalCheckpoints) * 100)
 ```
 
-Cap 95% cho đến `workflow.completed` (giữ behavior cũ).
+Cap at 95% until `workflow.completed` (preserves existing behavior).
 
-Khi **không** có checkpoints — fallback công thức cũ:
+When there are **no** checkpoints — fallback to the old formula:
 
 ```
 progressPercent = Math.round((currentStep / maxSteps) * 90)
@@ -783,14 +783,14 @@ progressPercent = Math.round((currentStep / maxSteps) * 90)
 
 ### Dynamic query — MVP vs Phase 2
 
-| Mechanism | Phase | Mô tả |
-|-----------|-------|-------|
-| **DB polling** | MVP (Phase 1) | `check_task_status`, `get_task_events`, `get_task_preview` — Assistant đọc DB state |
-| **Workflow signal** `query_worker` | Phase 2 | Assistant gửi câu hỏi → worker workflow nhận signal → trả lời qua `task_event` type `worker.query_response` |
+| Mechanism | Phase | Description |
+|-----------|-------|-------------|
+| **DB polling** | MVP (Phase 1) | `check_task_status`, `get_task_events`, `get_task_preview` — Assistant reads DB state |
+| **Workflow signal** `query_worker` | Phase 2 | Assistant sends question → worker workflow receives signal → responds via `task_event` type `worker.query_response` |
 
-**Lưu ý:** MVP "dynamic query" = Assistant query **DB**, không RPC trực tiếp tới agent in-memory. Đủ cho hầu hết case (progress, preview, events).
+**Note:** MVP "dynamic query" = Assistant queries **DB**, not direct RPC to in-memory agent. Sufficient for most cases (progress, preview, events).
 
-Phase 2 `query_worker` — khi worker stuck hoặc cần clarification mid-task:
+Phase 2 `query_worker` — when worker is stuck or needs clarification mid-task:
 
 ```mermaid
 sequenceDiagram
@@ -812,18 +812,18 @@ sequenceDiagram
 pending → running → completed | failed | cancelled
 ```
 
-| Status      | Mô tả                                       | Trigger                                |
+| Status      | Description                                 | Trigger                                |
 | ----------- | ------------------------------------------- | -------------------------------------- |
-| `pending`   | Task created, workflow chưa start           | `delegate_task` insert                 |
+| `pending`   | Task created, workflow not yet started      | `delegate_task` insert                 |
 | `running`   | `workflow_run_id` assigned, agent executing | `start()` returns                      |
 | `completed` | Deliverable saved                           | Workflow step `saveDeliverable`        |
 | `failed`    | Error logged                                | Workflow error / agent `status: error` |
-| `cancelled` | User cancelled                              | `POST /api/tasks/[id]/cancel`          |
+| `cancelled` | Boss cancelled                              | `POST /api/tasks/[id]/cancel`          |
 
 ### Retry Policy
 
-- `failed` tasks: Assistant có thể đề xuất retry
-- Retry = tạo task mới với cùng brief (không reuse workflow run)
+- `failed` tasks: Assistant may propose retry
+- Retry = create a new task with the same brief (do not reuse workflow run)
 - Max 3 retries per original task (tracked via `metadata.retryCount`)
 
 ### Notifications
@@ -870,7 +870,7 @@ You have access to the user's staff roster and documents. Use tools proactively.
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Runtime implementation
 - [DATA-MODEL.md](DATA-MODEL.md) — Database tables

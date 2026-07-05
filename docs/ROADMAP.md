@@ -1,42 +1,42 @@
 # Roadmap — Nex Staff
 
-## Tổng quan
+## Overview
 
-| Phase | Tên        | Timeline | Mục tiêu                        |
+| Phase | Name       | Timeline | Goals                           |
 | ----- | ---------- | -------- | ------------------------------- |
-| 0     | Foundation | 2 tuần   | Auth, chat, basic assistant     |
-| 1     | MVP        | 3-4 tuần | Hire, delegate, async, 8-bit UI |
-| 1.5   | Supervision| 1-2 tuần | Checkpoints, verify, multi-worker orchestration |
-| 2     | v1.0       | 3 tuần   | RAG, task history, polish       |
+| 0     | Foundation | 2 weeks  | Auth, chat, basic assistant     |
+| 1     | MVP        | 3-4 weeks| Hire, delegate, async, 8-bit UI |
+| 1.5   | Supervision| 1-2 weeks| Checkpoints, verify, multi-worker orchestration |
+| 2     | v1.0       | 3 weeks  | RAG, task history, polish       |
 | 3     | v1.5       | TBD      | Custom staff, MCP, HarnessAgent |
 | 4     | v2.0       | TBD      | Team, marketplace, billing      |
 
 ---
 
-## Phase 0 — Foundation (2 tuần)
+## Phase 0 — Foundation (2 weeks)
 
-**Mục tiêu:** Có thể login, chat với Assistant, upload file.
+**Goals:** User can log in, chat with Assistant, upload files.
 
 ### Deliverables
 
-- [ ] Init Next.js 16 project với TypeScript, Tailwind CSS v4
+- [ ] Init Next.js 16 project with TypeScript, Tailwind CSS v4
 - [ ] Install packages: `ai`, `@ai-sdk/react`, `@ai-sdk/google`, `workflow`, `@workflow/ai`, `@ai-sdk/sandbox-vercel`
 - [ ] Better Auth setup (Google OAuth)
 - [ ] Drizzle ORM + Neon Postgres schema (core tables)
-- [ ] Vercel Blob integration cho document upload
+- [ ] Vercel Blob integration for document upload
 - [ ] Workspace screen: tilemap grid, desk zones, player movement (CSS grid fallback)
 - [ ] RPG dialogue overlay: DialogueBox + typewriter
-- [ ] Assistant `ToolLoopAgent` với tools: chat, `web_research`
+- [ ] Assistant `ToolLoopAgent` with tools: chat, `web_research`
 - [ ] Document upload endpoint + Blob storage
 - [ ] Auto-create Assistant on first login
 
 ### Exit Criteria
 
-- User login → chat với Assistant → nhận streaming response
-- Upload file → lưu Blob → Assistant biết file đã upload
-- Deploy lên Vercel preview
+- User logs in → chats with Assistant → receives streaming response
+- Upload file → saved to Blob → Assistant knows file was uploaded
+- Deploy to Vercel preview
 
-### Không làm trong Phase 0
+### Out of scope for Phase 0
 
 - Hire/delegate flow
 - Staff agents
@@ -45,23 +45,23 @@
 
 ---
 
-## Phase 1 — MVP (3-4 tuần)
+## Phase 1 — MVP (3-4 weeks)
 
-**Mục tiêu:** Full hire → delegate → async → notify loop với 8-bit UI.
+**Goals:** Full hire → delegate → async → notify loop with 8-bit UI.
 
 ### Deliverables
 
-- [ ] Hiring flow hoàn chỉnh (assistant-driven, inline chat)
+- [ ] Complete hiring flow (assistant-driven, inline chat)
 - [ ] 3 preset staff templates: Writer, Researcher, Analyst
 - [ ] `staff` table + `hire_staff` tool
 - [ ] `DurableAgent` + `staffTaskWorkflow` (Vercel Workflow)
 - [ ] `delegate_task` tool — fire-and-forget
-- [ ] Vercel Sandbox cho staff với `useSandbox: true`
+- [ ] Vercel Sandbox for staff with `useSandbox: true`
 - [ ] Task observability: `task_event`, `task_preview`, `notification` tables
-- [ ] `reportProgress` trong staffTaskWorkflow + SSE `task.progress`
+- [ ] `reportProgress` in staffTaskWorkflow + SSE `task.progress`
 - [ ] Assistant tools: `list_active_tasks`, `get_task_events`, `get_task_preview`
-- [ ] Enhanced `check_task_status` với progress + preview
-- [ ] Deliverable preview inline trong chat
+- [ ] Enhanced `check_task_status` with progress + preview
+- [ ] Deliverable preview inline in chat
 - [ ] Archive Room + Task Board overlays
 - [ ] 8-bit tilemap assets, desk sprites, archive shelves
 - [ ] Staff roster overlay (`/staff`)
@@ -70,13 +70,13 @@
 
 ### Exit Criteria
 
-- User: "viết blog về X" → Assistant hire Writer (nếu chưa có) → delegate → user tiếp tục chat → nhận notification khi xong → xem deliverable
-- 3 staff types hoạt động end-to-end
-- UI có 8-bit aesthetic
+- User: "write a blog about X" → Assistant hires Writer (if not yet hired) → delegates → user continues chatting → receives notification when done → views deliverable
+- 3 staff types work end-to-end
+- UI has 8-bit aesthetic
 
 ### Milestones
 
-| Tuần | Focus                                     |
+| Week | Focus                                     |
 | ---- | ----------------------------------------- |
 | 1    | Staff schema, hire flow, preset templates |
 | 2    | Workflow + DurableAgent + delegate        |
@@ -85,95 +85,95 @@
 
 ---
 
-## Phase 1.5 — Supervision (1-2 tuần)
+## Phase 1.5 — Supervision (1-2 weeks)
 
-**Mục tiêu:** Assistant giám sát worker qua planned checkpoints; multi-worker orchestration; eval integration.
+**Goals:** Assistant supervises workers via planned checkpoints; multi-worker orchestration; eval integration.
 
 ### Deliverables
 
-- [ ] `task_checkpoint` table + checkpoint events trong `task_event`
+- [ ] `task_checkpoint` table + checkpoint events in `task_event`
 - [ ] `delegate_task` extended: `checkpoints[]`, `acceptanceCriteria`, `parentGroupId`, `dependsOn`
-- [ ] Worker tool `report_checkpoint` trong staffTaskWorkflow
+- [ ] Worker tool `report_checkpoint` in staffTaskWorkflow
 - [ ] Assistant tools: `verify_checkpoint`, `review_deliverable`, `revise_task`, `list_queued_tasks`
 - [ ] Task queue semantics: FIFO per staff, 1 running + 3 pending
 - [ ] Multi-task orchestration: task groups + dependency gating
-- [ ] `progressPercent` từ verified checkpoints (fallback step-based)
+- [ ] `progressPercent` from verified checkpoints (fallback step-based)
 - [ ] SSE `task.checkpoint` event
 - [ ] Eval harness: checkpoint pass rate metric
 
 ### Exit Criteria
 
-- Assistant delegate blog task với 4 checkpoints → verify từng checkpoint → review deliverable trước khi báo user
-- Multi-worker flow: Researcher → Writer dependency chain hoạt động end-to-end
-- Checkpoint pass rate ≥ 85% trên eval scenarios
+- Assistant delegates blog task with 4 checkpoints → verifies each checkpoint → reviews deliverable before notifying user
+- Multi-worker flow: Researcher → Writer dependency chain works end-to-end
+- Checkpoint pass rate ≥ 85% on eval scenarios
 
-### Không làm trong Phase 1.5
+### Out of scope for Phase 1.5
 
 - Workflow signal `query_worker` (Phase 2)
 - Per-staff quality dashboard (Phase 2)
 
 ---
 
-## Phase 2 — v1.0 (3 tuần)
+## Phase 2 — v1.0 (3 weeks)
 
-**Mục tiêu:** Production-ready với RAG, task history, error handling.
+**Goals:** Production-ready with RAG, task history, error handling.
 
 ### Deliverables
 
 - [ ] pgvector setup + `document_chunk` embedding pipeline
-- [ ] `search_documents` tool (RAG) cho Assistant và Staff
+- [ ] `search_documents` tool (RAG) for Assistant and Staff
 - [ ] Staff document linking (`staff_document` table)
 - [ ] Task history view (`/tasks` command)
-- [ ] Deliverable preview nâng cao (markdown render, copy, download)
+- [ ] Enhanced deliverable preview (markdown render, copy, download)
 - [ ] Slash commands: `/staff`, `/tasks`, `/docs`, `/status`, `/help`
-- [ ] Error handling + retry logic cho failed tasks
+- [ ] Error handling + retry logic for failed tasks
 - [ ] Workflow status polling endpoint
 - [ ] Chat persistence (`chat_event` event sourcing)
 - [ ] Chat sidebar (list conversations)
 - [ ] **Voice V1:** push-to-talk STT + optional NPC TTS readback in dialogue (see [VOICE-CHAT.md](VOICE-CHAT.md))
-- [ ] Workflow signal `query_worker` — Assistant dynamic query tới worker đang chạy
+- [ ] Workflow signal `query_worker` — Assistant dynamic query to running worker
 - [ ] Regression eval golden tasks (see [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md))
 - [ ] Per-staff quality metrics dashboard
 
 ### Exit Criteria
 
-- Upload PDF → chunk + embed → Assistant/Staff tra cứu được với citation
-- User xem lại toàn bộ task history và deliverables
-- Failed task → Assistant đề xuất retry
-- Chat history persist qua refresh
+- Upload PDF → chunk + embed → Assistant/Staff can search with citation
+- User can review full task history and deliverables
+- Failed task → Assistant suggests retry
+- Chat history persists across refresh
 
 ---
 
 ## Phase 3 — v1.5 (TBD)
 
-**Mục tiêu:** Power features cho advanced users.
+**Goals:** Power features for advanced users.
 
 ### Deliverables
 
 - [ ] Custom staff (user-defined role + skills + instructions)
 - [ ] MCP tool integrations (Notion, Linear, GitHub) via AI SDK MCP Apps
-- [ ] `HarnessAgent` cho coding staff (Claude Code / Codex trong Sandbox)
-- [ ] Staff "level up" — học từ user feedback, cập nhật instructions
+- [ ] `HarnessAgent` for coding staff (Claude Code / Codex in Sandbox)
+- [ ] Staff "level up" — learn from user feedback, update instructions
 - [ ] Chiptune sound effects (hire, complete, notification)
 - [ ] **Voice V2:** streaming STT, sentence-chunk TTS, mic SFX, user voice prefs (see [VOICE-CHAT.md](VOICE-CHAT.md))
-- [ ] `create_document` tool — lưu output thành company doc
+- [ ] `create_document` tool — save output as company doc
 - [ ] Provider skill uploads (`uploadSkill` API)
 
 ### Considerations
 
-- MCP Apps cần sandbox iframe — evaluate security
+- MCP Apps need sandbox iframe — evaluate security
 - HarnessAgent APIs experimental — pin versions
-- "Level up" cần eval framework để tránh drift
+- "Level up" needs eval framework to avoid drift
 
 ---
 
 ## Phase 4 — v2.0 (TBD)
 
-**Mục tiêu:** Mở rộng beyond solo founder (nếu product-market fit).
+**Goals:** Expand beyond solo founder (if product-market fit).
 
 ### Potential Deliverables
 
-- [ ] Team workspace (nhiều user, shared staff)
+- [ ] Team workspace (multiple users, shared staff)
 - [ ] Role-based access (admin, member, viewer)
 - [ ] Agent marketplace (share/discover staff templates)
 - [ ] Billing / usage tracking
@@ -183,11 +183,11 @@
 
 ### Gate
 
-Chỉ proceed nếu:
+Only proceed if:
 
-- Phase 1-2 có traction (retention, engagement metrics)
-- User feedback yêu cầu team features
-- Unit economics work với LLM + Sandbox costs
+- Phase 1-2 has traction (retention, engagement metrics)
+- User feedback requests team features
+- Unit economics work with LLM + Sandbox costs
 
 ---
 
@@ -195,12 +195,12 @@ Chỉ proceed nếu:
 
 | Risk                        | Impact                     | Likelihood | Mitigation                                                |
 | --------------------------- | -------------------------- | ---------- | --------------------------------------------------------- |
-| Sandbox cold start (10-30s) | UX delay khi delegate      | High       | Pixel "staff đang chuẩn bị..." animation; set expectation |
-| Vercel Sandbox cost         | Chi phí per sandbox-minute | Medium     | Destroy ngay sau task; monitor usage trên Vercel            |
-| Workflow cold start         | Delay trên hobby tier      | Medium     | Optimize step caching; set user expectation               |
-| LLM API cost                | Nhiều tasks = nhiều calls  | High       | `maxSteps` limit per task                                 |
-| RAG quality                 | Staff trả lời sai từ docs  | Medium     | Citation required; chunking eval benchmark                |
-| 8-bit assets delay          | UI không có identity       | Medium     | Emoji fallback trong Phase 0-1                            |
+| Sandbox cold start (10-30s) | UX delay on delegate       | High       | Pixel "staff preparing..." animation; set expectation     |
+| Vercel Sandbox cost         | Cost per sandbox-minute    | Medium     | Destroy immediately after task; monitor usage on Vercel   |
+| Workflow cold start         | Delay on hobby tier        | Medium     | Optimize step caching; set user expectation               |
+| LLM API cost                | Many tasks = many calls    | High       | `maxSteps` limit per task                                 |
+| RAG quality                 | Staff answers incorrectly from docs | Medium | Citation required; chunking eval benchmark           |
+| 8-bit assets delay          | UI lacks identity          | Medium     | Emoji fallback in Phase 0-1                               |
 | AI SDK 7 breaking changes   | Experimental APIs change   | Medium     | Pin versions; monitor changelog                           |
 | Delegation routing errors   | Wrong staff gets task      | Medium     | 20-scenario eval benchmark; fallback to Assistant         |
 
@@ -234,9 +234,9 @@ Chỉ proceed nếu:
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
-- [PRD.md](PRD.md) — Requirements và success criteria
+- [PRD.md](PRD.md) — Requirements and success criteria
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technical implementation
 - [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Supervision, checkpoints, multi-worker
 - [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md) — Worker quality metrics and tests

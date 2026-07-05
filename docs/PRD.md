@@ -4,20 +4,20 @@
 
 ### Problem Statement
 
-Solo founder phải tự làm mọi thứ — research, viết content, phân tích, coding. Các AI chat tool hiện tại không có khái niệm "nhân viên chuyên biệt" làm việc độc lập; mọi tương tác đều qua một assistant chung và user phải chờ kết quả.
+Solo founders must do everything themselves — research, content writing, analysis, coding. Current AI chat tools have no concept of specialized "staff" working independently; every interaction goes through one shared assistant and the user must wait for results.
 
 ### Proposed Solution
 
-Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agents như nhân viên thật. Mỗi agent có role, skills, tools, và access tới company knowledge base. User trò chuyện với Assistant — Assistant hire, delegate, và điều phối công việc mà không block user.
+Nex Staff is a web platform that lets solo founders build a team of AI agents like real staff. Each agent has a role, skills, tools, and access to the company knowledge base. The user talks to the Assistant — the Assistant hires, delegates, and coordinates work without blocking the user.
 
 ### Success Criteria
 
 | KPI                 | Target                                                   |
 | ------------------- | -------------------------------------------------------- |
-| Time-to-first-hire  | User hire agent đầu tiên trong < 5 phút sau onboarding   |
-| Delegation accuracy | Assistant delegate đúng staff ≥ 90% khi có agent phù hợp |
-| Async completion    | Hired agent hoàn thành task mà user không cần chờ        |
-| Time-to-deliverable | Deliverable đầu tiên trong < 10 phút sau khi giao việc   |
+| Time-to-first-hire  | User hires first agent within < 5 minutes after onboarding |
+| Delegation accuracy | Assistant delegates to correct staff ≥ 90% when a matching agent exists |
+| Async completion    | Hired agent completes task without user waiting            |
+| Time-to-deliverable | First deliverable within < 10 minutes after delegation   |
 
 ---
 
@@ -27,34 +27,34 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 
 **Solo Founder**
 
-- Có ý tưởng hoặc dự án đang chạy
-- Cần "đội ngũ" ảo: research, viết content, phân tích data, marketing, coding
-- Không có thời gian quản lý nhiều tool AI riêng lẻ
-- Thích giao tiếp tự nhiên qua chat hơn dashboard phức tạp
+- Has an idea or a project in progress
+- Needs a virtual "team": research, content writing, data analysis, marketing, coding
+- No time to manage many separate AI tools
+- Prefers natural chat over a complex dashboard
 
 ### User Stories
 
 | ID    | Story                                                                                 | Acceptance Criteria                                                                 |
 | ----- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| US-01 | Là user mới, tôi được gặp Assistant ngay khi đăng nhập để bắt đầu trò chuyện về dự án | Assistant tự động tạo; greeting message hiện trong < 2s sau login                   |
-| US-02 | Là user, tôi upload tài liệu (PDF, MD, URL) và Assistant lưu trữ + tra cứu được       | Upload qua chat; file lưu Blob; `search_documents` trả kết quả có citation          |
-| US-03 | Là user, tôi nói "tôi cần ai đó viết blog" và Assistant đề xuất hire Content Writer   | Assistant nhận diện intent; đề xuất role cụ thể nếu chưa có staff phù hợp           |
-| US-04 | Là user, tôi xác nhận hire và Assistant hỏi thêm yêu cầu, skills, tone                | Hire flow qua chat (không form); tối thiểu 2-3 câu hỏi clarify trước khi tạo staff  |
-| US-05 | Là user, tôi giao việc cho Assistant và nó delegate cho agent phù hợp                 | Task được tạo; progress track qua `task_event`; user có thể hỏi tiến độ bất cứ lúc nào |
-| US-10 | Là user, tôi hỏi "Alex làm đến đâu rồi?" và Assistant trả lời được tiến độ cụ thể     | `check_task_status` trả progressPercent, currentStep, preview excerpt                  |
-| US-11 | Là user, tôi được thông báo ngay khi staff hoàn thành việc                            | SSE + notification queue; desk `!` emote; Assistant cutscene khi có pending notification |
-| US-06 | Là user, tôi tiếp tục chat trong khi agent đang làm việc nền                          | Assistant response không block; user có thể gửi message mới ngay                    |
-| US-07 | Là user, tôi nhận thông báo khi agent hoàn thành công việc                            | SSE trigger cutscene: staff NPC walk-in + dialogue "đã xong" + choice [Xem kết quả] |
-| US-08 | Là user, tôi xem lại lịch sử công việc và deliverables của từng nhân viên             | Task Board trên workspace; click desk xem history; Archive Room cho documents        |
-| US-09 | Là user, tôi khám phá workspace và thấy staff đang làm gì                               | Top-down office view; desk states idle/working/done; click zone để tương tác         |
-| US-12 | Là user, tôi được Assistant báo tiến độ theo milestone có ý nghĩa (không chỉ %)         | Assistant tạo checkpoints khi delegate; verify qua `verify_checkpoint`; progress theo checkpoint |
-| US-13 | Là user, tôi giao việc phức tạp cần nhiều staff và Assistant điều phối                 | Multi-worker task_group; dependency chain; Assistant báo cáo tổng thể qua `list_active_tasks` |
-| US-14 | Là user, tôi nói chuyện với Assistant bằng giọng nói trong dialogue overlay           | Push-to-talk STT → text message; optional NPC TTS; transcript trong chat log — [VOICE-CHAT.md](VOICE-CHAT.md) |
+| US-01 | As a new user, I meet the Assistant right after login to start talking about my project | Assistant auto-created; greeting message appears within < 2s after login            |
+| US-02 | As a user, I upload documents (PDF, MD, URL) and the Assistant stores and retrieves them | Upload via chat; file stored in Blob; `search_documents` returns cited results      |
+| US-03 | As a user, I say "I need someone to write a blog" and the Assistant proposes hiring a Content Writer | Assistant detects intent; proposes specific role if no matching staff exists |
+| US-04 | As a user, I confirm hire and the Assistant asks for requirements, skills, and tone     | Hire flow via chat (no form); at least 2–3 clarifying questions before creating staff |
+| US-05 | As a user, I assign work to the Assistant and it delegates to the right agent        | Task created; progress tracked via `task_event`; user can ask for status anytime    |
+| US-10 | As a user, I ask "How far along is Alex?" and the Assistant reports specific progress | `check_task_status` returns progressPercent, currentStep, preview excerpt           |
+| US-11 | As a user, I am notified as soon as staff complete work                              | SSE + notification queue; desk `!` emote; Assistant cutscene when notification pending |
+| US-06 | As a user, I keep chatting while agents work in the background                       | Assistant response does not block; user can send new messages immediately           |
+| US-07 | As a user, I receive notification when an agent finishes work                        | SSE triggers cutscene: staff NPC walk-in + dialogue "done" + choice [View result] |
+| US-08 | As a user, I review task history and deliverables per staff member                   | Task Board on workspace; click desk for history; Archive Room for documents         |
+| US-09 | As a user, I explore the workspace and see what staff are doing                      | Top-down office view; desk states idle/working/done; click zones to interact        |
+| US-12 | As a user, the Assistant reports meaningful milestones (not just %)                    | Assistant creates checkpoints when delegating; verify via `verify_checkpoint`; progress by checkpoint |
+| US-13 | As a user, I assign complex work needing multiple staff and the Assistant coordinates  | Multi-worker task_group; dependency chain; Assistant reports overall via `list_active_tasks` |
+| US-14 | As a user, I talk to the Assistant by voice in the dialogue overlay                   | Push-to-talk STT → text message; optional NPC TTS; transcript in chat log — [VOICE-CHAT.md](VOICE-CHAT.md) |
 
 ### Non-Goals (MVP)
 
 - Multi-user workspace / team collaboration
-- Marketplace agent công khai
+- Public agent marketplace
 - Billing / subscription
 - Mobile native app
 - ~~Voice interface~~ → deferred to Phase 2+ ([VOICE-CHAT.md](VOICE-CHAT.md))
@@ -66,33 +66,33 @@ Nex Staff là nền tảng web cho phép solo founder tạo đội ngũ AI agent
 
 ### Assistant Tools
 
-| Tool                | Mô tả                                       |
+| Tool                | Description                                 |
 | ------------------- | ------------------------------------------- |
-| `search_documents`  | RAG query trên company documents (pgvector) |
-| `create_document`   | Tạo tài liệu mới từ nội dung agent generate |
-| `web_research`      | Search + summarize từ internet              |
-| `hire_staff`        | Tạo staff profile mới trong DB              |
-| `delegate_task`     | Tạo task + `start(staffTaskWorkflow)`       |
-| `list_staff`        | Trả về roster staff của user                |
-| `check_task_status` | Status + progress + preview của một task    |
-| `list_active_tasks` | Tasks đang chạy + vừa xong chưa báo         |
-| `get_task_events`   | Event log chi tiết                          |
-| `get_task_preview`  | Draft output tạm                            |
+| `search_documents`  | RAG query on company documents (pgvector)   |
+| `create_document`   | Create new document from agent-generated content |
+| `web_research`      | Search + summarize from the internet        |
+| `hire_staff`        | Create new staff profile in DB              |
+| `delegate_task`     | Create task + `start(staffTaskWorkflow)`    |
+| `list_staff`        | Return user's staff roster                  |
+| `check_task_status` | Status + progress + preview for one task    |
+| `list_active_tasks` | Running tasks + recently completed, undelivered |
+| `get_task_events`   | Detailed event log                          |
+| `get_task_preview`  | Draft output snapshot                       |
 | `get_deliverable`   | Fetch completed work                        |
 | `verify_checkpoint` | Verify planned checkpoint vs evidence       |
-| `review_deliverable`| Chấm deliverable vs acceptanceCriteria      |
-| `revise_task`       | Gửi feedback / spawn revision task          |
+| `review_deliverable`| Score deliverable vs acceptanceCriteria     |
+| `revise_task`       | Send feedback / spawn revision task         |
 | `list_queued_tasks` | Pending backlog per staff                   |
 
 ### Evaluation Strategy
 
-- **Benchmark**: 20 kịch bản hire + delegate (5 hire mới, 10 delegate existing, 5 edge cases)
-- **Routing accuracy**: ≥ 90% delegate đúng staff hoặc đề xuất hire phù hợp
-- **Deliverable quality**: Human eval trên 10 deliverables — ≥ 7/10 usable without major edits
+- **Benchmark**: 20 hire + delegate scenarios (5 new hires, 10 delegate to existing, 5 edge cases)
+- **Routing accuracy**: ≥ 90% correct delegation or appropriate hire proposal
+- **Deliverable quality**: Human eval on 10 deliverables — ≥ 7/10 usable without major edits
 - **Checkpoint pass rate**: ≥ 85% checkpoints verified on first attempt (Phase 1.5)
-- **Latency**: Assistant first token < 1s; task notification < 30s sau workflow complete
+- **Latency**: Assistant first token < 1s; task notification < 30s after workflow complete
 
-Chi tiết metrics, test types, eval harness: [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md)
+Details on metrics, test types, eval harness: [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK.md)
 
 ---
 
@@ -100,12 +100,12 @@ Chi tiết metrics, test types, eval harness: [EVAL-FRAMEWORK.md](EVAL-FRAMEWORK
 
 ### Architecture Overview
 
-- **Sync layer**: `ToolLoopAgent` cho Assistant — streaming real-time
-- **Async layer**: `DurableAgent` trong Vercel Workflow cho Staff tasks
-- **Sandbox**: Vercel Sandbox per-task khi `staff.useSandbox === true`
-- **Data**: Neon Postgres + pgvector; Vercel Blob cho files
+- **Sync layer**: `ToolLoopAgent` for Assistant — real-time streaming
+- **Async layer**: `DurableAgent` in Vercel Workflow for staff tasks
+- **Sandbox**: Vercel Sandbox per-task when `staff.useSandbox === true`
+- **Data**: Neon Postgres + pgvector; Vercel Blob for files
 
-Chi tiết: [ARCHITECTURE.md](ARCHITECTURE.md)
+Details: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ### Integration Points
 
@@ -120,10 +120,10 @@ Chi tiết: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ### Security & Privacy
 
-- Staff và documents scoped per `userId` — không cross-tenant access
-- Sandbox isolated per task, destroyed sau khi complete
+- Staff and documents scoped per `userId` — no cross-tenant access
+- Sandbox isolated per task, destroyed after completion
 - OAuth tokens encrypted at rest (Better Auth)
-- Documents không share giữa users
+- Documents not shared between users
 - API routes require authenticated session
 
 ---
@@ -134,19 +134,19 @@ Chi tiết: [ARCHITECTURE.md](ARCHITECTURE.md)
 
 | Phase    | Scope                                   | Timeline  |
 | -------- | --------------------------------------- | --------- |
-| Phase 0  | Foundation: auth, chat, basic assistant | 2 tuần    |
-| Phase 1  | MVP: hire, delegate, async, 8-bit UI    | 3-4 tuần  |
-| Phase 1.5| Supervision: checkpoints, multi-worker  | 1-2 tuần  |
-| Phase 2  | v1.0: RAG, task history, slash commands | 3 tuần    |
-| Phase 3+ | Custom staff, MCP, HarnessAgent         | Tương lai |
+| Phase 0  | Foundation: auth, chat, basic assistant | 2 weeks   |
+| Phase 1  | MVP: hire, delegate, async, 8-bit UI    | 3–4 weeks |
+| Phase 1.5| Supervision: checkpoints, multi-worker  | 1–2 weeks |
+| Phase 2  | v1.0: RAG, task history, slash commands | 3 weeks   |
+| Phase 3+ | Custom staff, MCP, HarnessAgent         | Future    |
 
-Chi tiết: [ROADMAP.md](ROADMAP.md)
+Details: [ROADMAP.md](ROADMAP.md)
 
 ### Technical Risks
 
 | Risk                        | Mitigation                                           |
 | --------------------------- | ---------------------------------------------------- |
-| Sandbox cold start (10-30s) | Pixel "staff đang chuẩn bị..." animation             |
-| LLM cost per task           | `maxSteps` limit; destroy sandbox sau task complete  |
+| Sandbox cold start (10–30s) | Pixel "staff preparing..." animation                 |
+| LLM cost per task           | `maxSteps` limit; destroy sandbox after task complete |
 | RAG hallucination           | Citation required; chunking eval benchmark           |
 | AI SDK 7 experimental APIs  | Pin versions; monitor changelog                      |

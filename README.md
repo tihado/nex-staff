@@ -1,34 +1,34 @@
 # Nex Staff
 
-**Tuyển dụng AI nhân viên cho dự án của bạn.**
+**Hire AI staff for your project.**
 
-Nex Staff là nền tảng web-based cho solo founder — nơi bạn trò chuyện với một Assistant, tuyển dụng các agent chuyên biệt như nhân viên, và giao việc cho họ làm độc lập trong nền.
+Nex Staff is a web-based platform for solo founders — chat with an Assistant, hire specialized agents as staff, and delegate work for them to complete independently in the background.
 
 ## Concept
 
 ```
-Bạn (Boss)
+You (Boss)
     │
     ▼
-Assistant ──► trò chuyện, lưu tài liệu, research
+Assistant ──► chat, save documents, research
     │
-    ├── hire ──► Staff mới (Writer, Researcher, Analyst...)
+    ├── hire ──► New staff (Writer, Researcher, Analyst...)
     │
-    └── delegate ──► Staff làm việc async (không cần chờ)
+    └── delegate ──► Staff work async (no waiting)
                         │
                         ▼
-                   Deliverable + thông báo
+                   Deliverable + notification
 ```
 
-## Tính năng chính
+## Key features
 
-- **Assistant agent** — cửa ngõ duy nhất: chat về dự án, upload tài liệu, tra cứu, research
-- **Hire staff** — Assistant đề xuất và tuyển agent chuyên biệt theo nhu cầu
-- **Delegate async** — giao việc, tiếp tục chat trong khi nhân viên làm nền
-- **Company knowledge** — tài liệu được lưu trữ và tra cứu qua RAG
-- **Workspace** — sàn làm việc pixel: bàn staff, phòng lưu tài liệu, task board
-- **NPC dialogue** — hội thoại kiểu RPG khi click vào agent (overlay trên workspace)
-- **8-bit UI** — design system thống nhất (pixel fonts, panels, không chat app UI)
+- **Assistant agent** — single entry point: chat about your project, upload documents, search, research
+- **Hire staff** — Assistant proposes and hires specialized agents on demand
+- **Delegate async** — assign work and keep chatting while staff work in the background
+- **Company knowledge** — documents stored and retrieved via RAG
+- **Workspace** — pixel office floor: staff desks, Archive Room, task board
+- **NPC dialogue** — RPG-style conversation when clicking an agent (overlay on workspace)
+- **8-bit UI** — unified design system (pixel fonts, panels, not a chat-app UI)
 
 ## Tech Stack
 
@@ -43,21 +43,21 @@ Assistant ──► trò chuyện, lưu tài liệu, research
 | Auth            | Better Auth (email/password; Google OAuth later) |
 | Storage         | Vercel Blob                                |
 
-## Tài liệu
+## Documentation
 
-| Tài liệu                             | Mô tả                                         |
+| Document                             | Description                                   |
 | ------------------------------------ | --------------------------------------------- |
 | [PRD](docs/PRD.md)                   | Product Requirements Document                 |
-| [Architecture](docs/ARCHITECTURE.md) | Kiến trúc kỹ thuật                            |
+| [Architecture](docs/ARCHITECTURE.md) | Technical architecture                        |
 | [Agent System](docs/AGENT-SYSTEM.md) | Hiring, delegation, supervision, checkpoints |
 | [Eval Framework](docs/EVAL-FRAMEWORK.md) | Worker quality metrics, tests, eval harness |
 | [Data Model](docs/DATA-MODEL.md)     | Database schema                               |
 | [API](docs/API.md)                   | REST endpoints, tools, events                 |
 | [UI/UX](docs/UI-UX.md)               | Workspace tilemap + NPC dialogue 8-bit          |
 | [Voice Chat](docs/VOICE-CHAT.md)     | Voice STT/TTS plan for RPG dialogue (Phase 2+)  |
-| [Roadmap](docs/ROADMAP.md)           | Lộ trình MVP → v2                             |
+| [Roadmap](docs/ROADMAP.md)           | MVP → v2 roadmap                              |
 
-## Trạng thái
+## Status
 
 **Foundation (issue #3)** — auth, database schema, health check, and Vercel deploy scaffolding are in place. Workplace UI and agent features follow in later issues.
 
@@ -120,6 +120,6 @@ For **local development**, set `SANDBOX_DISABLED=true` in `.env.local` so staff 
 | ------- | ------- |
 | `pnpm exec tsx scripts/test-delegate-workflow.ts` | Sign in, delegate to staff, poll task status (local smoke test) |
 
-## Đối tượng
+## Audience
 
-Solo founder — một người quản lý nhiều AI agent như đội ngũ nhân viên ảo.
+Solo founders — one person managing multiple AI agents as a virtual staff team.

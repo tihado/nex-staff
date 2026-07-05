@@ -2,44 +2,44 @@
 
 ## Design Philosophy
 
-### Hai màn hình chính
+### Two main screens
 
-Nex Staff có **hai view** bổ sung nhau — không phải dashboard truyền thống:
+Nex Staff has **two complementary views** — not a traditional dashboard:
 
-| View | Vai trò | Tham chiếu game |
-|------|---------|-----------------|
-| **Workspace** | Sàn làm việc top-down — đi lại, xem staff, phòng tài liệu | Stardew Valley interior, Habbo room, old Sim office |
-| **Dialogue** | Hội thoại NPC khi tương tác với agent | Pokémon, Final Fantasy dialogue box |
+| View | Role | Game reference |
+|------|------|----------------|
+| **Workspace** | Top-down office floor — walk around, see staff, document room | Stardew Valley interior, Habbo room, old Sim office |
+| **Dialogue** | NPC conversation when interacting with an agent | Pokémon, Final Fantasy dialogue box |
 
-User **khám phá workspace** như một văn phòng pixel → **click vào bàn/NPC** → chuyển sang dialogue mode.
+The user **explores the workspace** like a pixel office → **clicks a desk/NPC** → switches to dialogue mode.
 
-### NPC Dialogue (không phải chat truyền thống)
+### NPC Dialogue (not traditional chat)
 
-Toàn bộ interaction mô phỏng **hội thoại với NPC trong game RPG 8-bit** — không dùng bubble chat scrollable như Messenger/ChatGPT. User đứng trước một nhân vật (Assistant hoặc Staff), đọc dialogue box ở dưới màn hình, bấm để tiếp tục hoặc chọn lựa chọn.
+All interaction mimics **conversation with an NPC in an 8-bit RPG** — no scrollable bubble chat like Messenger/ChatGPT. The user stands before a character (Assistant or Staff), reads the dialogue box at the bottom of the screen, and taps to continue or choose an option.
 
-Tham chiếu visual: Pokémon, Final Fantasy, Undertale, Stardew Valley dialogue system.
+Visual references: Pokémon, Final Fantasy, Undertale, Stardew Valley dialogue system.
 
 ### Game-like
 
-User là "boss" trong pixel office. Assistant = NPC receptionist/coordinator luôn có mặt. Staff = NPC specialists xuất hiện khi được gọi hoặc báo cáo xong việc. Hire = recruit character vào roster. Delegate = giao quest.
+The user is the "boss" in a pixel office. Assistant = always-present NPC receptionist/coordinator. Staff = specialist NPCs who appear when called or when reporting finished work. Hire = recruit a character to the roster. Delegate = assign a quest.
 
 ### 8-bit retro aesthetic
 
-Pixel art scene, sprite portraits, dialogue box cổ điển, typewriter text, chiptune SFX (Phase 3). Identity của product — không phải skin trên chat app.
+Pixel art scene, sprite portraits, classic dialogue box, typewriter text, chiptune SFX (Phase 3). Core product identity — not a skin on a chat app.
 
-### Quy tắc thống nhất (implementation contract)
+### Unified rules (implementation contract)
 
-Mọi màn hình và component phải tuân theo **một design system** — xem issue [#16](https://github.com/tihado/nex-staff/issues/16) và thư mục `src/components/pixel/`.
+Every screen and component must follow **one design system** — see issue [#16](https://github.com/tihado/nex-staff/issues/16) and `src/components/pixel/`.
 
-| Layer | Quy tắc |
-|-------|---------|
-| **Tokens** | Chỉ dùng palette/fonts trong doc này — không hardcode màu lẻ |
-| **Components** | Overlay, button, dialogue, notification → `Pixel*` shared components |
-| **Patterns** | Workspace home + dialogue overlay — không thêm dashboard/list view |
-| **Assets** | Sprite thiếu → emoji fallback, nhưng **chrome vẫn pixel** (border, font, HUD) |
-| **shadcn** | Không dùng cho UI chính; chỉ settings/admin nếu cần |
+| Layer | Rule |
+|-------|------|
+| **Tokens** | Use only palette/fonts in this doc — no one-off hardcoded colors |
+| **Components** | Overlay, button, dialogue, notification → shared `Pixel*` components |
+| **Patterns** | Workspace home + dialogue overlay — no extra dashboard/list views |
+| **Assets** | Missing sprite → emoji fallback, but **chrome stays pixel** (border, font, HUD) |
+| **shadcn** | Not for main UI; settings/admin only if needed |
 
-**Review gate:** PR UI mới phải pass checklist anti-patterns cuối doc trước khi merge.
+**Review gate:** New UI PRs must pass the anti-patterns checklist at the end of this doc before merge.
 
 ---
 
@@ -58,7 +58,7 @@ stateDiagram-v2
     Idle --> NpcSpeaking: New message / notification
 ```
 
-**Nguyên tắc vàng (Dialogue):** Một thời điểm chỉ có **một dialogue box active** — không hiển thị lịch sử scroll như chat app. Lịch sử truy cập qua overlay "Log" (tùy chọn).
+**Golden rule (Dialogue):** Only **one active dialogue box** at a time — no scrollable history like a chat app. History is available via optional "Log" overlay.
 
 ---
 
@@ -70,7 +70,7 @@ stateDiagram-v2
     Workspace --> Dialogue: Click NPC desk / Reception
     Workspace --> ArchiveRoom: Click Archive room
     Workspace --> TaskBoard: Click Bulletin board
-    Dialogue --> Workspace: Esc / "Quay lại sàn"
+    Dialogue --> Workspace: Esc / "Back to workspace"
     ArchiveRoom --> Workspace: Close overlay
     TaskBoard --> Workspace: Close overlay
     Dialogue --> Dialogue: Switch speaker (staff cutscene)
@@ -78,24 +78,24 @@ stateDiagram-v2
 
 | Action | From | To |
 |--------|------|-----|
-| Login | — | Workspace (spawn tại Boss desk) |
-| Click Reception | Workspace | Dialogue với Assistant |
-| Click Staff desk | Workspace | Dialogue với Staff đó |
+| Login | — | Workspace (spawn at Boss desk) |
+| Click Reception | Workspace | Dialogue with Assistant |
+| Click Staff desk | Workspace | Dialogue with that Staff member |
 | Click Empty desk | Workspace | Hire flow (dialogue + choices) |
 | Click Archive room | Workspace | Archive overlay |
 | Click Task board | Workspace | Active tasks overlay |
 | `Esc` / Back | Dialogue | Workspace |
 | Task complete notification | Any | Workspace highlight desk + optional cutscene |
 
-**Default home screen = Workspace** — không phải dialogue. Dialogue là mode tương tác sâu.
+**Default home screen = Workspace** — not dialogue. Dialogue is the deep interaction mode.
 
 ---
 
-## Workspace View — Sàn làm việc
+## Workspace View
 
 ### Concept
 
-Top-down (hoặc slight isometric) pixel office mà user có thể **đi lại** và **tương tác** với các vùng. Mỗi staff có bàn làm việc riêng; trạng thái hiển thị trực quan (đang ngồi, đang làm việc, bàn trống). Không phải list/table — là **không gian có thể khám phá**.
+Top-down (or slight isometric) pixel office the user can **walk around** and **interact** with zones. Each staff member has their own desk; status is shown visually (sitting, working, empty desk). Not a list/table — an **explorable space**.
 
 ### Floor Plan
 
@@ -119,7 +119,7 @@ Top-down (hoặc slight isometric) pixel office mà user có thể **đi lại**
 │                                                                 │
 │   ┌─────────────────────────────────────────────────────────┐   │
 │   │              RECEPTION — Assistant 🤖                    │   │
-│   │              "Chào boss! Bấm để nói chuyện"              │   │
+│   │              "Hi boss! Click to talk"                     │   │
 │   └─────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │                              ┌────────┐                         │
@@ -132,25 +132,25 @@ Top-down (hoặc slight isometric) pixel office mà user có thể **đi lại**
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Zones (vùng tương tác)
+### Zones (interactive areas)
 
-| Zone | Vị trí | Tương tác | Mở |
-|------|--------|-----------|-----|
-| **Reception** | Bottom-center | Nói với Assistant | Dialogue mode |
-| **Staff desks** | Open floor grid | Nói với staff / xem status | Dialogue mode |
-| **Empty desks** | Unhired slots | Hire staff mới | Hire dialogue flow |
-| **Archive Room** | Top-left | Quản lý tài liệu | Archive overlay |
-| **Task Board** | Top-right | Xem tasks đang chạy | Task board overlay |
-| **Boss Desk** | Bottom | Spawn point; click = menu nhanh | Quick menu overlay |
+| Zone | Location | Interaction | Opens |
+|------|----------|-------------|-------|
+| **Reception** | Bottom-center | Talk to Assistant | Dialogue mode |
+| **Staff desks** | Open floor grid | Talk to staff / view status | Dialogue mode |
+| **Empty desks** | Unhired slots | Hire new staff | Hire dialogue flow |
+| **Archive Room** | Top-left | Manage documents | Archive overlay |
+| **Task Board** | Top-right | View running tasks | Task board overlay |
+| **Boss Desk** | Bottom | Spawn point; click = quick menu | Quick menu overlay |
 
 ### Desk States (visual)
 
 | State | Visual | Animation |
 |-------|--------|-----------|
-| `idle` | NPC ngồi tại desk, green status dot | 2-frame typing idle |
+| `idle` | NPC at desk, green status dot | 2-frame typing idle |
 | `working` | NPC + papers/screen glow, yellow dot | Fast typing, occasional sparkle |
-| `done` | `!` emote bubble trên đầu | Bounce until user clicks |
-| `empty` | Desk + chair, bảng "FOR HIRE" | Subtle blink on sign |
+| `done` | `!` emote bubble above head | Bounce until user clicks |
+| `empty` | Desk + chair, "FOR HIRE" sign | Subtle blink on sign |
 | `offline` | Desk empty, grayed out | None |
 
 ```typescript
@@ -166,12 +166,12 @@ interface WorkspaceDesk {
 ### Player Movement
 
 **Desktop:**
-- **Click-to-move**: click tile → player sprite pathfind tới đó (A* trên grid)
-- **WASD / Arrow keys**: di chuyển 4 hướng (grid-based, 16px per step)
-- Đứng cạnh interactive zone + **Enter** hoặc **click zone** → activate
+- **Click-to-move**: click tile → player sprite pathfinds there (A* on grid)
+- **WASD / Arrow keys**: move in 4 directions (grid-based, 16px per step)
+- Stand next to interactive zone + **Enter** or **click zone** → activate
 
 **Mobile:**
-- Tap zone trực tiếp (không cần walk — auto pathfind)
+- Tap zone directly (no walk required — auto pathfind)
 - Virtual D-pad optional
 
 ```typescript
@@ -182,9 +182,9 @@ interface WorkspacePlayer {
 }
 ```
 
-### Archive Room (Phòng lưu tài liệu)
+### Archive Room
 
-Overlay kiểu **game storage room** — kệ sách pixel, mỗi document = một item trên kệ.
+Overlay styled as a **game storage room** — pixel bookshelves, each document = one item on a shelf.
 
 ```
 ╔═ ARCHIVE ROOM ═══════════════════════════════════ [X] ═╗
@@ -199,41 +199,41 @@ Overlay kiểu **game storage room** — kệ sách pixel, mỗi document = mộ
 ║   │clip│  │    │                                       ║
 ║   └────┘  └────┘                                       ║
 ║                                                        ║
-║  Selected: product-spec.pdf (12 chunks)  [Xóa] [Gán staff] ║
+║  Selected: product-spec.pdf (12 chunks)  [Delete] [Assign staff] ║
 ╚════════════════════════════════════════════════════════╝
 ```
 
 **Actions:**
 - Click item → preview metadata + chunk count
-- `+` slot → upload (file picker hoặc URL paste)
-- "Gán staff" → chọn staff nào được access document này
-- Drag item to staff desk (Phase 2) — visual link documents
+- `+` slot → upload (file picker or URL paste)
+- "Assign staff" → choose which staff can access this document
+- Drag item to staff desk (Phase 2) — visual document linking
 
-### Task Board (Bảng công việc)
+### Task Board
 
-Bulletin board — sticky notes hiển thị **progress real-time** từ `task.progress` SSE.
+Bulletin board — sticky notes show **real-time progress** from `task.progress` SSE.
 
 ```
 ╔═ TASK BOARD ═══════════════════════════════════════ [X] ═╗
 ║  ┌──────────────┐  ┌──────────────┐                       ║
-║  │ ▶ Viết blog  │  │ ◉ Research   │                       ║
+║  │ ▶ Write blog │  │ ◉ Research   │                       ║
 ║  │ Alex         │  │ Sam          │                       ║
 ║  │ ████░░ 45%   │  │ ██░░░░ 30%   │  ← progress bar      ║
-║  │ Đang viết... │  │ Searching... │  ← currentStep       ║
+║  │ Writing...   │  │ Searching... │  ← currentStep       ║
 ║  └──────────────┘  └──────────────┘                       ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
-Click sticky note → dialogue với staff đó hoặc preview overlay (`get_task_preview`).
+Click sticky note → dialogue with that staff member or preview overlay (`get_task_preview`).
 
 ### Workspace → Dialogue Transition
 
-Khi user activate NPC (Reception hoặc desk):
+When the user activates an NPC (Reception or desk):
 
-1. Camera **zoom/pan** tới NPC (300ms step animation, không smooth ease — retro cut)
-2. Dialogue box **slide up** từ bottom
-3. Workspace vẫn visible phía sau (dimmed 50%) hoặc freeze
-4. `Esc` → dialogue đóng, camera pan về player position
+1. Camera **zoom/pan** to NPC (300ms step animation, no smooth ease — retro cut)
+2. Dialogue box **slides up** from bottom
+3. Workspace still visible behind (dimmed 50%) or frozen
+4. `Esc` → dialogue closes, camera pans back to player position
 
 ```typescript
 type AppView = "workspace" | "dialogue" | "overlay";
@@ -280,16 +280,16 @@ interface AppState {
 
 - Tile size: **16×16px**
 - Map size: **32×24 tiles** (512×384 native, scaled to fit viewport)
-- Format: JSON tilemap (Tiled editor) hoặc 2D array in code
+- Format: JSON tilemap (Tiled editor) or 2D array in code
 
-### Hire Flow trên Workspace
+### Hire Flow on Workspace
 
-1. User click **Empty desk** hoặc bảng "FOR HIRE"
-2. Camera pan tới desk
-3. Dialogue: Assistant xuất hiện (walk từ reception) — "Muốn hire ai cho bàn này?"
-4. Sau hire thành công:
+1. User clicks **Empty desk** or "FOR HIRE" sign
+2. Camera pans to desk
+3. Dialogue: Assistant appears (walks from reception) — "Who should we hire for this desk?"
+4. After successful hire:
    - Desk state: `empty` → `idle`
-   - NPC sprite spawn tại chair
+   - NPC sprite spawns in chair
    - Particle effect "✨ New hire!"
    - Quest banner: "{name} joined the team!"
 
@@ -335,16 +335,16 @@ interface AppState {
 | `--choice-bg`       | `#1E3A5F` | Choice button default               |
 | `--choice-hover`    | `#7EC8E3` | Choice button selected              |
 
-> **Đã bỏ** `--bubble-user/assistant/staff` — không dùng chat bubbles.
+> **Removed** `--bubble-user/assistant/staff` — chat bubbles are not used.
 
 ### Sprites
 
 | Asset            | Size                          | Usage                                 |
 | ---------------- | ----------------------------- | ------------------------------------- |
-| Scene background | 320×180 hoặc 480×270 (scaled) | Pixel office interior                 |
-| NPC portrait     | 96×96 hoặc 128×128            | Trong dialogue box, overlap cạnh trái |
-| NPC overworld    | 32×32 hoặc 48×48              | Workspace floor + dialogue scene |
-| Emote icons      | 16×16                         | `!` `?` `♪` khi staff báo cáo         |
+| Scene background | 320×180 or 480×270 (scaled) | Pixel office interior                 |
+| NPC portrait     | 96×96 or 128×128            | In dialogue box, overlapping left edge |
+| NPC overworld    | 32×32 or 48×48              | Workspace floor + dialogue scene |
+| Emote icons      | 16×16                         | `!` `?` `♪` when staff report in      |
 
 ```css
 .sprite,
@@ -358,7 +358,7 @@ interface AppState {
 
 ## Dialogue Overlay Layout
 
-Dialogue hiện **overlay trên Workspace** (workspace dimmed 50% phía sau). Không phải màn hình riêng biệt.
+Dialogue appears as an **overlay on the Workspace** (workspace dimmed 50% behind). Not a separate full screen.
 
 ### Desktop — Dialogue overlay
 
@@ -372,9 +372,9 @@ Dialogue hiện **overlay trên Workspace** (workspace dimmed 50% phía sau). Kh
 │              └────┘                                         │
 │  ┌────────┐ ┌─────────────────────────────────────────────┐ │
 │  │Portrait│ │ ▼ Assistant                                 │ │
-│  │ 96×96  │ │ Chào boss! Hôm nay cần gì?█    ▼ Tiếp tục  │ │
+│  │ 96×96  │ │ Hi boss! What do you need today?█  ▼ Continue │ │
 │  └────────┘ └─────────────────────────────────────────────┘ │
-│  [ Choice A ]  [ Choice B ]              [Esc: Quay lại]    │
+│  [ Choice A ]  [ Choice B ]              [Esc: Back]        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -383,12 +383,12 @@ Dialogue hiện **overlay trên Workspace** (workspace dimmed 50% phía sau). Kh
 ```
 ┌──────────────────────────────────────────────────┐
 │┌──────────┐                                     │
-││          │  ┌─ Assistant ─────────────────────┐ │  ← Name plate (gắn trên cạnh box)
+││          │  ┌─ Assistant ─────────────────────┐ │  ← Name plate (attached to top edge)
 ││ Portrait │  │                                 │ │
-││          │  │  Dialogue text types here...    │ │  ← Body (2-4 dòng visible)
+││          │  │  Dialogue text types here...    │ │  ← Body (2-4 lines visible)
 ││  96×96   │  │  with typewriter effect.█       │ │
 ││          │  │                                 │ │
-│└──────────┘  │                    ▼ Tiếp tục  │ │  ← Blinking advance prompt
+│└──────────┘  │                    ▼ Continue  │ │  ← Blinking advance prompt
 │              └─────────────────────────────────┘ │
 └──────────────────────────────────────────────────┘
      ↑ 4px white border + 4px dark shadow (classic RPG)
@@ -396,7 +396,7 @@ Dialogue hiện **overlay trên Workspace** (workspace dimmed 50% phía sau). Kh
 
 ### Mobile — Workspace
 
-- Tilemap scroll/pinch; tap zone để interact
+- Tilemap scroll/pinch; tap zone to interact
 - Overlays full-screen
 - Dialogue overlay: portrait 64×64, choices stack vertical
 
@@ -412,7 +412,7 @@ Dialogue hiện **overlay trên Workspace** (workspace dimmed 50% phía sau). Kh
 
 ### 1. `npc-speaking`
 
-NPC đang "nói". Text stream từ AI được buffer thành **lines** (split theo câu / 80 ký tự), hiển thị lần lượt với typewriter effect.
+NPC is "speaking". Text streamed from AI is buffered into **lines** (split by sentence / 80 characters), shown sequentially with typewriter effect.
 
 ```typescript
 interface DialogueLine {
@@ -425,33 +425,33 @@ interface DialogueLine {
 }
 ```
 
-- Streaming từ AI: buffer tokens → khi gặp `.` `!` `?` hoặc đủ 80 chars → push line mới
-- Mỗi line: typewriter 30-40 chars/sec
-- Portrait có thể đổi expression theo `emotion`
+- Streaming from AI: buffer tokens → on `.` `!` `?` or 80 chars → push new line
+- Each line: typewriter 30-40 chars/sec
+- Portrait can change expression per `emotion`
 
 ### 2. `waiting-advance`
 
-Typewriter xong. Hiện blinking `▼ Tiếp tục` góc dưới phải.
+Typewriter finished. Blinking `▼ Continue` in bottom-right corner.
 
-- **Click / Enter / Space** → line tiếp theo hoặc chuyển state
+- **Click / Enter / Space** → next line or state change
 - Sound: blip SFX (Phase 3)
 
 ### 3. `player-choice`
 
-Thay vì free text — hiện menu lựa chọn kiểu RPG.
+Instead of free text — show RPG-style choice menu.
 
-**Dùng khi:**
+**Use when:**
 
-- Hire flow: "Có / Không / Hỏi thêm"
-- Delegate confirm: "Giao cho Alex / Hire mới / Để sau"
-- Deliverable: "Xem kết quả / Giao tiếp tiếp / Dismiss"
+- Hire flow: "Yes / No / Tell me more"
+- Delegate confirm: "Delegate to Alex / Hire new / Not now"
+- Deliverable: "View result / Delegate more / Dismiss"
 - Quick actions: preset intents
 
 ```
 ┌─────────────────────────────────┐
-│  ▶ Có, hire Content Writer      │  ← Cursor selectable (arrow ▶)
-│    Không, để sau                 │
-│    Giải thích thêm về role này  │
+│  ▶ Yes, hire Content Writer     │  ← Cursor selectable (arrow ▶)
+│    Not now                       │
+│    Tell me more about this role  │
 └─────────────────────────────────┘
 ```
 
@@ -461,33 +461,33 @@ Thay vì free text — hiện menu lựa chọn kiểu RPG.
 
 ### 4. `player-input`
 
-Khi cần free text (mô tả dự án, brief task, custom answer).
+When free text is needed (project description, task brief, custom answer).
 
-Dialogue box chuyển sang input mode — **không phải input bar riêng**:
+Dialogue box switches to input mode — **not a separate input bar**:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  ▼ Boss (bạn)                                    │
+│  ▼ Boss                                          │
 │                                                  │
-│  Viết blog về AI agents cho startup founders█   │  ← Blinking cursor
+│  Write a blog about AI agents for founders█     │  ← Blinking cursor
 │                                                  │
-│                              [Gửi ▶]  [📎]       │
+│                              [Send ▶]  [📎]       │
 └──────────────────────────────────────────────────┘
 ```
 
-- Name plate hiện "Boss" hoặc tên user
-- Portrait = player sprite (hoặc không portrait)
-- Submit → line hiện ngắn trong log → chuyển về `npc-speaking`
+- Name plate shows "Boss" or user name
+- Portrait = player sprite (or no portrait)
+- Submit → short line in log → back to `npc-speaking`
 
 ### 5. `cutscene-notify`
 
-Staff hoàn thành task — NPC "walk in" với emote.
+Staff completes task — NPC "walks in" with emote.
 
 ```
 Scene: Alex sprite walks in from right + "!" emote bubble
 Dialogue box switches to Alex portrait:
-  "Boss! Đã xong bài blog rồi!"
-Choices: [ Xem kết quả ] [ Cảm ơn ]
+  "Boss! The blog post is done!"
+Choices: [ View result ] [ Thanks ]
 ```
 
 ---
@@ -496,7 +496,7 @@ Choices: [ Xem kết quả ] [ Cảm ơn ]
 
 ### 1. WorkspaceFloor
 
-Tilemap renderer — sàn làm việc top-down với desks, zones, player movement.
+Tilemap renderer — top-down office floor with desks, zones, player movement.
 
 ```typescript
 interface WorkspaceFloorProps {
@@ -517,7 +517,7 @@ Interactive desk entity — staff sprite, status indicator, click handler.
 
 ### 4. DialogueBox
 
-Component trung tâm — thay thế hoàn toàn ChatMessage list.
+Central component — fully replaces ChatMessage list.
 
 ```typescript
 interface DialogueBoxProps {
@@ -564,36 +564,36 @@ function TypewriterText({
 
 ### 3. Portrait
 
-NPC portrait góc trái dialogue box, overlap border.
+NPC portrait at left of dialogue box, overlapping border.
 
-- Swap sprite khi đổi speaker
-- Subtle bounce khi speaker change
+- Swap sprite when speaker changes
+- Subtle bounce on speaker change
 - Expression variants: `neutral`, `happy`, `think`, `alert` (4 frames per NPC)
 
 ### 4. ChoiceMenu
 
-Vertical list pixel buttons trong/below dialogue box.
+Vertical list of pixel buttons in/below dialogue box.
 
 - Keyboard navigable
-- Max 4 choices visible (scroll nếu nhiều hơn)
-- Hire flow dùng choices thay vì free text khi có thể
+- Max 4 choices visible (scroll if more)
+- Hire flow uses choices instead of free text when possible
 
 ### 5. DialogueInput
 
-Embedded input trong dialogue box (state `player-input`).
+Embedded input in dialogue box (`player-input` state).
 
-- Không có input bar tách riêng ở bottom
-- `📎` attach trong dialogue box corner
+- No separate input bar at bottom
+- `📎` attach in dialogue box corner
 - Enter submit, Shift+Enter newline
-- **Voice (planned):** push-to-talk mic `[🎤]` — xem [Voice in Dialogue](#voice-in-dialogue-planned)
+- **Voice (planned):** push-to-talk mic `[🎤]` — see [Voice in Dialogue](#voice-in-dialogue-planned)
 
 ### Voice in Dialogue (planned)
 
-Voice bổ sung RPG dialogue — **không** thay scroll chat. Chi tiết: [VOICE-CHAT.md](VOICE-CHAT.md).
+Voice complements RPG dialogue — does **not** replace scroll chat. Details: [VOICE-CHAT.md](VOICE-CHAT.md).
 
 | Mode | Input | Output |
 | ---- | ----- | ------ |
-| V1 (Phase 2) | Hold mic → STT → text trong box → Gửi | NPC line TTS sau typewriter (toggle) |
+| V1 (Phase 2) | Hold mic → STT → text in box → Send | NPC line TTS after typewriter (toggle) |
 | V2 (Phase 3) | Streaming partial transcript; voice choices | Sentence-chunk TTS + chiptune mic SFX |
 
 **States:**
@@ -601,45 +601,45 @@ Voice bổ sung RPG dialogue — **không** thay scroll chat. Chi tiết: [VOICE
 ```
 player-input + mic hold  →  listening (pulse border)
 release                  →  transcribing (mic spinner)
-success                  →  text in dialogue box → user confirms Gửi
+success                  →  text in dialogue box → user confirms Send
 npc-speaking + TTS on    →  play audio after typewriter; skip on advance
 ```
 
 **Rules:**
 
-- Mic **disabled** khi `isBusy` (Assistant streaming)
+- Mic **disabled** when `isBusy` (Assistant streaming)
 - Task Board / Archive overlays **text-only** in V1
-- Transcript luôn visible trong dialogue box / Log (captions)
+- Transcript always visible in dialogue box / Log (captions)
 
 **Component (planned):** `VoiceControl` — pixel mic button, composes into `DialogueInput`.
 
 ### 6. DialogueLog (overlay)
 
-Optional scrollable history — mở bằng `[Log]` trên HUD.
+Optional scrollable history — open via `[Log]` on HUD.
 
 ```
 ┌─ LOG ──────────────────────────────── [X] ─┐
-│ Assistant: Chào boss!                      │
-│ Boss: Viết blog về AI agents               │
-│ Assistant: Đã giao cho Alex!                │
-│ Alex: Đã xong bài blog!                    │
+│ Assistant: Hi boss!                        │
+│ Boss: Write a blog about AI agents         │
+│ Assistant: Delegated to Alex!              │
+│ Alex: The blog post is done!               │
 └────────────────────────────────────────────┘
 ```
 
-- Đây là **nơi duy nhất** thấy full history dạng list
-- Mặc định ẩn — không phá immersion RPG
+- This is the **only** place to see full history as a list
+- Hidden by default — preserves RPG immersion
 
 ### 7. ArchiveRoomOverlay
 
-Phòng lưu tài liệu — kệ sách pixel, upload, gán staff. Xem [Workspace View](#archive-room-phòng-lưu-tài-liệu).
+Archive Room — pixel bookshelves, upload, assign staff. See [Workspace View](#archive-room).
 
 ### 8. TaskBoardOverlay
 
-Bulletin board sticky notes cho active tasks.
+Bulletin board sticky notes for active tasks.
 
 ### 9. StaffRosterPanel
 
-Party menu overlay — grid StaffCards (giữ từ thiết kế trước).
+Party menu overlay — grid of StaffCards (from earlier design).
 
 ```
 ╔═ PARTY ═══════════════════════╗
@@ -651,7 +651,7 @@ Party menu overlay — grid StaffCards (giữ từ thiết kế trước).
 
 ### 8. DeliverablePreview
 
-Không inline trong dialogue scroll — mở như **item inspect screen** (game inventory style).
+Not inline in dialogue scroll — opens as **item inspect screen** (game inventory style).
 
 ```
 ╔═ DELIVERABLE ════════════════════════════╗
@@ -660,7 +660,7 @@ Không inline trong dialogue scroll — mở như **item inspect screen** (game 
 ║  # AI Agents                              ║
 ║  Lorem ipsum...                           ║
 ║                                           ║
-║  [Copy]  [Download]  [Đóng]              ║
+║  [Copy]  [Download]  [Close]             ║
 ╚═══════════════════════════════════════════╝
 ```
 
@@ -671,30 +671,30 @@ Staff task complete = RPG quest complete banner.
 ```
 ┌────────────────────────────────┐
 │ ★ QUEST COMPLETE ★             │
-│ "Viết blog về AI agents"       │
-│ Alex đã hoàn thành!             │
+│ "Write a blog about AI agents" │
+│ Alex completed the task!       │
 └────────────────────────────────┘
 ```
 
-- Slide down từ top, pixel font
-- Auto-trigger `cutscene-notify` dialogue sau 1.5s
+- Slide down from top, pixel font
+- Auto-trigger `cutscene-notify` dialogue after 1.5s
 
 ---
 
 ## Interaction Mapping
 
-| Hành động user | UI pattern | Không dùng |
+| User action | UI pattern | Do not use |
 | --- | --- | --- |
-| Khám phá văn phòng | Workspace tilemap + walk/click | Dashboard sidebar |
-| Nói với Assistant | Click Reception → dialogue overlay | Chat bubble |
-| Nói với Staff | Click desk → dialogue overlay | Chat bubble |
+| Explore office | Workspace tilemap + walk/click | Dashboard sidebar |
+| Talk to Assistant | Click Reception → dialogue overlay | Chat bubble |
+| Talk to Staff | Click desk → dialogue overlay | Chat bubble |
 | Hire staff | Click empty desk → hire dialogue | Form modal |
-| Xem tài liệu | Archive Room overlay | File manager table |
-| Xem tasks | Task Board overlay | Task list table |
-| Giao việc | Dialogue `player-choice` | Inline bubble |
-| Nhận kết quả | Desk `!` emote + cutscene dialogue | Toast chat message |
+| View documents | Archive Room overlay | File manager table |
+| View tasks | Task Board overlay | Task list table |
+| Delegate work | Dialogue `player-choice` | Inline bubble |
+| Receive results | Desk `!` emote + cutscene dialogue | Toast chat message |
 | Upload file | Archive Room `+` slot | Drag-drop zone |
-| Xem lịch sử | Log overlay | Scroll chat |
+| View history | Log overlay | Scroll chat |
 
 ---
 
@@ -702,30 +702,30 @@ Staff task complete = RPG quest complete banner.
 
 ```
 [Assistant portrait]
-"Bạn cần ai đó viết blog. Muốn hire Content Writer không?"
+"You need someone to write a blog. Want to hire a Content Writer?"
 
 Choices:
-  ▶ Có, hire ngay!
-    Hỏi thêm trước
-    Không, để sau
+  ▶ Yes, hire now!
+    Tell me more first
+    Not now
 
-→ User chọn "Có, hire ngay!"
+→ User chooses "Yes, hire now!"
 
 [Assistant portrait, think expression]
-"Tone viết thế nào?"
+"What writing tone should they use?"
 
 Choices:
   ▶ Casual — startup founders
     Formal — enterprise
     Technical — developers
-    Tự mô tả...
+    Describe it yourself...
 
-→ User chọn hoặc input
+→ User chooses or types input
 
 [Cutscene: Alex walks in]
 
 [Alex portrait]
-"Xin chào boss! Tôi là Alex, Content Writer. Sẵn sàng viết!"
+"Hi boss! I'm Alex, Content Writer. Ready to write!"
 
 [Quest banner: "Alex joined the party!"]
 ```
@@ -734,7 +734,7 @@ Choices:
 
 ## Data Flow (UI layer)
 
-`useChat` vẫn dùng ở backend — UI layer transform messages thành dialogue sequence:
+`useChat` still powers the backend — UI layer transforms messages into dialogue sequence:
 
 ```typescript
 function useDialogueEngine(messages: UIMessage[]) {
@@ -751,24 +751,24 @@ function useDialogueEngine(messages: UIMessage[]) {
 
 | Tool result             | Auto choices                                 |
 | ----------------------- | -------------------------------------------- |
-| `delegate_task` success | "Tiếp tục làm việc khác" / "Xem task status" |
-| `hire_staff` proposed   | "Hire" / "Hỏi thêm" / "Hủy"                  |
-| `task.completed` SSE    | "Xem kết quả" / "Cảm ơn"                     |
+| `delegate_task` success | "Continue with something else" / "View task status" |
+| `hire_staff` proposed   | "Hire" / "Tell me more" / "Cancel"           |
+| `task.completed` SSE    | "View result" / "Thanks"                     |
 | `list_staff`            | Staff names as choices → `/status`           |
 
 ---
 
 ## Slash Commands
 
-Vẫn hỗ trợ nhưng **ẩn** — chỉ dành power user. Trong `player-input`, gõ `/` mở command palette kiểu game cheat menu:
+Still supported but **hidden** — power users only. In `player-input`, typing `/` opens a game-style cheat command palette:
 
 | Command        | Effect                        |
 | -------------- | ----------------------------- |
-| `/staff`       | Mở party roster overlay       |
+| `/staff`       | Open party roster overlay     |
 | `/hire [role]` | Trigger hire dialogue         |
 | `/tasks`       | Quest log overlay             |
 | `/docs`        | Inventory-style document list |
-| `/log`         | Mở dialogue history           |
+| `/log`         | Open dialogue history         |
 | `/help`        | Tutorial dialogue sequence    |
 
 ---
@@ -877,7 +877,7 @@ Vẫn hỗ trợ nhưng **ẩn** — chỉ dành power user. Trong `player-input
 
 ## Accessibility
 
-- Dialogue box: `role="dialog"`, `aria-live="polite"` cho typewriter text
+- Dialogue box: `role="dialog"`, `aria-live="polite"` for typewriter text
 - Choices: `role="menu"`, arrow key navigation, `aria-selected`
 - `prefers-reduced-motion`: skip typewriter (show full text instantly), no walk-in
 - High contrast mode: thicker dialogue border
@@ -888,34 +888,34 @@ Vẫn hỗ trợ nhưng **ẩn** — chỉ dành power user. Trong `player-input
 ## Phase 0 Fallback
 
 **Workspace:**
-- Grid CSS thay tilemap (colored cells)
-- Emoji cho NPCs tại desk positions
+- Grid CSS instead of tilemap (colored cells)
+- Emoji for NPCs at desk positions
 - Click zones as dashed borders
 - No walk animation — click zone = instant interact
 
 **Dialogue:**
 
-- Scene: solid color `#1A0F3D` + emoji NPC to ở giữa
-- Portrait: emoji 64px trong box
-- Dialogue box: CSS pixel border (không cần 9-slice sprite)
-- Typewriter vẫn hoạt động — core experience không phụ thuộc assets
+- Scene: solid color `#1A0F3D` + emoji NPC in center
+- Portrait: 64px emoji in box
+- Dialogue box: CSS pixel border (no 9-slice sprite needed)
+- Typewriter still works — core experience does not depend on assets
 
 ---
 
-## Anti-patterns (tránh)
+## Anti-patterns
 
-| Không làm                                | Lý do                                   |
+| Do not do                                | Reason                                  |
 | ---------------------------------------- | --------------------------------------- |
-| Scrollable message list làm UI chính     | Phá immersion RPG                       |
-| Input bar cố định tách khỏi dialogue box | Không giống game 8-bit                  |
-| Chat bubbles trái/phải                   | Chat app, không phải NPC dialogue       |
-| Avatar nhỏ 32px trong bubble             | Dùng portrait 96px overlap box          |
-| Dashboard sidebar / data tables | Phá game immersion |
-| List view làm màn hình chính | Workspace tilemap là home |
+| Scrollable message list as main UI       | Breaks RPG immersion                    |
+| Fixed input bar separate from dialogue box | Does not feel like 8-bit game          |
+| Left/right chat bubbles                  | Chat app, not NPC dialogue              |
+| Small 32px avatar in bubble              | Use 96px portrait overlapping box       |
+| Dashboard sidebar / data tables | Breaks game immersion |
+| List view as home screen | Workspace tilemap is home |
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
 - [PRD.md](PRD.md) — User stories
 - [API.md](API.md) — SSE events trigger cutscene-notify

@@ -43,6 +43,7 @@ export function WorkspaceAgentAudio({
   useEmoteVocal({
     arrivalSignal,
     location: desk.location,
+    playPantryArrivalVocal: desk.state === "done",
     volumeScale,
   });
 

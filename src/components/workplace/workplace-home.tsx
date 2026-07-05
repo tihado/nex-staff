@@ -47,6 +47,7 @@ import {
 import type { TaskDetail, TaskSummary } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 import { WorkspaceFloor, type WorkspaceZone } from "./workspace-floor";
+import { WorkspaceLetterboxSky } from "./workspace-letterbox-sky";
 
 interface WorkplaceHomeProps {
   assistantName: string;
@@ -516,7 +517,7 @@ export function WorkplaceHome({
       musicSuppressed={musicSuppressed}
       sfxSuppressed={sfxSuppressed}
     >
-      <GameShell>
+      <GameShell letterboxBackdrop={<WorkspaceLetterboxSky />}>
         <div className="flex min-h-0 flex-1 flex-col">
           <PixelHUD
             className="relative shrink-0"

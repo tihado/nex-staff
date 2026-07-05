@@ -26,6 +26,19 @@ export function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+function pickNextCatAnchorIndex(current: number): number {
+  const count = CAT_WANDER_ANCHORS.length;
+  if (count <= 1) {
+    return 0;
+  }
+
+  let next = current;
+  while (next === current) {
+    next = Math.floor(Math.random() * count);
+  }
+  return next;
+}
+
 export function useOfficeCatWander(enabled = true): {
   anchor: FloorAnchor;
   reducedMotion: boolean;
@@ -43,7 +56,7 @@ export function useOfficeCatWander(enabled = true): {
     const scheduleTick = () => {
       const delay = CAT_WANDER_MIN_MS + Math.random() * CAT_WANDER_JITTER_MS;
       const timeout = setTimeout(() => {
-        setIndex((current) => (current + 1) % CAT_WANDER_ANCHORS.length);
+        setIndex((current) => pickNextCatAnchorIndex(current));
         scheduleTick();
       }, delay);
       timeouts.push(timeout);

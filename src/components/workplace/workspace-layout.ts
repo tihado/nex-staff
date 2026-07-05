@@ -156,8 +156,9 @@ export const WORKSPACE_BOOKSHELVES: Array<
   { id: "shelf-b", left: 42, top: 11, size: 38 },
 ];
 
-/** Waypoints for the office cat — aisles between staggered desk rows. */
+/** Waypoints for the office cat — work area, pantry, and reception. */
 export const CAT_WANDER_ANCHORS: FloorAnchor[] = [
+  // Work area aisles
   { left: 12, top: 48 },
   { left: 28, top: 48 },
   { left: 36, top: 42 },
@@ -166,6 +167,14 @@ export const CAT_WANDER_ANCHORS: FloorAnchor[] = [
   { left: 36, top: 62 },
   { left: 50, top: 60 },
   { left: 44, top: 72 },
+  // Pantry hangout
+  { left: 72, top: 32 },
+  { left: 80, top: 35 },
+  { left: 86, top: 31 },
+  // Reception lounge
+  { left: 68, top: 78 },
+  { left: 79, top: 86 },
+  { left: 90, top: 78 },
 ];
 
 export function catAnchorForIndex(index: number): FloorAnchor {
@@ -230,6 +239,22 @@ export const PANTRY_ANCHORS: FloorAnchor[] = [
   { left: 84, top: 38 },
   { left: 88, top: 36 },
 ];
+
+/** Roam bounds for idle staff hanging out in the pantry. */
+export const PANTRY_WANDER_BOUNDS = {
+  minLeft: 66,
+  maxLeft: 92,
+  minTop: 28,
+  maxTop: 40,
+} as const;
+
+/** Idle staff jitter within each pantry hangout anchor. */
+export const PANTRY_WANDER_ZONES: OfficeWanderZone[] = PANTRY_ANCHORS.map(
+  (anchor) => ({
+    center: anchor,
+    radius: { left: 1.5, top: 1.5 },
+  })
+);
 
 /** Small meeting-room alcove — left column below archive, clear of desk grid. */
 export const MEETING_ROOM = {

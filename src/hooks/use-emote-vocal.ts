@@ -87,6 +87,7 @@ export function EmoteBubbleAudio({
 interface UseEmoteVocalOptions {
   arrivalSignal?: number;
   location: AgentLocation;
+  playPantryArrivalVocal?: boolean;
   volumeScale?: number;
 }
 
@@ -94,6 +95,7 @@ interface UseEmoteVocalOptions {
 export function useEmoteVocal({
   arrivalSignal = 0,
   location,
+  playPantryArrivalVocal = false,
   volumeScale = 1,
 }: UseEmoteVocalOptions): void {
   const audio = useWorkplaceAudioOptional();
@@ -103,12 +105,12 @@ export function useEmoteVocal({
       return;
     }
 
-    if (location === "pantry") {
+    if (location === "pantry" && playPantryArrivalVocal) {
       const timer = setTimeout(() => {
         audio.stopVocal();
         audio.playCue("vocal-relief", { volume: 0.45 * volumeScale });
       }, 350);
       return () => clearTimeout(timer);
     }
-  }, [arrivalSignal, audio, location, volumeScale]);
+  }, [arrivalSignal, audio, location, playPantryArrivalVocal, volumeScale]);
 }

@@ -105,7 +105,7 @@ function deriveAgent(
 
   return {
     state: "idle",
-    location: "roaming",
+    location: "pantry",
     pendingTaskId: null,
     progress: 0,
     emote: null,

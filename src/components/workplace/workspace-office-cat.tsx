@@ -13,7 +13,7 @@ interface WorkspaceOfficeCatProps {
   motionEnabled?: boolean;
 }
 
-/** Office cat that slowly wanders the work-area floor. */
+/** Office cat that slowly wanders the work area, pantry, and reception. */
 export function WorkspaceOfficeCat({
   motionEnabled = true,
 }: WorkspaceOfficeCatProps) {

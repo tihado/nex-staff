@@ -17,10 +17,11 @@ export const uiStrings = {
   },
   taskBoard: {
     close: "Close task board",
+    completedSection: "Completed tasks",
     empty:
       "No active tasks. Delegate work from the Assistant to see progress here.",
     failedSection: "Failed tasks",
-    loading: "Loading active tasks…",
+    loading: "Loading tasks…",
     title: "Task Board",
   },
   deliverable: {

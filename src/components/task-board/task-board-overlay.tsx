@@ -61,6 +61,18 @@ export function TaskBoardOverlay({
     [tasks]
   );
 
+  const completedTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => task.status === "completed")
+        .sort((left, right) => {
+          const leftTime = left.completedAt ?? left.createdAt;
+          const rightTime = right.completedAt ?? right.createdAt;
+          return rightTime.localeCompare(leftTime);
+        }),
+    [tasks]
+  );
+
   useEffect(() => {
     if (tasks.length === 0) {
       setSelectedTask(null);
@@ -119,6 +131,7 @@ export function TaskBoardOverlay({
 
       {!(loading || error) &&
       activeTasks.length === 0 &&
+      completedTasks.length === 0 &&
       failedTasks.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center gap-3 py-10 text-center"
@@ -145,6 +158,30 @@ export function TaskBoardOverlay({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {completedTasks.length > 0 ? (
+        <section
+          className={cn(
+            "flex flex-col gap-2",
+            activeTasks.length > 0 ? "mt-4" : null
+          )}
+        >
+          <h3 className="font-[family-name:var(--font-pixel)] text-[8px] text-leaf-dark uppercase tracking-wide">
+            {uiStrings.taskBoard.completedSection}
+          </h3>
+          <ul className="flex flex-col gap-3 pb-1">
+            {completedTasks.map((task) => (
+              <li key={task.id}>
+                <TaskStickyNote
+                  onSelect={handleSelectTask}
+                  selected={selectedTask?.id === task.id}
+                  task={task}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {failedTasks.length > 0 ? (

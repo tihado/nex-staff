@@ -38,7 +38,11 @@ function questListPrefix(selected: boolean, isRunning: boolean): string {
   return "▷";
 }
 
-function questStepTextClass(isFailed: boolean, isRunning: boolean): string {
+function questStepTextClass(
+  isFailed: boolean,
+  isRunning: boolean,
+  isCompleted: boolean
+): string {
   if (isFailed) {
     return "text-alert";
   }
@@ -47,7 +51,43 @@ function questStepTextClass(isFailed: boolean, isRunning: boolean): string {
     return "text-[#7a3d10]";
   }
 
+  if (isCompleted) {
+    return "text-leaf-dark";
+  }
+
   return "text-ink";
+}
+
+function questStepLabel(task: TaskSummary): string {
+  if (task.status === "failed") {
+    return task.failureMessage ?? task.currentStep ?? "Task failed.";
+  }
+
+  if (task.status === "completed") {
+    return task.currentStep ?? "Task completed.";
+  }
+
+  return task.currentStep ?? "Awaiting start…";
+}
+
+function questProgressLabel(task: TaskSummary): string {
+  if (task.status === "failed") {
+    return "Failed";
+  }
+
+  if (task.status === "completed") {
+    return "Done";
+  }
+
+  return `${task.progressPercent}%`;
+}
+
+function questProgressValue(task: TaskSummary): number {
+  if (task.status === "failed" || task.status === "completed") {
+    return 100;
+  }
+
+  return task.progressPercent;
 }
 
 export function TaskStickyNote({
@@ -57,9 +97,8 @@ export function TaskStickyNote({
 }: TaskStickyNoteProps) {
   const title = truncateTaskBrief(task.brief, 42);
   const isFailed = task.status === "failed";
-  const stepLabel = isFailed
-    ? (task.failureMessage ?? task.currentStep ?? "Task failed.")
-    : (task.currentStep ?? "Awaiting start…");
+  const isCompleted = task.status === "completed";
+  const stepLabel = questStepLabel(task);
   const isRunning = task.status === "running";
 
   return (
@@ -123,15 +162,15 @@ export function TaskStickyNote({
       </div>
 
       <PixelProgressBar
-        label={isFailed ? "Failed" : `${task.progressPercent}%`}
+        label={questProgressLabel(task)}
         segments={8}
-        value={isFailed ? 100 : task.progressPercent}
+        value={questProgressValue(task)}
       />
 
       <p
         className={cn(
           "line-clamp-2 font-body text-[16px] leading-snug",
-          questStepTextClass(isFailed, isRunning)
+          questStepTextClass(isFailed, isRunning, isCompleted)
         )}
       >
         {stepLabel}

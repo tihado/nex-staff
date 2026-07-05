@@ -15,7 +15,7 @@ export function PixelButton({
   return (
     <button
       className={cn(
-        "pixel-wood-btn inline-flex min-h-9 cursor-pointer select-none items-center justify-center px-5 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase transition-none focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
+        "pixel-wood-btn inline-flex min-h-9 cursor-pointer select-none items-center justify-center px-5 py-2 font-[family-name:var(--font-pixel)] text-[length:var(--font-size-nameplate)] uppercase leading-none transition-none focus-visible:outline-2 focus-visible:outline-pixel-accent focus-visible:outline-offset-2",
         className
       )}
       disabled={disabled}

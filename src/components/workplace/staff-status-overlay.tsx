@@ -107,7 +107,11 @@ function StaffIdleBody({
       <p className="font-body text-[20px] text-ink leading-snug">
         {staffStatusMessage(desk)}
       </p>
-      <PixelButton onClick={onOpenAssistant} type="button">
+      <PixelButton
+        className="w-full pt-px"
+        onClick={onOpenAssistant}
+        type="button"
+      >
         {uiStrings.staffStatus.talkToAssistant}
       </PixelButton>
     </div>
@@ -338,9 +342,10 @@ export function StaffStatusOverlay({
         role="dialog"
       >
         <PixelPanel
-          className="flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-2xl flex-col overflow-hidden p-4 sm:p-6"
-          contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden pt-4"
+          className="flex max-h-[min(90vh,720px)] min-h-0 w-full max-w-2xl flex-col overflow-hidden"
+          contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5"
           title={uiStrings.staffStatus.title}
+          titleInset
         >
           <StaffStatusHeader desk={desk} onClose={onClose} />
 

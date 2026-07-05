@@ -203,6 +203,7 @@
 .pixel-wood-btn {
   position: relative;
   margin: 3px;
+  line-height: 1;
   color: #ffce3a;
   text-shadow: 2px 2px 0 #4a2410;
   image-rendering: pixelated;

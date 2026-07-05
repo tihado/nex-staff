@@ -215,6 +215,7 @@ function DialogueOverlayPanel({
   const [choiceVoiceError, setChoiceVoiceError] = useState<string | null>(null);
   const spokenPrefixRef = useRef("");
   const lastAssistantMessageIdRef = useRef<string | undefined>(undefined);
+  const prevOutputEnabledRef = useRef(preferences.outputEnabled);
 
   const voiceOutput = useVoiceOutput({
     enabled: preferences.outputEnabled && !useScriptedUi,
@@ -243,11 +244,18 @@ function DialogueOverlayPanel({
   });
 
   useEffect(() => {
+    const wasEnabled = prevOutputEnabledRef.current;
+    prevOutputEnabledRef.current = preferences.outputEnabled;
+
     if (!preferences.outputEnabled) {
-      spokenPrefixRef.current = "";
       voiceOutput.stopSpeaking();
+      return;
     }
-  }, [preferences.outputEnabled, voiceOutput.stopSpeaking]);
+
+    if (!wasEnabled && displayText.trim()) {
+      spokenPrefixRef.current = displayText.trim();
+    }
+  }, [displayText, preferences.outputEnabled, voiceOutput.stopSpeaking]);
 
   useEffect(() => {
     const messageId = lastAssistant?.id;

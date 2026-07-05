@@ -1,7 +1,9 @@
 "use client";
 
-import { PixelButton } from "@/components/pixel/pixel-button";
+import { PixelButton, PixelIcon, PixelMusicOffIcon } from "@/components/pixel";
 import { useWorkplaceAudio } from "@/components/workplace/workplace-audio-provider";
+
+const MUSIC_TOGGLE_ICON_SIZE = 24;
 
 export function WorkplaceAudioToggle() {
   const { enabled, enableFromUserGesture, setEnabled } = useWorkplaceAudio();
@@ -23,11 +25,16 @@ export function WorkplaceAudioToggle() {
           : "Enable office sounds and music"
       }
       aria-pressed={enabled}
+      className="px-2"
       onClick={handleToggle}
       title="Office sounds + lofi jazz"
       type="button"
     >
-      {enabled ? "SND On" : "SND Off"}
+      {enabled ? (
+        <PixelIcon aria-hidden name="music" size={MUSIC_TOGGLE_ICON_SIZE} />
+      ) : (
+        <PixelMusicOffIcon size={MUSIC_TOGGLE_ICON_SIZE} />
+      )}
     </PixelButton>
   );
 }

@@ -13,6 +13,17 @@ import { STAFF_WANDER_MOVE_CHANCE } from "@/lib/workplace/wander-config";
 const WANDER_PAUSE_MIN_MS = 6000;
 const WANDER_PAUSE_JITTER_MS = 6000;
 
+export type IdleWanderZone = "pantry" | "workplace";
+
+export interface AgentWanderOptions {
+  /** Secondary roam area (e.g. work area while idling in pantry). */
+  alternateConfig?: WanderConfig;
+  /** Per tick, chance to switch from primary to alternate zone. */
+  alternateVisitChance?: number;
+  /** Per tick while in alternate, chance to return to primary zone. */
+  primaryReturnChance?: number;
+}
+
 function buildInitialAnchors(
   staffIds: string[],
   wanderConfig: WanderConfig
@@ -22,6 +33,47 @@ function buildInitialAnchors(
     initial[id] = initialWanderAnchorForStaff(id, wanderConfig);
   }
   return initial;
+}
+
+function buildInitialZones(staffIds: string[]): Record<string, IdleWanderZone> {
+  const initial: Record<string, IdleWanderZone> = {};
+  for (const id of staffIds) {
+    initial[id] = "pantry";
+  }
+  return initial;
+}
+
+function resolveWanderZone(
+  staffId: string,
+  primaryConfig: WanderConfig,
+  options: AgentWanderOptions | undefined,
+  zones: Record<string, IdleWanderZone>
+): { config: WanderConfig; zone: IdleWanderZone } {
+  const alternateConfig = options?.alternateConfig;
+  const currentZone = zones[staffId] ?? "pantry";
+
+  if (!alternateConfig) {
+    return { config: primaryConfig, zone: "pantry" };
+  }
+
+  if (
+    currentZone === "pantry" &&
+    Math.random() < (options.alternateVisitChance ?? 0)
+  ) {
+    return { config: alternateConfig, zone: "workplace" };
+  }
+
+  if (
+    currentZone === "workplace" &&
+    Math.random() < (options.primaryReturnChance ?? 0)
+  ) {
+    return { config: primaryConfig, zone: "pantry" };
+  }
+
+  return {
+    config: currentZone === "workplace" ? alternateConfig : primaryConfig,
+    zone: currentZone,
+  };
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -46,16 +98,24 @@ function usePrefersReducedMotion(): boolean {
  */
 export function useAgentWander(
   roamingStaffIds: string[],
-  wanderConfig: WanderConfig = OFFICE_WANDER_CONFIG
+  wanderConfig: WanderConfig = OFFICE_WANDER_CONFIG,
+  options?: AgentWanderOptions
 ): {
   onStaffArrived: (staffId: string) => void;
   reducedMotion: boolean;
   wanderAnchors: Record<string, FloorAnchor>;
+  wanderZones: Record<string, IdleWanderZone>;
 } {
   const reducedMotion = usePrefersReducedMotion();
   const [anchors, setAnchors] = useState<Record<string, FloorAnchor>>(() =>
     buildInitialAnchors(roamingStaffIds, wanderConfig)
   );
+  const [zones, setZones] = useState<Record<string, IdleWanderZone>>(() =>
+    buildInitialZones(roamingStaffIds)
+  );
+
+  const zonesRef = useRef(zones);
+  zonesRef.current = zones;
 
   const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const kickstartedRef = useRef<Set<string>>(new Set());
@@ -90,27 +150,50 @@ export function useAgentWander(
         }
 
         setAnchors((current) => {
+          const currentZone = zonesRef.current[staffId] ?? "pantry";
           const currentAnchor =
             current[staffId] ??
-            initialWanderAnchorForStaff(staffId, wanderConfig);
+            initialWanderAnchorForStaff(
+              staffId,
+              currentZone === "workplace" && options?.alternateConfig
+                ? options.alternateConfig
+                : wanderConfig
+            );
+
+          const { config: nextConfig, zone: nextZone } = resolveWanderZone(
+            staffId,
+            wanderConfig,
+            options,
+            zonesRef.current
+          );
+
           const nextAnchor = pickNextWanderAnchor(
             staffId,
             currentAnchor,
             current,
-            wanderConfig
+            nextConfig
           );
+
           if (
             nextAnchor.left === currentAnchor.left &&
-            nextAnchor.top === currentAnchor.top
+            nextAnchor.top === currentAnchor.top &&
+            nextZone === currentZone
           ) {
             queueMicrotask(() => scheduleNextMoveRef.current(staffId));
             return current;
           }
+
+          if (nextZone !== currentZone) {
+            const nextZones = { ...zonesRef.current, [staffId]: nextZone };
+            zonesRef.current = nextZones;
+            setZones(nextZones);
+          }
+
           return { ...current, [staffId]: nextAnchor };
         });
       }, delay);
     },
-    [clearStaffTimeout, reducedMotion, wanderConfig]
+    [clearStaffTimeout, options, reducedMotion, wanderConfig]
   );
 
   scheduleNextMoveRef.current = scheduleNextMove;
@@ -121,6 +204,16 @@ export function useAgentWander(
       for (const id of roamingStaffIds) {
         if (next[id] === undefined) {
           next[id] = initialWanderAnchorForStaff(id, wanderConfig);
+        }
+      }
+      return next;
+    });
+
+    setZones((current) => {
+      const next = { ...current };
+      for (const id of roamingStaffIds) {
+        if (next[id] === undefined) {
+          next[id] = "pantry";
         }
       }
       return next;
@@ -167,6 +260,7 @@ export function useAgentWander(
   return {
     onStaffArrived: scheduleNextMove,
     wanderAnchors: anchors,
+    wanderZones: zones,
     reducedMotion,
   };
 }

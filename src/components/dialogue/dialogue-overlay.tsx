@@ -18,7 +18,7 @@ import {
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import { matchChoiceFromTranscript } from "@/lib/voice/match-choice";
-import { extractSpeakableSentences } from "@/lib/voice/sentence-chunks";
+import { queueAssistantSpeech } from "@/lib/voice/queue-assistant-speech";
 import {
   handleDialogueChoiceSelection,
   handleDialogueInputSubmission,
@@ -138,6 +138,11 @@ function DialogueOverlayPanel({
     [chat.messages]
   );
 
+  const lastUserMessage = useMemo(
+    () => chat.messages.filter((message) => message.role === "user").at(-1),
+    [chat.messages]
+  );
+
   useAssistantHireSuccessEffect(
     hireContext,
     hireFlow,
@@ -215,6 +220,7 @@ function DialogueOverlayPanel({
   const [choiceVoiceError, setChoiceVoiceError] = useState<string | null>(null);
   const spokenPrefixRef = useRef("");
   const lastAssistantMessageIdRef = useRef<string | undefined>(undefined);
+  const lastUserMessageIdRef = useRef<string | undefined>(undefined);
   const prevOutputEnabledRef = useRef(preferences.outputEnabled);
   const prevTaskIdRef = useRef(taskId);
 
@@ -289,6 +295,22 @@ function DialogueOverlayPanel({
   }, [displayText, lastAssistant?.id, voiceOutput.stopSpeaking]);
 
   useEffect(() => {
+    const messageId = lastUserMessage?.id;
+
+    if (messageId === lastUserMessageIdRef.current) {
+      return;
+    }
+
+    const isNewUserMessage = lastUserMessageIdRef.current !== undefined;
+    lastUserMessageIdRef.current = messageId;
+
+    if (isNewUserMessage) {
+      spokenPrefixRef.current = displayText.trim();
+      voiceOutput.stopSpeaking();
+    }
+  }, [displayText, lastUserMessage?.id, voiceOutput.stopSpeaking]);
+
+  useEffect(() => {
     if (useScriptedUi || showThinkingIndicator) {
       return;
     }
@@ -298,33 +320,14 @@ function DialogueOverlayPanel({
     }
 
     const text = displayText.trim();
-    const spokenPrefix = spokenPrefixRef.current;
 
-    if (spokenPrefix && !text.startsWith(spokenPrefix)) {
-      spokenPrefixRef.current = "";
-      voiceOutput.stopSpeaking();
-    }
-
-    const remainder = text.slice(spokenPrefixRef.current.length).trim();
-
-    if (!remainder) {
-      return;
-    }
-
-    const chunks = extractSpeakableSentences(remainder, {
-      includePartial: !engine.isStreaming,
-      streaming: engine.isStreaming,
+    spokenPrefixRef.current = queueAssistantSpeech({
+      isStreaming: engine.isStreaming,
+      queueSpeak: voiceOutput.queueSpeak,
+      spokenPrefix: spokenPrefixRef.current,
+      stopSpeaking: voiceOutput.stopSpeaking,
+      text,
     });
-
-    for (const chunk of chunks) {
-      voiceOutput.queueSpeak(chunk);
-
-      const chunkStart = text.indexOf(chunk, spokenPrefixRef.current.length);
-
-      if (chunkStart >= 0) {
-        spokenPrefixRef.current = text.slice(0, chunkStart + chunk.length);
-      }
-    }
   }, [
     displayText,
     engine.isStreaming,

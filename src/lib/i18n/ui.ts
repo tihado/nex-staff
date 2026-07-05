@@ -56,13 +56,13 @@ export const uiStrings = {
     idle: "No active task right now. Chat with the Assistant to delegate work.",
     loading: "Loading task status…",
     noOutput: "No output yet. Check back once the task finishes.",
-    offline: "This agent is currently offline.",
+    offline: "This staff member is currently offline.",
     output: "Output",
     progress: "Progress",
     refresh: "Refresh",
     starting: "Starting…",
     talkToAssistant: "Talk to Assistant",
-    title: "Agent status",
+    title: "Staff status",
   },
   completion: {
     greeting: (staffName: string, title: string) =>

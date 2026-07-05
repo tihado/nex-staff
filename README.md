@@ -16,12 +16,14 @@ Over weeks and months, that isolation turns into something worse than being busy
 
 That leads to a familiar spiral:
 
-| Struggle | What it feels like |
-| -------- | ------------------ |
-| **No depth in every field** | You need a blog, a landing page, and a data pull — but you're strong in none of them |
-| **Low budget** | Contractors and agencies are out of reach; every tool is another subscription |
-| **No time** | Side project nights disappear into research rabbit holes and half-finished drafts |
+
+| Struggle                     | What it feels like                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------- |
+| **No depth in every field**  | You need a blog, a landing page, and a data pull — but you're strong in none of them        |
+| **Low budget**               | Contractors and agencies are out of reach; every tool is another subscription               |
+| **No time**                  | Side project nights disappear into research rabbit holes and half-finished drafts           |
 | **Boredom & demoralization** | The grind feels endless — no teammates, no visible wins, no reason to open the app tomorrow |
+
 
 Current AI products treat you like a power user in a terminal. Nex Staff treats you like a **boss with a staff** — and gives you an office worth coming back to.
 
@@ -82,32 +84,36 @@ The goal isn't only faster output. It's making the founder journey **less lonely
 
 ## Features
 
-| Area | What you get |
-| ---- | ------------ |
-| **Assistant** | Single entry point — project chat, document upload, hire/delegate orchestration |
-| **Hire staff** | On-demand specialists (Writer, Researcher, Coder, …) with role-specific tools |
-| **Delegate async** | Background workflows; progress on the Task Board; ask "how's Alex doing?" anytime |
-| **Documents** | Archive Room + RAG — briefs and references linked to staff |
-| **Coder staff** | Cursor SDK Cloud Agent on your repo; PRs + live website preview on Cloudflare Workers |
-| **Workspace** | Top-down pixel office — walk the floor, see who's busy, feel like you have a company |
-| **NPC dialogue** | RPG overlay for talking to Assistant and staff — presence, not a dead chat log |
-| **Quest moments** | Done emotes, completion banners, deliverable reveals — celebrate progress, not just store it |
-| **Eval harness** | Metrics and test runners for routing accuracy and deliverable quality |
+
+| Area               | What you get                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| **Assistant**      | Single entry point — project chat, document upload, hire/delegate orchestration              |
+| **Hire staff**     | On-demand specialists (Writer, Researcher, Coder, …) with role-specific tools                |
+| **Delegate async** | Background workflows; progress on the Task Board; ask "how's Alex doing?" anytime            |
+| **Documents**      | Archive Room + RAG — briefs and references linked to staff                                   |
+| **Coder staff**    | Cursor SDK Cloud Agent on your repo; PRs + live website preview on Cloudflare Workers        |
+| **Workspace**      | Top-down pixel office — walk the floor, see who's busy, feel like you have a company         |
+| **NPC dialogue**   | RPG overlay for talking to Assistant and staff — presence, not a dead chat log               |
+| **Quest moments**  | Done emotes, completion banners, deliverable reveals — celebrate progress, not just store it |
+| **Eval harness**   | Metrics and test runners for routing accuracy and deliverable quality                        |
+
 
 ---
 
 ## Tech (high level)
 
-| Layer | Technology |
-| ----- | ---------- |
-| **Agents** | AI SDK 7 — `ToolLoopAgent` (Assistant), `DurableAgent` + Vercel Workflow (staff tasks) |
-| **Coder staff** | `@cursor/sdk` Cloud Agent on `CODER_GITHUB_REPO_URL` |
+
+| Layer               | Technology                                                                                                                                                                        |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Agents**          | AI SDK 7 — `ToolLoopAgent` (Assistant), `DurableAgent` + Vercel Workflow (staff tasks)                                                                                            |
+| **Coder staff**     | `@cursor/sdk` Cloud Agent on `CODER_GITHUB_REPO_URL`                                                                                                                              |
 | **Client websites** | [Cloudflare Workers](https://workers.cloudflare.com/) — branch preview URLs for coder deliverables (`CLOUDFLARE_WORKER_NAME`; Pages fallback via `CLOUDFLARE_PAGES_PROJECT_NAME`) |
-| **Documents** | Vercel Blob storage + Neon Postgres / pgvector for search |
-| **Harness** | Eval framework — routing scenarios, deliverable rubrics, checkpoint gates ([docs](docs/EVAL-FRAMEWORK.md)) |
-| **Sandbox** | Vercel Sandbox for Writer deliverables (`@ai-sdk/sandbox-vercel`) |
-| **Models** | Google Gemini (default) or [OpenRouter](https://openrouter.ai/) — see `LLM_PROVIDER` |
-| **App** | Next.js 16, React 19, Tailwind CSS v4, Better Auth |
+| **Documents**       | Vercel Blob storage + Neon Postgres / pgvector for search                                                                                                                         |
+| **Harness**         | Eval framework — routing scenarios, deliverable rubrics, checkpoint gates ([docs](docs/EVAL-FRAMEWORK.md))                                                                        |
+| **Sandbox**         | Vercel Sandbox for Writer deliverables (`@ai-sdk/sandbox-vercel`)                                                                                                                 |
+| **Models**          | Google Gemini (default) or [OpenRouter](https://openrouter.ai/) — see `LLM_PROVIDER`                                                                                              |
+| **App**             | Next.js 16, React 19, Tailwind CSS v4, Better Auth                                                                                                                                |
+
 
 Full stack and data flow: [Architecture](docs/ARCHITECTURE.md).
 
@@ -115,17 +121,20 @@ Full stack and data flow: [Architecture](docs/ARCHITECTURE.md).
 
 ## Documentation
 
-| Document | Description |
-| -------- | ----------- |
-| [PRD](docs/PRD.md) | Product requirements and user stories |
-| [Architecture](docs/ARCHITECTURE.md) | Technical architecture |
-| [Agent System](docs/AGENT-SYSTEM.md) | Hiring, delegation, supervision, checkpoints |
-| [Eval Framework](docs/EVAL-FRAMEWORK.md) | Worker quality metrics, tests, eval harness |
-| [Data Model](docs/DATA-MODEL.md) | Database schema |
-| [API](docs/API.md) | REST endpoints, tools, events |
-| [UI/UX](docs/UI-UX.md) | Workspace tilemap + NPC dialogue |
-| [Voice Chat](docs/VOICE-CHAT.md) | Voice STT/TTS plan (Phase 2+) |
-| [Roadmap](docs/ROADMAP.md) | MVP → v2 roadmap |
+For local setup, environment variables, and dev commands, see [Architecture](docs/ARCHITECTURE.md) and [AGENTS.md](AGENTS.md).
+
+| Document                                 | Description                                  |
+| ---------------------------------------- | -------------------------------------------- |
+| [PRD](docs/PRD.md)                       | Product requirements and user stories        |
+| [Architecture](docs/ARCHITECTURE.md)     | Technical architecture                       |
+| [Agent System](docs/AGENT-SYSTEM.md)     | Hiring, delegation, supervision, checkpoints |
+| [Eval Framework](docs/EVAL-FRAMEWORK.md) | Worker quality metrics, tests, eval harness  |
+| [Data Model](docs/DATA-MODEL.md)         | Database schema                              |
+| [API](docs/API.md)                       | REST endpoints, tools, events                |
+| [UI/UX](docs/UI-UX.md)                   | Workspace tilemap + NPC dialogue             |
+| [Voice Chat](docs/VOICE-CHAT.md)         | Voice STT/TTS plan (Phase 2+)                |
+| [Roadmap](docs/ROADMAP.md)               | MVP → v2 roadmap                             |
+
 
 ---
 
@@ -139,12 +148,14 @@ Foundation is in place — auth, database, health check, deploy scaffolding, wor
 
 Thanks to everyone who has helped build Nex Staff:
 
-| Contributor | GitHub |
-| ----------- | ------ |
-| Viet-Tien | [@nvti](https://github.com/nvti) |
-| Hong Hanh | [@honghanhh](https://github.com/honghanhh) |
-| NLag | [@NLag](https://github.com/NLag) |
-| Phương Nhi | [@ctpnheee](https://github.com/ctpnheee) |
-| Anh Nguyen | [@anh-nguyen-79](https://github.com/anh-nguyen-79) |
+
+| Contributor | GitHub                                             |
+| ----------- | -------------------------------------------------- |
+| Viet-Tien   | [@nvti](https://github.com/nvti)                   |
+| Hong Hanh   | [@honghanhh](https://github.com/honghanhh)         |
+| NLag        | [@NLag](https://github.com/NLag)                   |
+| Phuong Nhi  | [@ctpnheee](https://github.com/ctpnheee)           |
+| Anh Nguyen  | [@anh-nguyen-79](https://github.com/anh-nguyen-79) |
+
 
 Maintained by [tihado](https://github.com/tihado).

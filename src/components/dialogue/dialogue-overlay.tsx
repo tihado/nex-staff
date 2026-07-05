@@ -18,6 +18,7 @@ import {
 import type { HireStaffResult } from "@/lib/staff/types";
 import { cn } from "@/lib/utils";
 import { matchChoiceFromTranscript } from "@/lib/voice/match-choice";
+import { extractSpeakableSentences } from "@/lib/voice/sentence-chunks";
 import {
   handleDialogueChoiceSelection,
   handleDialogueInputSubmission,
@@ -212,7 +213,8 @@ function DialogueOverlayPanel({
 
   const { preferences, toggleOutput } = useVoicePreferences();
   const [choiceVoiceError, setChoiceVoiceError] = useState<string | null>(null);
-  const lastSpokenTextRef = useRef<string>("");
+  const spokenPrefixRef = useRef("");
+  const lastAssistantMessageIdRef = useRef<string | undefined>(undefined);
 
   const voiceOutput = useVoiceOutput({
     enabled: preferences.outputEnabled && !useScriptedUi,
@@ -241,14 +243,26 @@ function DialogueOverlayPanel({
   });
 
   useEffect(() => {
-    if (engine.isStreaming) {
-      lastSpokenTextRef.current = "";
+    if (!preferences.outputEnabled) {
+      spokenPrefixRef.current = "";
       voiceOutput.stopSpeaking();
     }
-  }, [engine.isStreaming, voiceOutput.stopSpeaking]);
+  }, [preferences.outputEnabled, voiceOutput.stopSpeaking]);
 
   useEffect(() => {
-    if (useScriptedUi || isThinking || engine.isStreaming) {
+    const messageId = lastAssistant?.id;
+
+    if (messageId === lastAssistantMessageIdRef.current) {
+      return;
+    }
+
+    lastAssistantMessageIdRef.current = messageId;
+    spokenPrefixRef.current = "";
+    voiceOutput.stopSpeaking();
+  }, [lastAssistant?.id, voiceOutput.stopSpeaking]);
+
+  useEffect(() => {
+    if (useScriptedUi || showThinkingIndicator) {
       return;
     }
 
@@ -256,26 +270,42 @@ function DialogueOverlayPanel({
       return;
     }
 
-    if (state !== "npc-speaking") {
+    const text = displayText.trim();
+    const spokenPrefix = spokenPrefixRef.current;
+
+    if (spokenPrefix && !text.startsWith(spokenPrefix)) {
+      spokenPrefixRef.current = "";
+      voiceOutput.stopSpeaking();
+    }
+
+    const remainder = text.slice(spokenPrefixRef.current.length).trim();
+
+    if (!remainder) {
       return;
     }
 
-    if (lastSpokenTextRef.current === displayText) {
-      return;
-    }
-
-    lastSpokenTextRef.current = displayText;
-    voiceOutput.speak(displayText).catch(() => {
-      // TTS failures are non-blocking.
+    const chunks = extractSpeakableSentences(remainder, {
+      includePartial: !engine.isStreaming,
+      streaming: engine.isStreaming,
     });
+
+    for (const chunk of chunks) {
+      voiceOutput.queueSpeak(chunk);
+
+      const chunkStart = text.indexOf(chunk, spokenPrefixRef.current.length);
+
+      if (chunkStart >= 0) {
+        spokenPrefixRef.current = text.slice(0, chunkStart + chunk.length);
+      }
+    }
   }, [
     displayText,
     engine.isStreaming,
-    isThinking,
     preferences.outputEnabled,
-    state,
+    showThinkingIndicator,
     useScriptedUi,
-    voiceOutput.speak,
+    voiceOutput.queueSpeak,
+    voiceOutput.stopSpeaking,
   ]);
 
   const handleClose = useCallback(() => {
@@ -399,7 +429,7 @@ export function DialogueOverlay({
           "flex items-center justify-center",
           layout === "panel"
             ? "min-h-0 flex-1 bg-bg-dialogue"
-            : "fixed inset-0 z-20 bg-black/50"
+            : "fixed inset-0 z-50 bg-black/50"
         )}
         role="dialog"
       >

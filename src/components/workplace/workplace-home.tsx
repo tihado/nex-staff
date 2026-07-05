@@ -519,7 +519,7 @@ export function WorkplaceHome({
       <GameShell>
         <div className="flex min-h-0 flex-1 flex-col">
           <PixelHUD
-            className="relative z-50 shrink-0"
+            className="relative shrink-0"
             subtitle={viewerLabel}
             title="Nex Staff — Workspace"
           >

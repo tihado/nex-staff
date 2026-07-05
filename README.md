@@ -13,17 +13,6 @@ Nex Staff is a web platform for **solo founders** who need a company-sized skill
   <img src="docs/images/avatars/staff-09.svg" width="72" alt="Jean-Pierre" title="Jean-Pierre" />
 </p>
 
-<table align="center">
-  <tr>
-    <td align="center" width="88"><sub><b>Assistant</b></sub></td>
-    <td align="center" width="88"><sub><b>Aria</b></sub></td>
-    <td align="center" width="88"><sub><b>Leo</b></sub></td>
-    <td align="center" width="88"><sub><b>Elena</b></sub></td>
-    <td align="center" width="88"><sub><b>Chloe</b></sub></td>
-    <td align="center" width="88"><sub><b>Jean-Pierre</b></sub></td>
-  </tr>
-</table>
-
 ![Nex Staff workspace — top-down pixel office with staff desks, Archive Room, Task Board, and Reception](docs/images/workspace.png)
 
 ---

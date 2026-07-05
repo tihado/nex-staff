@@ -1,125 +1,116 @@
 # Nex Staff
 
-**Hire AI staff for your project.**
+**Build a team. Ship your project. Stay in the game.**
 
-Nex Staff is a web-based platform for solo founders — chat with an Assistant, hire specialized agents as staff, and delegate work for them to complete independently in the background.
+Nex Staff is a web platform for **solo founders** who need a company-sized skill set on a one-person budget — without the grind of juggling a dozen AI tools alone.
 
-## Concept
+---
+
+## The problem
+
+Solo founders wear every hat: product, marketing, content, research, coding, ops. Most can't afford a real team. Generic AI chat helps in the moment, but it doesn't feel like *having people* — you still wait, context-switch, and carry the mental load yourself.
+
+That leads to a familiar spiral:
+
+| Struggle | What it feels like |
+| -------- | ------------------ |
+| **No depth in every field** | You need a blog, a landing page, and a data pull — but you're strong in none of them |
+| **Low budget** | Contractors and agencies are out of reach; every tool is another subscription |
+| **No time** | Side project nights disappear into research rabbit holes and half-finished drafts |
+| **Boredom** | The journey gets lonely and repetitive — no team energy, no wins to celebrate |
+
+Current AI products treat you like a power user in a terminal. Nex Staff treats you like a **boss with a staff**.
+
+---
+
+## Who this is for
+
+**Solo founders** — indie hackers, first-time builders, side-project operators — who:
+
+- Have an idea or product in motion and need output across multiple disciplines
+- Want to **delegate**, not prompt-engineer every task from scratch
+- Prefer conversation and a sense of progress over dashboards and API keys
+- Need the journey to stay **engaging**, not another tab they dread opening
+
+---
+
+## How we solve it
+
+You run a **pixel office**. An **Assistant** is your coordinator — you talk about the project, upload briefs, and decide what to do next. When work needs a specialist, you **hire** staff (Writer, Researcher, Coder, …) and **delegate** tasks. Staff work **async in the background**; you keep chatting, exploring the workspace, and get notified when deliverables land.
 
 ```
 You (Boss)
     │
     ▼
-Assistant ──► chat, save documents, research
+Assistant ──► chat, documents, research, coordination
     │
-    ├── hire ──► New staff (Writer, Researcher, Analyst...)
+    ├── hire ──► Specialist staff join your roster
     │
-    └── delegate ──► Staff work async (no waiting)
+    └── delegate ──► Staff work async (you don't wait)
                         │
                         ▼
                    Deliverable + notification
 ```
 
-## Key features
+**AI agents, not one chat thread.** Each staff member has a role, tools, and access to your company knowledge. The Assistant routes work, tracks progress, and reports back — so you're managing a team, not babysitting a model.
 
-- **Assistant agent** — single entry point: chat about your project, upload documents, search, research
-- **Hire staff** — Assistant proposes and hires specialized agents on demand
-- **Delegate async** — assign work and keep chatting while staff work in the background
-- **Company knowledge** — documents stored and retrieved via RAG
-- **Workspace** — pixel office floor: staff desks, Archive Room, task board
-- **NPC dialogue** — RPG-style conversation when clicking an agent (overlay on workspace)
-- **8-bit UI** — unified design system (pixel fonts, panels, not a chat-app UI)
+**Documents as company memory.** Upload specs, notes, and references to the Archive Room. Staff and the Assistant pull from the same knowledge base so work stays on-brief.
 
-## Tech Stack
+**Real coding staff via Cursor SDK.** Coder staff run on [Cursor Cloud Agent](https://cursor.com) (`@cursor/sdk`) against your GitHub repo — open PRs, preview sites, ship changes without you living in the IDE.
 
-| Layer           | Technology                                 |
-| --------------- | ------------------------------------------ |
-| Frontend        | Next.js 16, React 19, Tailwind CSS v4      |
-| Agent framework | AI SDK 7 (`ToolLoopAgent`, `DurableAgent`) |
-| Async execution | Vercel Workflow                            |
-| Sandbox         | Vercel Sandbox (`@ai-sdk/sandbox-vercel`)  |
-| Model provider  | Google Gemini (`@ai-sdk/google`)           |
-| Database        | Neon Postgres + Drizzle ORM + pgvector     |
-| Auth            | Better Auth (email/password; Google OAuth later) |
-| Storage         | Vercel Blob                                |
+**Quality you can trust — eval harness.** Worker output is measured, not assumed. Routing benchmarks, deliverable rubrics, and checkpoint verification ([Eval Framework](docs/EVAL-FRAMEWORK.md)) keep staff reliable as you add roles and scale delegation.
+
+**RPG-style UX on purpose.** Workspace, desks, NPC dialogue, and quest-complete moments exist so building a company feels like a game — not another boring SaaS form.
+
+---
+
+## Features
+
+| Area | What you get |
+| ---- | ------------ |
+| **Assistant** | Single entry point — project chat, document upload, hire/delegate orchestration |
+| **Hire staff** | On-demand specialists (Writer, Researcher, Coder, …) with role-specific tools |
+| **Delegate async** | Background workflows; progress on the Task Board; ask "how's Alex doing?" anytime |
+| **Documents** | Archive Room + RAG — briefs and references linked to staff |
+| **Coder staff** | Cursor SDK Cloud Agent on your repo; PRs and website previews when done |
+| **Workspace** | Top-down pixel office — desks, idle/working/done states, Archive Room, Task Board |
+| **NPC dialogue** | RPG overlay for talking to Assistant and staff (not a scrollable chat app) |
+| **Eval harness** | Metrics and test runners for routing accuracy and deliverable quality |
+
+---
+
+## Tech (high level)
+
+| Layer | Technology |
+| ----- | ---------- |
+| **Agents** | AI SDK 7 — `ToolLoopAgent` (Assistant), `DurableAgent` + Vercel Workflow (staff tasks) |
+| **Coder staff** | `@cursor/sdk` Cloud Agent on `CODER_GITHUB_REPO_URL` |
+| **Documents** | Vercel Blob storage + Neon Postgres / pgvector for search |
+| **Harness** | Eval framework — routing scenarios, deliverable rubrics, checkpoint gates ([docs](docs/EVAL-FRAMEWORK.md)) |
+| **Sandbox** | Vercel Sandbox for Writer deliverables (`@ai-sdk/sandbox-vercel`) |
+| **Models** | Google Gemini (`@ai-sdk/google`) |
+| **App** | Next.js 16, React 19, Tailwind CSS v4, Better Auth |
+
+Full stack and data flow: [Architecture](docs/ARCHITECTURE.md).
+
+---
 
 ## Documentation
 
-| Document                             | Description                                   |
-| ------------------------------------ | --------------------------------------------- |
-| [PRD](docs/PRD.md)                   | Product Requirements Document                 |
-| [Architecture](docs/ARCHITECTURE.md) | Technical architecture                        |
+| Document | Description |
+| -------- | ----------- |
+| [PRD](docs/PRD.md) | Product requirements and user stories |
+| [Architecture](docs/ARCHITECTURE.md) | Technical architecture |
 | [Agent System](docs/AGENT-SYSTEM.md) | Hiring, delegation, supervision, checkpoints |
 | [Eval Framework](docs/EVAL-FRAMEWORK.md) | Worker quality metrics, tests, eval harness |
-| [Data Model](docs/DATA-MODEL.md)     | Database schema                               |
-| [API](docs/API.md)                   | REST endpoints, tools, events                 |
-| [UI/UX](docs/UI-UX.md)               | Workspace tilemap + NPC dialogue 8-bit          |
-| [Voice Chat](docs/VOICE-CHAT.md)     | Voice STT/TTS plan for RPG dialogue (Phase 2+)  |
-| [Roadmap](docs/ROADMAP.md)           | MVP → v2 roadmap                              |
+| [Data Model](docs/DATA-MODEL.md) | Database schema |
+| [API](docs/API.md) | REST endpoints, tools, events |
+| [UI/UX](docs/UI-UX.md) | Workspace tilemap + NPC dialogue |
+| [Voice Chat](docs/VOICE-CHAT.md) | Voice STT/TTS plan (Phase 2+) |
+| [Roadmap](docs/ROADMAP.md) | MVP → v2 roadmap |
+
+---
 
 ## Status
 
-**Foundation (issue #3)** — auth, database schema, health check, and Vercel deploy scaffolding are in place. Workplace UI and agent features follow in later issues.
-
-## Local setup
-
-1. Copy env template and fill in values:
-
-```bash
-cp .env.example .env.local
-```
-
-2. Create a [Neon](https://neon.tech) Postgres database and set `DATABASE_URL`.
-
-3. Generate a random `BETTER_AUTH_SECRET` (32+ characters).
-
-4. Add a [Google AI Studio](https://aistudio.google.com/apikey) API key as `GOOGLE_GENERATIVE_AI_API_KEY`.
-
-5. Push the schema to Neon:
-
-```bash
-pnpm db:push
-```
-
-6. Start the dev server:
-
-```bash
-pnpm dev
-```
-
-Open `http://localhost:3000`, sign up or sign in with email/password, and confirm the placeholder home page shows your user and Assistant IDs.
-
-### Useful commands
-
-| Command | Purpose |
-| ------- | ------- |
-| `pnpm db:generate` | Generate SQL migrations from `src/db/schema.ts` |
-| `pnpm db:migrate` | Apply migrations |
-| `pnpm db:push` | Push schema directly (dev) |
-| `pnpm db:seed` | Verify database connectivity |
-
-### Health check
-
-`GET /api/health` returns `{ ok: true, db: true }` when the app and database are reachable.
-
-### Vercel deploy
-
-Set these environment variables on Vercel:
-
-- `DATABASE_URL`
-- `BETTER_AUTH_SECRET`
-- `BETTER_AUTH_URL` (optional on Vercel — auto-detected from `VERCEL_URL`)
-- `BLOB_READ_WRITE_TOKEN`
-- `GOOGLE_GENERATIVE_AI_API_KEY`
-
-Enable **Sandbox OIDC** in the Vercel project settings so `@ai-sdk/sandbox-vercel` can authenticate in preview/production. Verify with `GET /api/staging/sandbox-oidc` after deploy (remove that route once confirmed).
-
-For **local development**, set `SANDBOX_DISABLED=true` in `.env.local` so staff tasks use an in-memory workspace instead of Vercel Sandbox (no OIDC required). Delegate a task to a Writer staff member to exercise the full `staffTaskWorkflow` + `DurableAgent` path.
-
-| Command | Purpose |
-| ------- | ------- |
-| `pnpm exec tsx scripts/test-delegate-workflow.ts` | Sign in, delegate to staff, poll task status (local smoke test) |
-
-## Audience
-
-Solo founders — one person managing multiple AI agents as a virtual staff team.
+Foundation is in place — auth, database, health check, deploy scaffolding, workplace UI, and core agent flows. See [Roadmap](docs/ROADMAP.md) for what's next.

@@ -216,6 +216,7 @@ function DialogueOverlayPanel({
   const spokenPrefixRef = useRef("");
   const lastAssistantMessageIdRef = useRef<string | undefined>(undefined);
   const prevOutputEnabledRef = useRef(preferences.outputEnabled);
+  const prevTaskIdRef = useRef(taskId);
 
   const voiceOutput = useVoiceOutput({
     enabled: preferences.outputEnabled && !useScriptedUi,
@@ -258,16 +259,34 @@ function DialogueOverlayPanel({
   }, [displayText, preferences.outputEnabled, voiceOutput.stopSpeaking]);
 
   useEffect(() => {
+    if (prevTaskIdRef.current === taskId) {
+      return;
+    }
+
+    prevTaskIdRef.current = taskId;
+    spokenPrefixRef.current = displayText.trim();
+    voiceOutput.stopSpeaking();
+  }, [displayText, taskId, voiceOutput.stopSpeaking]);
+
+  useEffect(() => {
     const messageId = lastAssistant?.id;
 
     if (messageId === lastAssistantMessageIdRef.current) {
       return;
     }
 
+    const isNewAssistantMessage =
+      lastAssistantMessageIdRef.current !== undefined;
     lastAssistantMessageIdRef.current = messageId;
-    spokenPrefixRef.current = "";
-    voiceOutput.stopSpeaking();
-  }, [lastAssistant?.id, voiceOutput.stopSpeaking]);
+
+    if (isNewAssistantMessage) {
+      spokenPrefixRef.current = "";
+      voiceOutput.stopSpeaking();
+      return;
+    }
+
+    spokenPrefixRef.current = displayText.trim();
+  }, [displayText, lastAssistant?.id, voiceOutput.stopSpeaking]);
 
   useEffect(() => {
     if (useScriptedUi || showThinkingIndicator) {

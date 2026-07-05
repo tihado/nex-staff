@@ -1,10 +1,35 @@
-import type { FloorAnchor } from "@/components/workplace/workspace-layout";
+import type {
+  FloorAnchor,
+  OfficeWanderZone,
+} from "@/components/workplace/workspace-layout";
 import {
   OFFICE_WANDER_BOUNDS,
   OFFICE_WANDER_ZONES,
+  PANTRY_WANDER_BOUNDS,
+  PANTRY_WANDER_ZONES,
   STAFF_WANDER_MIN_DISTANCE,
 } from "@/components/workplace/workspace-layout";
 import { anchorDistance } from "@/lib/workplace/agent-motion";
+
+export interface WanderConfig {
+  bounds: {
+    minLeft: number;
+    maxLeft: number;
+    minTop: number;
+    maxTop: number;
+  };
+  zones: OfficeWanderZone[];
+}
+
+export const OFFICE_WANDER_CONFIG: WanderConfig = {
+  bounds: OFFICE_WANDER_BOUNDS,
+  zones: OFFICE_WANDER_ZONES,
+};
+
+export const PANTRY_WANDER_CONFIG: WanderConfig = {
+  bounds: PANTRY_WANDER_BOUNDS,
+  zones: PANTRY_WANDER_ZONES,
+};
 
 function hashStaffId(staffId: string): number {
   let hash = 0;
@@ -18,42 +43,42 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function clampWanderAnchor(anchor: FloorAnchor): FloorAnchor {
+export function clampWanderAnchor(
+  anchor: FloorAnchor,
+  config: WanderConfig = OFFICE_WANDER_CONFIG
+): FloorAnchor {
   return {
-    left: clamp(
-      anchor.left,
-      OFFICE_WANDER_BOUNDS.minLeft,
-      OFFICE_WANDER_BOUNDS.maxLeft
-    ),
-    top: clamp(
-      anchor.top,
-      OFFICE_WANDER_BOUNDS.minTop,
-      OFFICE_WANDER_BOUNDS.maxTop
-    ),
+    left: clamp(anchor.left, config.bounds.minLeft, config.bounds.maxLeft),
+    top: clamp(anchor.top, config.bounds.minTop, config.bounds.maxTop),
   };
 }
 
-function jitterWithinZone(seed: number): FloorAnchor {
-  const zone = OFFICE_WANDER_ZONES[seed % OFFICE_WANDER_ZONES.length];
+function jitterWithinZone(seed: number, config: WanderConfig): FloorAnchor {
+  const zone = config.zones[seed % config.zones.length];
   const leftJitter = ((seed % 100) / 100) * 2 - 1;
   const topJitter = ((Math.floor(seed / 100) % 100) / 100) * 2 - 1;
 
-  return clampWanderAnchor({
-    left: zone.center.left + leftJitter * zone.radius.left,
-    top: zone.center.top + topJitter * zone.radius.top,
-  });
+  return clampWanderAnchor(
+    {
+      left: zone.center.left + leftJitter * zone.radius.left,
+      top: zone.center.top + topJitter * zone.radius.top,
+    },
+    config
+  );
 }
 
-function randomJitterInZone(): FloorAnchor {
-  const zone =
-    OFFICE_WANDER_ZONES[Math.floor(Math.random() * OFFICE_WANDER_ZONES.length)];
+function randomJitterInZone(config: WanderConfig): FloorAnchor {
+  const zone = config.zones[Math.floor(Math.random() * config.zones.length)];
   const leftJitter = Math.random() * 2 - 1;
   const topJitter = Math.random() * 2 - 1;
 
-  return clampWanderAnchor({
-    left: zone.center.left + leftJitter * zone.radius.left,
-    top: zone.center.top + topJitter * zone.radius.top,
-  });
+  return clampWanderAnchor(
+    {
+      left: zone.center.left + leftJitter * zone.radius.left,
+      top: zone.center.top + topJitter * zone.radius.top,
+    },
+    config
+  );
 }
 
 function isFarEnoughFromOthers(
@@ -72,30 +97,37 @@ function isFarEnoughFromOthers(
   return true;
 }
 
-export function initialWanderAnchorForStaff(staffId: string): FloorAnchor {
-  return jitterWithinZone(hashStaffId(staffId));
+export function initialWanderAnchorForStaff(
+  staffId: string,
+  config: WanderConfig = OFFICE_WANDER_CONFIG
+): FloorAnchor {
+  return jitterWithinZone(hashStaffId(staffId), config);
 }
 
 /** Pick a random roam point that stays in bounds and away from other staff. */
 export function pickNextWanderAnchor(
   staffId: string,
   current: FloorAnchor,
-  occupied: Record<string, FloorAnchor>
+  occupied: Record<string, FloorAnchor>,
+  config: WanderConfig = OFFICE_WANDER_CONFIG
 ): FloorAnchor {
   const minMoveDistance = 3;
 
   for (let attempt = 0; attempt < 24; attempt += 1) {
-    const candidate = randomJitterInZone();
+    const candidate = randomJitterInZone(config);
     const movedEnough = anchorDistance(current, candidate) >= minMoveDistance;
     if (movedEnough && isFarEnoughFromOthers(candidate, staffId, occupied)) {
       return candidate;
     }
   }
 
-  const fallback = clampWanderAnchor({
-    left: current.left + (Math.random() - 0.5) * 6,
-    top: current.top + (Math.random() - 0.5) * 6,
-  });
+  const fallback = clampWanderAnchor(
+    {
+      left: current.left + (Math.random() - 0.5) * 6,
+      top: current.top + (Math.random() - 0.5) * 6,
+    },
+    config
+  );
 
   if (isFarEnoughFromOthers(fallback, staffId, occupied)) {
     return fallback;

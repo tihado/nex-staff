@@ -5,12 +5,15 @@ interface GameShellProps {
   children: ReactNode;
   className?: string;
   letterbox?: boolean;
+  /** Decorative layer behind the letterboxed panel (e.g. sky scenery). */
+  letterboxBackdrop?: ReactNode;
 }
 
 export function GameShell({
   children,
   className,
   letterbox = true,
+  letterboxBackdrop,
 }: GameShellProps) {
   return (
     <div
@@ -25,9 +28,10 @@ export function GameShell({
           letterbox && "lg:items-center lg:justify-center lg:p-4"
         )}
       >
+        {letterboxBackdrop}
         <div
           className={cn(
-            "relative flex min-h-0 w-full flex-col",
+            "relative z-10 flex min-h-0 w-full flex-col",
             letterbox
               ? "min-h-0 flex-1 lg:aspect-video lg:max-h-[calc(100dvh-2rem)] lg:max-w-[calc((100dvh-2rem)*16/9)] lg:flex-none lg:overflow-hidden lg:border-4 lg:border-border-dialogue lg:shadow-[var(--pixel-shadow)]"
               : "min-h-0 flex-1"

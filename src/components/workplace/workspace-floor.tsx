@@ -3,7 +3,10 @@
 import { Fragment, type ReactNode, useMemo } from "react";
 import { useAgentWander } from "@/hooks/use-agent-wander";
 import { cn } from "@/lib/utils";
-import { initialWanderAnchorForStaff } from "@/lib/workplace/wander";
+import {
+  initialWanderAnchorForStaff,
+  PANTRY_WANDER_CONFIG,
+} from "@/lib/workplace/wander";
 import { depthZ } from "./iso-projection";
 import {
   PixelMeetingTable,
@@ -151,19 +154,21 @@ export function WorkspaceFloor({
 }: WorkspaceFloorProps) {
   let pantryCounter = 0;
 
-  const roamingStaffIds = useMemo(
+  const idlePantryStaffIds = useMemo(
     () =>
       desks
         .filter(
           (desk) =>
-            desk.staffId && desk.location === "roaming" && desk.state === "idle"
+            desk.staffId && desk.location === "pantry" && desk.state === "idle"
         )
         .map((desk) => desk.staffId as string),
     [desks]
   );
 
-  const { onStaffArrived, reducedMotion, wanderAnchors } =
-    useAgentWander(roamingStaffIds);
+  const { onStaffArrived, reducedMotion, wanderAnchors } = useAgentWander(
+    idlePantryStaffIds,
+    PANTRY_WANDER_CONFIG
+  );
 
   return (
     <WorkspaceScene>
@@ -400,9 +405,13 @@ export function WorkspaceFloor({
           );
         })}
 
-        {/* Pantry agents walk from their desk slot */}
+        {/* Pantry — task complete, waiting for acknowledgement */}
         {desks.map((desk, index) => {
-          if (!desk.staffId || desk.location !== "pantry") {
+          if (
+            !desk.staffId ||
+            desk.location !== "pantry" ||
+            desk.state !== "done"
+          ) {
             return null;
           }
 
@@ -414,7 +423,7 @@ export function WorkspaceFloor({
             <WorkspaceAgent
               anchor={anchor}
               desk={desk}
-              key={`${desk.id}-pantry`}
+              key={`${desk.id}-pantry-done`}
               motionEnabled
               onSelect={onSelectAgent}
               variant={index}
@@ -423,21 +432,26 @@ export function WorkspaceFloor({
           );
         })}
 
+        {/* Pantry — idle staff wander from desk */}
         {desks.map((desk, index) => {
-          if (!desk.staffId || desk.location !== "roaming") {
+          if (
+            !desk.staffId ||
+            desk.location !== "pantry" ||
+            desk.state !== "idle"
+          ) {
             return null;
           }
 
           const slot = workspaceDeskSlot(desk.id);
           const anchor =
             wanderAnchors[desk.staffId] ??
-            initialWanderAnchorForStaff(desk.staffId);
+            initialWanderAnchorForStaff(desk.staffId, PANTRY_WANDER_CONFIG);
 
           return (
             <WorkspaceAgent
               anchor={anchor}
               desk={desk}
-              key={`${desk.id}-roam`}
+              key={`${desk.id}-pantry-idle`}
               motionEnabled={!reducedMotion}
               onSelect={onSelectAgent}
               onStaffArrived={onStaffArrived}

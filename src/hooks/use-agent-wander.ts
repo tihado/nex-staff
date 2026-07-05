@@ -4,17 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FloorAnchor } from "@/components/workplace/workspace-layout";
 import {
   initialWanderAnchorForStaff,
+  OFFICE_WANDER_CONFIG,
   pickNextWanderAnchor,
+  type WanderConfig,
 } from "@/lib/workplace/wander";
 import { STAFF_WANDER_MOVE_CHANCE } from "@/lib/workplace/wander-config";
 
 const WANDER_PAUSE_MIN_MS = 6000;
 const WANDER_PAUSE_JITTER_MS = 6000;
 
-function buildInitialAnchors(staffIds: string[]): Record<string, FloorAnchor> {
+function buildInitialAnchors(
+  staffIds: string[],
+  wanderConfig: WanderConfig
+): Record<string, FloorAnchor> {
   const initial: Record<string, FloorAnchor> = {};
   for (const id of staffIds) {
-    initial[id] = initialWanderAnchorForStaff(id);
+    initial[id] = initialWanderAnchorForStaff(id, wanderConfig);
   }
   return initial;
 }
@@ -39,14 +44,17 @@ function usePrefersReducedMotion(): boolean {
  * Roaming anchors for idle staff. After each walk completes, staff pause 6–12s
  * then ~70% chance to walk to a new point inside a roam zone.
  */
-export function useAgentWander(roamingStaffIds: string[]): {
+export function useAgentWander(
+  roamingStaffIds: string[],
+  wanderConfig: WanderConfig = OFFICE_WANDER_CONFIG
+): {
   onStaffArrived: (staffId: string) => void;
   reducedMotion: boolean;
   wanderAnchors: Record<string, FloorAnchor>;
 } {
   const reducedMotion = usePrefersReducedMotion();
   const [anchors, setAnchors] = useState<Record<string, FloorAnchor>>(() =>
-    buildInitialAnchors(roamingStaffIds)
+    buildInitialAnchors(roamingStaffIds, wanderConfig)
   );
 
   const timeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -83,11 +91,13 @@ export function useAgentWander(roamingStaffIds: string[]): {
 
         setAnchors((current) => {
           const currentAnchor =
-            current[staffId] ?? initialWanderAnchorForStaff(staffId);
+            current[staffId] ??
+            initialWanderAnchorForStaff(staffId, wanderConfig);
           const nextAnchor = pickNextWanderAnchor(
             staffId,
             currentAnchor,
-            current
+            current,
+            wanderConfig
           );
           if (
             nextAnchor.left === currentAnchor.left &&
@@ -100,7 +110,7 @@ export function useAgentWander(roamingStaffIds: string[]): {
         });
       }, delay);
     },
-    [clearStaffTimeout, reducedMotion]
+    [clearStaffTimeout, reducedMotion, wanderConfig]
   );
 
   scheduleNextMoveRef.current = scheduleNextMove;
@@ -110,12 +120,12 @@ export function useAgentWander(roamingStaffIds: string[]): {
       const next = { ...current };
       for (const id of roamingStaffIds) {
         if (next[id] === undefined) {
-          next[id] = initialWanderAnchorForStaff(id);
+          next[id] = initialWanderAnchorForStaff(id, wanderConfig);
         }
       }
       return next;
     });
-  }, [roamingStaffIds]);
+  }, [roamingStaffIds, wanderConfig]);
 
   useEffect(() => {
     const active = new Set(roamingStaffIds);

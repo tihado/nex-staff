@@ -150,10 +150,10 @@ export function WorkspaceAgent({
   const arrivalHandledRef = useRef(false);
 
   const handleArrived = useCallback(() => {
-    if (desk.staffId && desk.location === "roaming") {
+    if (desk.staffId) {
       onStaffArrived?.(desk.staffId);
     }
-  }, [desk.location, desk.staffId, onStaffArrived]);
+  }, [desk.staffId, onStaffArrived]);
 
   const {
     displayAnchor,

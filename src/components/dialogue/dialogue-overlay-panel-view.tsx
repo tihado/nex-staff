@@ -211,17 +211,20 @@ function DialogueChromeButtons({
         <PixelButton
           aria-label={
             voiceOutputEnabled
-              ? "Disable NPC voice readback"
-              : "Enable NPC voice readback"
+              ? "Disable assistant text-to-speech"
+              : "Enable assistant text-to-speech"
           }
           aria-pressed={voiceOutputEnabled}
           onClick={onToggleVoiceOutput}
         >
-          <PixelIcon
-            label={voiceOutputEnabled ? "Voice on" : "Voice off"}
-            name={voiceOutputEnabled ? "volume-high" : "volume-off"}
-            size={12}
-          />
+          <span className="flex items-center gap-1">
+            <PixelIcon
+              aria-hidden
+              name={voiceOutputEnabled ? "volume-2" : "volume-x"}
+              size={12}
+            />
+            {voiceOutputEnabled ? "TTS" : "TTS off"}
+          </span>
         </PixelButton>
       ) : null}
       <PixelButton aria-label="Close (Esc)" onClick={onClose}>
@@ -388,7 +391,7 @@ export function DialogueOverlayPanelView({
       aria-modal={isPanel ? undefined : "true"}
       className={cn(
         "flex min-h-0 flex-col overflow-hidden",
-        isPanel ? "flex-1 bg-bg-dialogue" : "fixed inset-0 z-20"
+        isPanel ? "flex-1 bg-bg-dialogue" : "fixed inset-0 z-50"
       )}
       role="dialog"
     >

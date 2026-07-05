@@ -11,6 +11,7 @@ export { PixelCloseButton } from "./pixel-close-button";
 export { PixelDialogueBox } from "./pixel-dialogue-box";
 export { PixelHUD } from "./pixel-hud";
 export { PixelIcon } from "./pixel-icon";
+export { PixelMusicOffIcon } from "./pixel-music-off-icon";
 export { PixelNotification } from "./pixel-notification";
 export { PixelPanel } from "./pixel-panel";
 export { PixelProgressBar } from "./pixel-progress-bar";

@@ -20,6 +20,6 @@ export interface VoicePreferences {
 
 export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   inputEnabled: true,
-  outputEnabled: false,
+  outputEnabled: true,
   locale: "en",
 };

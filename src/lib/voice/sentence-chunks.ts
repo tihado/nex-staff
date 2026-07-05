@@ -1,7 +1,42 @@
+import { MAX_SPEAK_CHARS } from "./constants";
+
 const SENTENCE_BOUNDARY = /[^.!?]+[.!?]+[\])'"`]*\s*|[^.!?]+$/g;
 const SENTENCE_END = /[.!?][\])'"`]*\s*$/;
 
 const STREAMING_CHUNK_MIN_CHARS = 120;
+
+/** True when assistant reply is long enough to speak only the first sentence. */
+export function shouldLimitSpeakableToFirstSentence(
+  text: string,
+  limit = MAX_SPEAK_CHARS
+): boolean {
+  return text.trim().length > limit;
+}
+
+/** First complete sentence, or the full trimmed text when partial is allowed. */
+export function extractFirstSpeakableSentence(
+  text: string,
+  options: { allowPartial: boolean }
+): string | null {
+  const trimmed = text.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const raw = trimmed.match(SENTENCE_BOUNDARY) ?? [trimmed];
+  const first = raw[0]?.trim();
+
+  if (!first) {
+    return null;
+  }
+
+  if (SENTENCE_END.test(first) || options.allowPartial) {
+    return first;
+  }
+
+  return null;
+}
 
 /** Split text into speakable sentence chunks; drops trailing fragment while streaming. */
 export function extractSpeakableSentences(

@@ -14,6 +14,7 @@ export function useVoiceOutput(options: UseVoiceOutputOptions) {
   const objectUrlRef = useRef<string | null>(null);
   const queueRef = useRef<string[]>([]);
   const processingRef = useRef(false);
+  const speakSessionRef = useRef(0);
   const enabledRef = useRef(enabled);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -39,6 +40,7 @@ export function useVoiceOutput(options: UseVoiceOutputOptions) {
   }, [revokeObjectUrl]);
 
   const stopSpeaking = useCallback(() => {
+    speakSessionRef.current += 1;
     queueRef.current = [];
     processingRef.current = false;
     stopAudio();
@@ -47,11 +49,11 @@ export function useVoiceOutput(options: UseVoiceOutputOptions) {
   useEffect(() => stopSpeaking, [stopSpeaking]);
 
   const playChunk = useCallback(
-    (text: string): Promise<void> =>
+    (text: string, session: number): Promise<void> =>
       new Promise((resolve) => {
         const trimmed = text.trim();
 
-        if (!trimmed) {
+        if (!trimmed || session !== speakSessionRef.current) {
           resolve();
           return;
         }
@@ -62,12 +64,21 @@ export function useVoiceOutput(options: UseVoiceOutputOptions) {
           body: JSON.stringify({ text: trimmed, speakerId, locale }),
         })
           .then(async (response) => {
-            if (!(response.ok && enabledRef.current)) {
+            if (
+              session !== speakSessionRef.current ||
+              !(response.ok && enabledRef.current)
+            ) {
               resolve();
               return;
             }
 
             const blob = await response.blob();
+
+            if (session !== speakSessionRef.current) {
+              resolve();
+              return;
+            }
+
             const objectUrl = URL.createObjectURL(blob);
             objectUrlRef.current = objectUrl;
 
@@ -106,13 +117,18 @@ export function useVoiceOutput(options: UseVoiceOutputOptions) {
     processingRef.current = true;
 
     while (queueRef.current.length > 0 && enabledRef.current) {
+      const session = speakSessionRef.current;
       const chunk = queueRef.current.shift();
 
       if (!chunk) {
         continue;
       }
 
-      await playChunk(chunk);
+      await playChunk(chunk, session);
+
+      if (session !== speakSessionRef.current) {
+        break;
+      }
     }
 
     processingRef.current = false;

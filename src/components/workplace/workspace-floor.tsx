@@ -5,8 +5,13 @@ import { useAgentWander } from "@/hooks/use-agent-wander";
 import { cn } from "@/lib/utils";
 import {
   initialWanderAnchorForStaff,
+  OFFICE_WANDER_CONFIG,
   PANTRY_WANDER_CONFIG,
 } from "@/lib/workplace/wander";
+import {
+  STAFF_IDLE_PANTRY_RETURN_CHANCE,
+  STAFF_IDLE_WORKPLACE_VISIT_CHANCE,
+} from "@/lib/workplace/wander-config";
 import { depthZ } from "./iso-projection";
 import {
   PixelMeetingTable,
@@ -165,10 +170,12 @@ export function WorkspaceFloor({
     [desks]
   );
 
-  const { onStaffArrived, reducedMotion, wanderAnchors } = useAgentWander(
-    idlePantryStaffIds,
-    PANTRY_WANDER_CONFIG
-  );
+  const { onStaffArrived, reducedMotion, wanderAnchors, wanderZones } =
+    useAgentWander(idlePantryStaffIds, PANTRY_WANDER_CONFIG, {
+      alternateConfig: OFFICE_WANDER_CONFIG,
+      alternateVisitChance: STAFF_IDLE_WORKPLACE_VISIT_CHANCE,
+      primaryReturnChance: STAFF_IDLE_PANTRY_RETURN_CHANCE,
+    });
 
   return (
     <WorkspaceScene>
@@ -432,7 +439,7 @@ export function WorkspaceFloor({
           );
         })}
 
-        {/* Pantry — idle staff wander from desk */}
+        {/* Idle staff — mostly pantry, occasionally work area */}
         {desks.map((desk, index) => {
           if (
             !desk.staffId ||
@@ -443,15 +450,18 @@ export function WorkspaceFloor({
           }
 
           const slot = workspaceDeskSlot(desk.id);
+          const zone = wanderZones[desk.staffId] ?? "pantry";
+          const wanderConfig =
+            zone === "workplace" ? OFFICE_WANDER_CONFIG : PANTRY_WANDER_CONFIG;
           const anchor =
             wanderAnchors[desk.staffId] ??
-            initialWanderAnchorForStaff(desk.staffId, PANTRY_WANDER_CONFIG);
+            initialWanderAnchorForStaff(desk.staffId, wanderConfig);
 
           return (
             <WorkspaceAgent
               anchor={anchor}
               desk={desk}
-              key={`${desk.id}-pantry-idle`}
+              key={`${desk.id}-idle`}
               motionEnabled={!reducedMotion}
               onSelect={onSelectAgent}
               onStaffArrived={onStaffArrived}

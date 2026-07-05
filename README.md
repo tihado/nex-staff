@@ -132,3 +132,19 @@ Full stack and data flow: [Architecture](docs/ARCHITECTURE.md).
 ## Status
 
 Foundation is in place — auth, database, health check, deploy scaffolding, workplace UI, and core agent flows. See [Roadmap](docs/ROADMAP.md) for what's next.
+
+---
+
+## Contributors
+
+Thanks to everyone who has helped build Nex Staff:
+
+| Contributor | GitHub |
+| ----------- | ------ |
+| Viet-Tien | [@nvti](https://github.com/nvti) |
+| Hong Hanh | [@honghanhh](https://github.com/honghanhh) |
+| NLag | [@NLag](https://github.com/NLag) |
+| Phương Nhi | [@ctpnheee](https://github.com/ctpnheee) |
+| Anh Nguyen | [@anh-nguyen-79](https://github.com/anh-nguyen-79) |
+
+Maintained by [tihado](https://github.com/tihado).

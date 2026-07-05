@@ -1,11 +1,11 @@
 import { DurableAgent } from "@workflow/ai/agent";
-import { google } from "@workflow/ai/google";
 import type { StepResult, ToolSet, UIMessageChunk } from "ai";
 import { getWritable } from "workflow";
 import {
   buildStaffInstructions,
   buildStaffTools,
 } from "@/lib/agents/staff-tools";
+import { getWorkflowLanguageModel } from "@/lib/ai/model";
 import {
   createStaffSandbox,
   destroyStaffSandbox,
@@ -167,7 +167,7 @@ export async function staffTaskWorkflow(taskId: string): Promise<void> {
     const modelId = staff.model ?? DEFAULT_STAFF_MODEL;
     const tools = buildStaffTools(staff, sandboxHandle?.sessionId);
     const agent = new DurableAgent({
-      model: google(modelId),
+      model: getWorkflowLanguageModel(modelId),
       instructions: buildStaffInstructions(staff, sandboxHandle?.manifest),
       tools,
     });

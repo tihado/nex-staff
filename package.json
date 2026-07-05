@@ -9,6 +9,7 @@
     "@iconify/react": "^6.0.2",
     "@neondatabase/serverless": "^1.1.0",
     "@octokit/rest": "^22.0.1",
+    "@openrouter/ai-sdk-provider": "^2.10.0",
     "@vercel/blob": "^2.5.0",
     "@vercel/oidc": "3.2.0",
     "@workflow/ai": "^4.1.2",

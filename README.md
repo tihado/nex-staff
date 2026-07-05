@@ -72,7 +72,7 @@ The goal isn't only faster output. It's making the founder journey **less lonely
 
 **Documents as company memory.** Upload specs, notes, and references to the Archive Room. Staff and the Assistant pull from the same knowledge base so work stays on-brief.
 
-**Real coding staff via Cursor SDK.** Coder staff run on [Cursor Cloud Agent](https://cursor.com) (`@cursor/sdk`) against your GitHub repo — open PRs, preview sites, ship changes without you living in the IDE.
+**Real coding staff via Cursor SDK.** Coder staff run on [Cursor Cloud Agent](https://cursor.com) (`@cursor/sdk`) against your GitHub repo — open PRs, ship changes without you living in the IDE. Live website previews are served via [Cloudflare Workers](https://workers.cloudflare.com/) (per-branch preview URLs; falls back to Cloudflare Pages when Workers is not configured).
 
 **Quality you can trust — eval harness.** Worker output is measured, not assumed. Routing benchmarks, deliverable rubrics, and checkpoint verification ([Eval Framework](docs/EVAL-FRAMEWORK.md)) keep staff reliable as you add roles and scale delegation.
 
@@ -88,7 +88,7 @@ The goal isn't only faster output. It's making the founder journey **less lonely
 | **Hire staff** | On-demand specialists (Writer, Researcher, Coder, …) with role-specific tools |
 | **Delegate async** | Background workflows; progress on the Task Board; ask "how's Alex doing?" anytime |
 | **Documents** | Archive Room + RAG — briefs and references linked to staff |
-| **Coder staff** | Cursor SDK Cloud Agent on your repo; PRs and website previews when done |
+| **Coder staff** | Cursor SDK Cloud Agent on your repo; PRs + live website preview on Cloudflare Workers |
 | **Workspace** | Top-down pixel office — walk the floor, see who's busy, feel like you have a company |
 | **NPC dialogue** | RPG overlay for talking to Assistant and staff — presence, not a dead chat log |
 | **Quest moments** | Done emotes, completion banners, deliverable reveals — celebrate progress, not just store it |
@@ -102,10 +102,11 @@ The goal isn't only faster output. It's making the founder journey **less lonely
 | ----- | ---------- |
 | **Agents** | AI SDK 7 — `ToolLoopAgent` (Assistant), `DurableAgent` + Vercel Workflow (staff tasks) |
 | **Coder staff** | `@cursor/sdk` Cloud Agent on `CODER_GITHUB_REPO_URL` |
+| **Client websites** | [Cloudflare Workers](https://workers.cloudflare.com/) — branch preview URLs for coder deliverables (`CLOUDFLARE_WORKER_NAME`; Pages fallback via `CLOUDFLARE_PAGES_PROJECT_NAME`) |
 | **Documents** | Vercel Blob storage + Neon Postgres / pgvector for search |
 | **Harness** | Eval framework — routing scenarios, deliverable rubrics, checkpoint gates ([docs](docs/EVAL-FRAMEWORK.md)) |
 | **Sandbox** | Vercel Sandbox for Writer deliverables (`@ai-sdk/sandbox-vercel`) |
-| **Models** | Google Gemini (`@ai-sdk/google`) |
+| **Models** | Google Gemini (default) or [OpenRouter](https://openrouter.ai/) — see `LLM_PROVIDER` |
 | **App** | Next.js 16, React 19, Tailwind CSS v4, Better Auth |
 
 Full stack and data flow: [Architecture](docs/ARCHITECTURE.md).

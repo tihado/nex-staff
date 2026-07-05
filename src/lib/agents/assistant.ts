@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { assistant } from "@/db/schema";
 import { ensureEnglishResponseRule } from "@/lib/agents/language";
-import { getGeminiModel } from "@/lib/ai/google";
+import { getLanguageModel } from "@/lib/ai/model";
 import {
   ASSISTANT_MAX_STEPS,
   DEFAULT_ASSISTANT_CONFIG,
@@ -111,7 +111,7 @@ export async function createAssistant(
 
   return new ToolLoopAgent<never, AssistantAgentTools, AssistantRuntimeContext>(
     {
-      model: getGeminiModel(modelId),
+      model: getLanguageModel(modelId),
       instructions,
       tools: assistantTools,
       toolsContext,

@@ -169,10 +169,12 @@ If `.env.local` is missing, recreate it with those three lines.
 - **Dependency install:** use `pnpm install --ignore-scripts`. The `prepare` script runs `lefthook install`, which fails because Cursor manages `core.hooksPath`. `--ignore-scripts` avoids that non-fatal failure and does not skip any needed dependency builds (platform binaries come via optional deps).
 
 ### Secrets and features
-- `GOOGLE_GENERATIVE_AI_API_KEY` (Google AI Studio) powers the core AI features — Assistant chat, hiring staff, and delegating tasks (`staffTaskWorkflow`). Without it, `/api/chat` returns `"Assistant unavailable"` and the server logs `GOOGLE_GENERATIVE_AI_API_KEY is not set`.
+- **LLM provider** — `LLM_PROVIDER` selects the model backend (default: `google`).
+  - **Google (default):** `GOOGLE_GENERATIVE_AI_API_KEY` (Google AI Studio) via `@ai-sdk/google`. Powers Assistant chat, hiring staff, and delegating tasks (`staffTaskWorkflow`). Without it, `/api/chat` returns `"Assistant unavailable"` and the server logs `GOOGLE_GENERATIVE_AI_API_KEY is not set`.
+  - **OpenRouter:** set `LLM_PROVIDER=openrouter` and `OPENROUTER_API_KEY`. Optional `OPENROUTER_DEFAULT_MODEL` (default `google/gemini-2.5-flash`). Bare model ids stored in the DB (e.g. `gemini-3.5-flash`) are mapped to `google/<id>` on OpenRouter; use a full OpenRouter slug (e.g. `anthropic/claude-sonnet-4`) to target other providers.
 - `BLOB_READ_WRITE_TOKEN` (Vercel Blob) powers document upload and staff deliverable persistence.
 - Both keys are read from `process.env` / `.env.local`. They are provided as injected environment secrets, and are also written into `.env.local` so the app picks them up regardless of shell. If a key is rotated, update `.env.local` (or start the dev server from a shell that has the fresh injected value). Auth + non-AI pages work even without these keys.
 - The Vercel Workflow engine runs embedded in `pnpm dev` (no separate service). Vercel Sandbox is bypassed via `SANDBOX_DISABLED=true`.
 
 ### tmux + injected secrets gotcha
-The tmux server captures its environment when first started. If you create the tmux server before secrets are injected, new tmux windows inherit a stale env missing those secrets — the dev server then can't see `GOOGLE_GENERATIVE_AI_API_KEY`. Because the keys are in `.env.local`, Next.js still loads them; but if you rely on shell env, start the dev server from a freshly-created tmux server (or plain shell) that has the injected secrets.
+The tmux server captures its environment when first started. If you create the tmux server before secrets are injected, new tmux windows inherit a stale env missing those secrets — the dev server then can't see `GOOGLE_GENERATIVE_AI_API_KEY` or `OPENROUTER_API_KEY`. Because the keys are in `.env.local`, Next.js still loads them; but if you rely on shell env, start the dev server from a freshly-created tmux server (or plain shell) that has the injected secrets.

@@ -21,13 +21,26 @@ Nex Staff is built directly on **AI SDK 7** — no Eve. Two main agent runtime l
 | Coder workspace   | GitHub repo (`CODER_GITHUB_REPO_URL`) + Cursor Cloud Agent            |
 | Coder preview     | Cloudflare Pages deployment URL for the PR branch                     |
 | Durability        | Vercel Workflow (`workflow`, `@ai-sdk/workflow`)      |
-| Model provider    | Google Gemini (`@ai-sdk/google`)                |
+| Model provider    | Google Gemini (default, `@ai-sdk/google`) or OpenRouter (`@openrouter/ai-sdk-provider`, `LLM_PROVIDER=openrouter`) |
 | Voice (planned)   | Gemini / Google STT + TTS via `/api/voice/*`    |
 | Database          | Neon Postgres + Drizzle ORM + pgvector                |
 | Auth              | Better Auth (Google OAuth)                            |
 | File storage      | Vercel Blob                                           |
 
 > **Deferred (out of scope MVP):** Rate limiting / Upstash Redis — will be added after real usage data is available.
+
+## LLM provider
+
+Assistant and staff workflows resolve models through `src/lib/ai/model.ts`. Default is **Google**; set `LLM_PROVIDER=openrouter` to route through [OpenRouter](https://openrouter.ai/).
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `LLM_PROVIDER` | `google` | `google` or `openrouter` |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | — | Required when provider is Google |
+| `OPENROUTER_API_KEY` | — | Required when provider is OpenRouter |
+| `OPENROUTER_DEFAULT_MODEL` | `google/gemini-2.5-flash` | Default model when provider is OpenRouter and no per-agent override |
+
+Per-agent `model` fields in the DB (Assistant config, staff row) still apply. On OpenRouter, bare ids like `gemini-3.5-flash` are prefixed with `google/`; use a full slug (e.g. `anthropic/claude-sonnet-4`) to pick a non-Google model.
 
 ## Overall Architecture
 
@@ -93,11 +106,11 @@ flowchart TB
 ```typescript
 // lib/agents/assistant.ts
 import { ToolLoopAgent } from "ai";
-import { getGeminiModel } from "@/lib/ai/google";
+import { getLanguageModel } from "@/lib/ai/model";
 
 export function createAssistant(userId: string) {
   return new ToolLoopAgent({
-    model: getGeminiModel(),
+    model: getLanguageModel(),
     instructions: loadAssistantInstructions(userId),
     tools: {
       hire_staff: hireStaffTool,

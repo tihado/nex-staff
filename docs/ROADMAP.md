@@ -20,7 +20,7 @@
 ### Deliverables
 
 - [ ] Init Next.js 16 project with TypeScript, Tailwind CSS v4
-- [ ] Install packages: `ai`, `@ai-sdk/react`, `@ai-sdk/google`, `workflow`, `@workflow/ai`, `@ai-sdk/sandbox-vercel`
+- [ ] Install packages: `ai`, `@ai-sdk/react`, `@ai-sdk/google`, `@openrouter/ai-sdk-provider`, `workflow`, `@workflow/ai`, `@ai-sdk/sandbox-vercel`
 - [ ] Better Auth setup (Google OAuth)
 - [ ] Drizzle ORM + Neon Postgres schema (core tables)
 - [ ] Vercel Blob integration for document upload

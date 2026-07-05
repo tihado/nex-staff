@@ -233,7 +233,7 @@ See [UI-UX.md — Voice in Dialogue](UI-UX.md#voice-in-dialogue-planned).
 
 ## Provider strategy
 
-The project already uses **Google Gemini** (`@ai-sdk/google`).
+Text generation defaults to **Google Gemini** (`@ai-sdk/google`). Set `LLM_PROVIDER=openrouter` to use OpenRouter instead (`@openrouter/ai-sdk-provider`). Voice STT/TTS remains Google-based regardless of `LLM_PROVIDER`.
 
 | Capability | V1 recommendation | Fallback |
 | ---------- | ------------------- | -------- |
@@ -243,8 +243,14 @@ The project already uses **Google Gemini** (`@ai-sdk/google`).
 **Env vars (planned):**
 
 ```bash
-# Existing
+# LLM (text) — Google is default
+LLM_PROVIDER=google
 GOOGLE_GENERATIVE_AI_API_KEY=
+
+# LLM (text) — optional OpenRouter backend
+# LLM_PROVIDER=openrouter
+# OPENROUTER_API_KEY=
+# OPENROUTER_DEFAULT_MODEL=google/gemini-2.5-flash
 
 # Optional V1 — if using Cloud TTS separately
 GOOGLE_CLOUD_TTS_API_KEY=

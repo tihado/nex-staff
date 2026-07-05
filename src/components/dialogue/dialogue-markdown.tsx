@@ -8,6 +8,8 @@ interface DialogueMarkdownProps {
   className?: string;
   content: string;
   isAnimating?: boolean;
+  /** Render markdown in static mode (e.g. deliverable previews). */
+  parseMarkdown?: boolean;
   variant?: "assistant" | "user";
 }
 
@@ -83,6 +85,7 @@ export function DialogueMarkdown({
   content,
   isAnimating = false,
   className,
+  parseMarkdown = false,
   variant = "assistant",
 }: DialogueMarkdownProps) {
   if (!content.trim()) {
@@ -96,7 +99,7 @@ export function DialogueMarkdown({
 
   // Scripted hire lines and other static dialogue — plain text avoids Streamdown
   // fade-in blocks that can leave the NPC box visually empty.
-  if (!isAnimating) {
+  if (!(isAnimating || parseMarkdown)) {
     return <p className={cn(classNames, "whitespace-pre-wrap")}>{content}</p>;
   }
 
@@ -110,9 +113,9 @@ export function DialogueMarkdown({
         mermaid: false,
         table: false,
       }}
-      isAnimating
+      isAnimating={isAnimating}
       lineNumbers={false}
-      mode="streaming"
+      mode={isAnimating ? "streaming" : "static"}
     >
       {content}
     </Streamdown>

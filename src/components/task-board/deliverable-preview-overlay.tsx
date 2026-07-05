@@ -155,7 +155,7 @@ export function DeliverablePreviewOverlay({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-sm border-[3px] border-wood bg-[#fff9c4]/40 p-3 sm:p-4">
-            <DialogueMarkdown content={previewBody} />
+            <DialogueMarkdown content={previewBody} parseMarkdown />
           </div>
 
           <div className="pixel-button-row shrink-0 border-wood border-t-[3px] pt-3">

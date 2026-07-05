@@ -290,7 +290,7 @@ interface TaskMetadata {
 
 ### `task_event`
 
-Append-only progress log cho task observability.
+Append-only progress log for task observability.
 
 **Event types** (non-exhaustive):
 
@@ -317,7 +317,7 @@ export const taskEvent = pgTable("task_event", {
 
 ### `task_checkpoint`
 
-Planned milestones — Assistant tạo khi delegate; worker báo cáo qua `checkpoint.reached` events.
+Planned milestones — Assistant creates when delegating; worker reports via `checkpoint.reached` events.
 
 ```typescript
 export const checkpointStatusEnum = pgEnum("checkpoint_status", [
@@ -347,7 +347,7 @@ export const taskCheckpoint = pgTable("task_checkpoint", {
 
 ### `task_preview`
 
-Draft output tạm — cập nhật khi agent stream text, trước khi finalize deliverable.
+Temporary draft output — updated when agent streams text, before finalizing deliverable.
 
 ```typescript
 export const taskPreview = pgTable("task_preview", {
@@ -363,7 +363,7 @@ export const taskPreview = pgTable("task_preview", {
 
 ### `notification`
 
-Queue thông báo cho Assistant và UI — track đã báo user chưa.
+Notification queue for Assistant and UI — tracks whether user has been notified.
 
 ```typescript
 export const notificationStatusEnum = pgEnum("notification_status", [
@@ -596,7 +596,7 @@ async function searchDocuments(
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — How data flows through the system
 - [API.md](API.md) — REST endpoints using these tables

@@ -1,15 +1,15 @@
 # Voice Chat — Nex Staff
 
-## Mục tiêu
+## Goals
 
-Thêm **voice input/output** vào RPG dialogue — user nói với Assistant/Staff như NPC trong game, không biến Nex Staff thành chat app thông thường.
+Add **voice input/output** to RPG dialogue — the user speaks with the Assistant/Staff like NPCs in a game, without turning Nex Staff into a conventional chat app.
 
-**Nguyên tắc:**
+**Principles:**
 
-- Voice **bổ sung** text dialogue, không thay thế hoàn toàn
-- Một luồng agent duy nhất: STT → text → `POST /api/chat` (hiện tại) → TTS
-- Giữ immersion: typewriter NPC lines + optional voice readback; push-to-talk mặc định
-- Staff async workflow **không** đổi — voice chỉ áp dụng lớp Assistant dialogue sync
+- Voice **supplements** text dialogue; it does not fully replace it
+- A single agent flow: STT → text → `POST /api/chat` (current) → TTS
+- Preserve immersion: typewriter NPC lines + optional voice readback; push-to-talk by default
+- Staff async workflow **unchanged** — voice applies only to the sync Assistant dialogue layer
 
 **Phases:** V1 (Phase 2) push-to-talk + TTS readback · V2 (Phase 3) streaming + chiptune SFX · V3 (TBD) duplex live session
 
@@ -19,17 +19,17 @@ Thêm **voice input/output** vào RPG dialogue — user nói với Assistant/Sta
 
 | ID     | Story                                                                                         | Acceptance criteria                                              |
 | ------ | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| VC-01  | Là user, tôi giữ nút mic và nói brief task thay vì gõ                                        | STT → text hiện trong dialogue input → submit như keyboard       |
-| VC-02  | Là user, tôi nghe Assistant đọc dialogue line sau typewriter                                  | TTS phát sau line complete; có thể tắt trong settings            |
-| VC-03  | Là user, tôi chọn choice bằng giọng ("A", "Yes") khi menu hiện                               | STT map tới choice label/shortcut trong `player-choice`          |
-| VC-04  | Là user, tôi thấy trạng thái mic rõ ràng (idle / listening / processing)                      | Pixel mic indicator; không ghi khi Assistant đang stream         |
-| VC-05  | Là user, transcript vẫn lưu trong chat log như text message                                   | `chat` / `chat_message` persistence không đổi                    |
+| VC-01  | As a user, I hold the mic button and speak a brief task instead of typing                     | STT → text appears in dialogue input → submit like keyboard      |
+| VC-02  | As a user, I hear the Assistant read the dialogue line after the typewriter                   | TTS plays after line complete; can be disabled in settings       |
+| VC-03  | As a user, I select a choice by voice ("A", "Yes") when the menu is shown                     | STT maps to choice label/shortcut in `player-choice`             |
+| VC-04  | As a user, I see clear mic status (idle / listening / processing)                             | Pixel mic indicator; no recording while Assistant is streaming     |
+| VC-05  | As a user, the transcript is still saved in the chat log like a text message                  | `chat` / `chat_message` persistence unchanged                      |
 
 ---
 
-## Kiến trúc
+## Architecture
 
-Voice là **adapter layer** trên dialogue hiện có — không fork agent runtime.
+Voice is an **adapter layer** on top of the existing dialogue — no fork of the agent runtime.
 
 ```mermaid
 flowchart TB
@@ -64,19 +64,19 @@ flowchart TB
     Speak --> GeminiTTS
 ```
 
-### Luồng V1 (push-to-talk)
+### V1 flow (push-to-talk)
 
-1. User giữ **mic** trong `player-input` hoặc `player-choice`
-2. Browser ghi audio (WebM/Opus) → `POST /api/voice/transcribe` với `chatId`, `locale?`
-3. Server trả `{ text, confidence? }` → điền `DialogueInput` hoặc auto-submit nếu user bật
-4. `sendMessage` qua transport hiện tại → `/api/chat` (không đổi contract agent)
-5. Khi NPC line typewriter xong → optional `POST /api/voice/speak` → phát audio qua `HTMLAudioElement`
+1. User holds **mic** in `player-input` or `player-choice`
+2. Browser records audio (WebM/Opus) → `POST /api/voice/transcribe` with `chatId`, `locale?`
+3. Server returns `{ text, confidence? }` → fills `DialogueInput` or auto-submits if the user enabled it
+4. `sendMessage` via the current transport → `/api/chat` (agent contract unchanged)
+5. When NPC line typewriter completes → optional `POST /api/voice/speak` → play audio via `HTMLAudioElement`
 
-### Tại sao không gửi audio thẳng vào `/api/chat`?
+### Why not send audio directly to `/api/chat`?
 
-- Assistant tools, persistence, và `ToolLoopAgent` đã chuẩn hóa trên **UIMessage text**
-- Tách STT/TTS giữ boundary rõ, dễ test, dễ swap provider
-- Phase 3 có thể thêm **Gemini Live** session riêng nếu cần duplex — vẫn sync transcript về `chat`
+- Assistant tools, persistence, and `ToolLoopAgent` are standardized on **UIMessage text**
+- Separating STT/TTS keeps boundaries clear, easy to test, easy to swap providers
+- Phase 3 can add a separate **Gemini Live** session if duplex is needed — still sync transcript back to `chat`
 
 ---
 
@@ -86,39 +86,39 @@ flowchart TB
 
 | Area        | Deliverable                                                                 |
 | ----------- | --------------------------------------------------------------------------- |
-| Input       | Push-to-talk mic trên `DialogueInput`; transcript preview trước send       |
-| Output      | TTS readback cho NPC lines (`npc-speaking`); user toggle global           |
+| Input       | Push-to-talk mic on `DialogueInput`; transcript preview before send         |
+| Output      | TTS readback for NPC lines (`npc-speaking`); global user toggle             |
 | API         | `POST /api/voice/transcribe`, `POST /api/voice/speak`                       |
-| UX          | Mic states: idle / listening / transcribing; disable khi `isBusy`         |
-| Persistence | Lưu text transcript only (giống typed message)                              |
+| UX          | Mic states: idle / listening / transcribing; disabled when `isBusy`         |
+| Persistence | Save text transcript only (same as typed message)                            |
 | Surfaces    | `DialogueOverlay` (Reception, staff, task-scoped assistant panel)           |
 
-**Không làm V1:**
+**Out of scope for V1:**
 
 - Always-on listening / wake word
-- Voice cho Archive Room, Task Board (text-only overlays)
+- Voice for Archive Room, Task Board (text-only overlays)
 - Staff workflow voice (async layer)
 
-### V2 — Polish (Phase 3, cùng chiptune SFX)
+### V2 — Polish (Phase 3, alongside chiptune SFX)
 
 | Area     | Deliverable                                                              |
 | -------- | ------------------------------------------------------------------------ |
 | Input    | Streaming partial transcript; voice choice selection                     |
-| Output   | Sentence-chunk TTS during stream (bắt đầu sau first sentence)            |
+| Output   | Sentence-chunk TTS during stream (starts after first sentence)           |
 | Audio UX | Chiptune blip SFX mic on/off; optional 8-bit voice filter post-processing |
 | Settings | Per-user prefs: `voiceInputEnabled`, `voiceOutputEnabled`, `locale`      |
 
 ### V3 — Live session (TBD)
 
-- Gemini Live API hoặc WebRTC duplex cho “phone call với Assistant”
-- Interrupt barge-in khi user nói trong lúc TTS
-- Đánh giá cost/latency trước khi commit
+- Gemini Live API or WebRTC duplex for a “phone call with the Assistant”
+- Interrupt barge-in when the user speaks during TTS
+- Evaluate cost/latency before committing
 
 ---
 
-## Cấu trúc thư mục (đề xuất)
+## Directory structure (proposed)
 
-Khớp layout hiện tại (`components/dialogue`, `hooks`, `lib`, `app/api`):
+Matches the current layout (`components/dialogue`, `hooks`, `lib`, `app/api`):
 
 ```
 src/
@@ -144,7 +144,7 @@ src/
 
 | File | Change |
 | ---- | ------ |
-| `dialogue-input.tsx` | Render `VoiceControl`; merge STT text vào textarea |
+| `dialogue-input.tsx` | Render `VoiceControl`; merge STT text into textarea |
 | `use-dialogue-engine.ts` | Optional callback `onNpcLineComplete` → trigger TTS |
 | `dialogue-overlay.tsx` | Wire `useVoiceOutput`; stop TTS on close/Esc |
 | `choice-menu.tsx` | Optional voice pick via STT → `selectChoice` |
@@ -154,7 +154,7 @@ src/
 
 ## API (planned)
 
-Chi tiết REST bổ sung vào [API.md](API.md#voice-planned).
+REST details to be added to [API.md](API.md#voice-planned).
 
 ### `POST /api/voice/transcribe`
 
@@ -172,9 +172,9 @@ Chi tiết REST bổ sung vào [API.md](API.md#voice-planned).
 
 ```json
 {
-  "text": "Viết blog về AI agents cho startup founders",
+  "text": "Write a blog post about AI agents for startup founders",
   "durationMs": 4200,
-  "locale": "vi"
+  "locale": "en-US"
 }
 ```
 
@@ -186,9 +186,9 @@ Chi tiết REST bổ sung vào [API.md](API.md#voice-planned).
 
 ```json
 {
-  "text": "Đã giao cho Alex. Bạn có thể tiếp tục chat.",
+  "text": "Delegated to Alex. You can continue chatting.",
   "speakerId": "assistant",
-  "locale": "vi"
+  "locale": "en-US"
 }
 ```
 
@@ -200,7 +200,7 @@ Chi tiết REST bổ sung vào [API.md](API.md#voice-planned).
 
 ## UI/UX
 
-Xem [UI-UX.md — Voice in Dialogue](UI-UX.md#voice-in-dialogue-planned).
+See [UI-UX.md — Voice in Dialogue](UI-UX.md#voice-in-dialogue-planned).
 
 | State           | Mic                         | TTS                                    |
 | --------------- | --------------------------- | -------------------------------------- |
@@ -209,13 +209,13 @@ Xem [UI-UX.md — Voice in Dialogue](UI-UX.md#voice-in-dialogue-planned).
 | `player-input`  | Push-to-talk + text field   | Disabled                               |
 | `isBusy`        | Disabled                    | Queue or skip until stream ends        |
 
-**Pixel mic button** — cùng design system `#16`:
+**Pixel mic button** — same design system `#16`:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  ▼ Boss (bạn)                                    │
+│  ▼ Hi boss                                       │
 │  [transcript preview while holding mic...]         │
-│                              [🎤] [Gửi ▶] [📎]   │
+│                              [🎤] [Send ▶] [📎]   │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -227,13 +227,13 @@ Xem [UI-UX.md — Voice in Dialogue](UI-UX.md#voice-in-dialogue-planned).
 
 - Keyboard-only path unchanged
 - `aria-pressed` on mic; live region for transcript
-- Captions: dialogue text vẫn hiển thị (voice không thay thế visual)
+- Captions: dialogue text still displayed (voice does not replace visual)
 
 ---
 
 ## Provider strategy
 
-Project đã dùng **Google Gemini** (`@ai-sdk/google`).
+The project already uses **Google Gemini** (`@ai-sdk/google`).
 
 | Capability | V1 recommendation | Fallback |
 | ---------- | ------------------- | -------- |
@@ -274,7 +274,7 @@ interface VoicePreferences {
 }
 ```
 
-**Không lưu raw audio** in V1 (privacy + storage). Optional debug flag in dev only.
+**Do not store raw audio** in V1 (privacy + storage). Optional debug flag in dev only.
 
 ---
 
@@ -299,7 +299,7 @@ interface UseVoiceSessionResult {
 }
 ```
 
-Hook compose trong `DialogueOverlayPanel` — không đặt logic voice trong `ToolLoopAgent`.
+Hook composed in `DialogueOverlayPanel` — do not put voice logic inside `ToolLoopAgent`.
 
 ---
 
@@ -340,7 +340,7 @@ Hook compose trong `DialogueOverlayPanel` — không đặt logic voice trong `T
 
 ---
 
-## Phụ thuộc
+## Dependencies
 
 | Dependency | Required by |
 | ---------- | ----------- |
@@ -350,7 +350,7 @@ Hook compose trong `DialogueOverlayPanel` — không đặt logic voice trong `T
 | Google STT/TTS or Gemini audio | V1 |
 | Chiptune SFX (#ROADMAP Phase 3) | V2 polish |
 
-## Tài liệu liên quan
+## Related docs
 
 - [UI-UX.md](UI-UX.md) — Dialogue states, immersion rules
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Client/API layers

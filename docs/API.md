@@ -2,11 +2,11 @@
 
 ## Overview
 
-Nex Staff API gồm REST endpoints (Next.js Route Handlers) và SSE events cho real-time notifications. Tất cả endpoints yêu cầu authenticated session (Better Auth) trừ workflow webhook.
+The Nex Staff API comprises REST endpoints (Next.js Route Handlers) and SSE events for real-time notifications. All endpoints require an authenticated session (Better Auth) except the workflow webhook.
 
 **Base URL:** `/api`
 
-**Auth:** Session cookie từ Better Auth. Check via `getServerViewer()`.
+**Auth:** Session cookie from Better Auth. Check via `getServerViewer()`.
 
 ---
 
@@ -31,7 +31,7 @@ Stream assistant response. Primary endpoint for `useChat`.
 ```json
 {
   "id": "chat-uuid",
-  "messages": [{ "role": "user", "content": "Viết blog về AI agents" }]
+  "messages": [{ "role": "user", "content": "Write a blog post about AI agents" }]
 }
 ```
 
@@ -135,10 +135,10 @@ Called by `hire_staff` tool or directly.
   "tasks": [
     {
       "id": "uuid",
-      "brief": "Viết blog về AI agents",
+      "brief": "Write a blog post about AI agents",
       "status": "running",
       "progressPercent": 45,
-      "currentStep": "Đang viết phần mở đầu...",
+      "currentStep": "Writing the introduction...",
       "lastEventAt": "2026-07-04T10:08:30Z",
       "staff": { "id": "uuid", "name": "Alex", "role": "Content Writer" },
       "workflowRunId": "wrun_xxx",
@@ -250,7 +250,7 @@ Tools available to `ToolLoopAgent` (Assistant). Defined in `lib/tools/`.
 
 ### `search_documents`
 
-RAG query trên user's documents.
+RAG query over user's documents.
 
 ```typescript
 {
@@ -269,7 +269,7 @@ RAG query trên user's documents.
 
 ### `create_document`
 
-Tạo tài liệu mới từ nội dung agent generate.
+Create a new document from agent-generated content.
 
 ```typescript
 {
@@ -285,7 +285,7 @@ Tạo tài liệu mới từ nội dung agent generate.
 
 ### `web_research`
 
-Search và summarize từ internet.
+Search and summarize from the internet.
 
 ```typescript
 {
@@ -300,7 +300,7 @@ Search và summarize từ internet.
 
 ### `hire_staff`
 
-Tạo staff profile mới.
+Create a new staff profile.
 
 ```typescript
 {
@@ -319,7 +319,7 @@ Tạo staff profile mới.
 
 ### `delegate_task`
 
-Giao việc cho staff — fire-and-forget. Assistant có thể kèm checkpoints và acceptance criteria.
+Delegate to staff — fire-and-forget. Assistant may include checkpoints and acceptance criteria.
 
 ```typescript
 {
@@ -342,7 +342,7 @@ Giao việc cho staff — fire-and-forget. Assistant có thể kèm checkpoints 
 
 ### `list_staff`
 
-Trả về roster staff.
+Returns staff roster.
 
 ```typescript
 {
@@ -356,7 +356,7 @@ Trả về roster staff.
 
 ### `check_task_status`
 
-Snapshot đầy đủ: status, progress, current step, recent events, preview excerpt.
+Full snapshot: status, progress, current step, recent events, preview excerpt.
 
 ```typescript
 {
@@ -371,7 +371,7 @@ Snapshot đầy đủ: status, progress, current step, recent events, preview ex
 
 ### `list_active_tasks`
 
-Tasks đang chạy + vừa hoàn thành chưa thông báo.
+Running tasks + recently completed tasks not yet notified.
 
 ```typescript
 {
@@ -383,7 +383,7 @@ Tasks đang chạy + vừa hoàn thành chưa thông báo.
 
 ### `get_task_events`
 
-Nhật ký chi tiết từng bước (paginated).
+Detailed step-by-step log (paginated).
 
 ```typescript
 {
@@ -398,7 +398,7 @@ Nhật ký chi tiết từng bước (paginated).
 
 ### `get_task_preview`
 
-Draft output tạm thời.
+Temporary draft output.
 
 ```typescript
 {
@@ -426,7 +426,7 @@ Fetch completed work.
 
 ### `verify_checkpoint`
 
-Verify planned checkpoint — so evidence vs criteria, LLM judge pass/fail.
+Verify planned checkpoint — score evidence vs criteria, LLM judge pass/fail.
 
 ```typescript
 {
@@ -442,7 +442,7 @@ Verify planned checkpoint — so evidence vs criteria, LLM judge pass/fail.
 
 ### `review_deliverable`
 
-Chấm deliverable vs `acceptanceCriteria` trong task metadata.
+Score deliverable vs `acceptanceCriteria` in task metadata.
 
 ```typescript
 {
@@ -457,7 +457,7 @@ Chấm deliverable vs `acceptanceCriteria` trong task metadata.
 
 ### `revise_task`
 
-Gửi feedback cho worker đang chạy hoặc spawn revision task.
+Send feedback to running worker or spawn revision task.
 
 ```typescript
 {
@@ -498,7 +498,7 @@ Client connects via `GET /api/notifications` (EventSource).
 | ---------------- | ------------------------------------------- | --------------------------------- |
 | `message.delta`  | `{ text: string }`                          | Assistant streaming (via useChat) |
 | `task.started`    | `{ taskId, staffName, staffRole }`                    | Task dispatched to workflow        |
-| `task.progress`   | `{ taskId, progressPercent, currentStep, preview?, checkpointId? }`  | Mỗi `reportProgress` step          |
+| `task.progress`   | `{ taskId, progressPercent, currentStep, preview?, checkpointId? }`  | Each `reportProgress` step          |
 | `task.checkpoint` | `{ taskId, checkpointId, label, status }`                            | Checkpoint reached/verified/failed |
 | `task.completed`  | `{ taskId, deliverableId, title, preview }`           | Workflow finished successfully     |
 | `task.failed`     | `{ taskId, error }`                                   | Workflow or agent error            |
@@ -555,7 +555,7 @@ Voice endpoints are **adapters** — they do not replace `POST /api/chat`. Clien
 
 ```json
 {
-  "text": "Viết blog về AI agents",
+  "text": "Write a blog post about AI agents",
   "durationMs": 3200,
   "locale": "vi"
 }
@@ -567,7 +567,7 @@ Voice endpoints are **adapters** — they do not replace `POST /api/chat`. Clien
 
 ```json
 {
-  "text": "Đã giao cho Alex.",
+  "text": "Delegated to Alex.",
   "speakerId": "assistant",
   "locale": "vi"
 }
@@ -601,7 +601,7 @@ Standard error format:
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Implementation details
 - [VOICE-CHAT.md](VOICE-CHAT.md) — Voice STT/TTS plan

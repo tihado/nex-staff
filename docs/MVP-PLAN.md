@@ -1,32 +1,32 @@
 # MVP Plan — Nex Staff
 
-## Mục tiêu
+## Goals
 
-Ship MVP cho solo founder với **5 trụ cột**:
+Ship MVP for solo founder with **5 pillars**:
 
-1. **Assistant** — trò chuyện về project, thêm & lưu tài liệu
-2. **Hire** — tuyển 1 agent mới (preset template)
-3. **Delegate** — giao việc, theo dõi tiến độ, thông báo hoàn thành, xem kết quả
-4. **Workplace** — sàn làm việc pixel, agent ngồi bàn, phòng lưu tài liệu
-5. **UI 8-bit thống nhất** — toàn app một visual language game retro; không chat app / dashboard
+1. **Assistant** — discuss project, add & save documents
+2. **Hire** — recruit one new agent (preset template)
+3. **Delegate** — assign tasks, track progress, notify on completion, view results
+4. **Workplace** — pixel workspace floor, agents at desks, document archive room
+5. **Unified 8-bit UI** — entire app shares one retro game visual language; not a chat app / dashboard
 
-> **UI là first-class.** Mọi feature issue (#5, #8, #9…) phải build trên [#16 Design System](https://github.com/tihado/nex-staff/issues/16). Không dùng shadcn/default chat patterns cho màn hình chính.
+> **UI is first-class.** Every feature issue (#5, #8, #9…) must build on [#16 Design System](https://github.com/tihado/nex-staff/issues/16). Do not use shadcn/default chat patterns for the main screen.
 
 ## Out of scope (MVP)
 
-- RAG / pgvector (chỉ lưu file + metadata, search sau)
-- Nhiều preset staff (MVP: 1 template Writer)
-- Slash commands đầy đủ
+- RAG / pgvector (store files + metadata only; search later)
+- Multiple preset staff (MVP: 1 Writer template)
+- Full slash commands
 - Team / billing / rate limiting
 
 ## In scope (MVP) — Vercel Sandbox
 
-- **Bắt buộc** cho staff execution — [#17](https://github.com/tihado/nex-staff/issues/17)
-- Per-task `createVercelSandbox`, seed docs từ Archive, sandbox file/shell tools
-- Writer preset: `useSandbox: true` (đọc brief, ghi draft `.md`, upload deliverable)
-- Progress events `sandbox.creating` / `sandbox.created` + pixel "chuẩn bị..." UI
+- **Required** for staff execution — [#17](https://github.com/tihado/nex-staff/issues/17)
+- Per-task `createVercelSandbox`, seed docs from Archive, sandbox file/shell tools
+- Writer preset: `useSandbox: true` (read brief, write draft `.md`, upload deliverable)
+- Progress events `sandbox.creating` / `sandbox.created` + pixel "preparing..." UI
 
-## Kiến trúc MVP
+## MVP Architecture
 
 ```
 Workplace (home)
@@ -45,14 +45,14 @@ Staff (DurableAgent + Workflow, async)
 
 ## Phases & Issues
 
-| Phase | Tuần | Issues | Exit criteria |
+| Phase | Week | Issues | Exit criteria |
 |-------|------|--------|---------------|
 | 0 Foundation | 1 | [#3](https://github.com/tihado/nex-staff/issues/3)–[#4](https://github.com/tihado/nex-staff/issues/4) | Login, DB, deploy |
 | **0.5 UI Foundation** | 1 | [#16](https://github.com/tihado/nex-staff/issues/16) | Tokens + pixel components + `/design-system` demo |
 | 1 Assistant + Docs | 1–2 | [#5](https://github.com/tihado/nex-staff/issues/5)–[#7](https://github.com/tihado/nex-staff/issues/7) | Dialogue + upload doc |
 | 2 Workplace | 2 | [#8](https://github.com/tihado/nex-staff/issues/8)–[#9](https://github.com/tihado/nex-staff/issues/9) | Floor view + archive room |
 | 3 Hire | 2–3 | [#10](https://github.com/tihado/nex-staff/issues/10)–[#11](https://github.com/tihado/nex-staff/issues/11) | Hire 1 Writer |
-| 4 Delegate loop | 3–4 | [#12](https://github.com/tihado/nex-staff/issues/12)–[#15](https://github.com/tihado/nex-staff/issues/15), [#17](https://github.com/tihado/nex-staff/issues/17) | Sandbox + giao việc → progress → xong → xem kết quả |
+| 4 Delegate loop | 3–4 | [#12](https://github.com/tihado/nex-staff/issues/12)–[#15](https://github.com/tihado/nex-staff/issues/15), [#17](https://github.com/tihado/nex-staff/issues/17) | Sandbox + delegate → progress → complete → view result |
 
 **Epic:** [#2 MVP — Nex Staff platform](https://github.com/tihado/nex-staff/issues/2)
 
@@ -126,17 +126,17 @@ flowchart TD
 
 ## Definition of Done (MVP)
 
-- [ ] User login Google → vào Workplace (**pixel chrome**, không default Next.js page)
-- [ ] Mọi overlay dùng `PixelPanel` / shared tokens — không one-off styles
-- [ ] Click Reception → dialogue với Assistant về project
-- [ ] Upload PDF/MD → hiện trong Archive Room; Assistant biết file đã lưu
-- [ ] Hire Content Writer qua dialogue → sprite xuất hiện tại desk
-- [ ] "Viết blog về X" → delegate → sandbox spin-up → desk chuyển `working`
-- [ ] Progress hiện `sandbox.creating` / steps; deliverable từ file trong sandbox
-- [ ] Task Board hiện progress %; user hỏi Assistant "tiến độ thế nào" → trả lời được
-- [ ] Task xong → desk `!` + dialogue cutscene + xem deliverable
+- [ ] User logs in with Google → enters Workplace (**pixel chrome**, not default Next.js page)
+- [ ] Every overlay uses `PixelPanel` / shared tokens — no one-off styles
+- [ ] Click Reception → dialogue with Assistant about project
+- [ ] Upload PDF/MD → appears in Archive Room; Assistant knows file was saved
+- [ ] Hire Content Writer via dialogue → sprite appears at desk
+- [ ] "Write a blog about X" → delegate → sandbox spin-up → desk switches to `working`
+- [ ] Progress shows `sandbox.creating` / steps; deliverable from file in sandbox
+- [ ] Task Board shows progress %; user asks Assistant "how's progress?" → gets an answer
+- [ ] Task complete → desk `!` + dialogue cutscene + view deliverable
 
-## Tài liệu tham chiếu
+## Related docs
 
 - [PRD.md](PRD.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)

@@ -1,13 +1,13 @@
-# Kiến trúc kỹ thuật — Nex Staff
+# Technical Architecture — Nex Staff
 
-## Tổng quan
+## Overview
 
-Nex Staff build trực tiếp trên **AI SDK 7** — không dùng Eve. Hai lớp agent runtime chính:
+Nex Staff is built directly on **AI SDK 7** — no Eve. Two main agent runtime layers:
 
 1. **Assistant** (`ToolLoopAgent`) — sync, streaming, conversational
 2. **Staff** — async, background, durable:
    - **Writer / sandbox staff:** `DurableAgent` + Vercel Workflow + Vercel Sandbox
-   - **Coder staff:** Cursor SDK Cloud Agent (`@cursor/sdk`) trên GitHub repo đã cấu hình
+   - **Coder staff:** Cursor SDK Cloud Agent (`@cursor/sdk`) on a configured GitHub repo
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ Nex Staff build trực tiếp trên **AI SDK 7** — không dùng Eve. Hai lớp
 | Frontend          | Next.js 16 App Router, React 19, Tailwind CSS v4      |
 | Agent framework   | AI SDK 7 (`ai`, `@ai-sdk/react`)                      |
 | Assistant runtime | `ToolLoopAgent` + `streamText`                        |
-| Staff runtime     | `DurableAgent` (`@workflow/ai`) hoặc Cursor SDK Cloud (`@cursor/sdk`) |
+| Staff runtime     | `DurableAgent` (`@workflow/ai`) or Cursor SDK Cloud (`@cursor/sdk`) |
 | Sandbox           | `@ai-sdk/sandbox-vercel` — `createVercelSandbox()` (writer staff)     |
 | Coder workspace   | GitHub repo (`CODER_GITHUB_REPO_URL`) + Cursor Cloud Agent            |
 | Coder preview     | Cloudflare Pages deployment URL for the PR branch                     |
@@ -27,9 +27,9 @@ Nex Staff build trực tiếp trên **AI SDK 7** — không dùng Eve. Hai lớp
 | Auth              | Better Auth (Google OAuth)                            |
 | File storage      | Vercel Blob                                           |
 
-> **Tạm hoãn (out of scope MVP):** Rate limiting / Upstash Redis — sẽ thêm sau khi có usage data thực tế.
+> **Deferred (out of scope MVP):** Rate limiting / Upstash Redis — will be added after real usage data is available.
 
-## Kiến trúc tổng thể
+## Overall Architecture
 
 ```mermaid
 flowchart TB
@@ -78,15 +78,15 @@ flowchart TB
 
 ## Agent Runtime Layers
 
-### Lớp 1 — Assistant (sync, streaming)
+### Layer 1 — Assistant (sync, streaming)
 
-`ToolLoopAgent` xử lý mọi tương tác real-time với user.
+`ToolLoopAgent` handles all real-time interactions with the user.
 
 **Responsibilities:**
 
-- Chat streaming qua `assistant.stream({ messages })` → `useChat` client
+- Chat streaming via `assistant.stream({ messages })` → `useChat` client
 - Tools: hire, delegate, RAG, web research, list staff, check status
-- Không block khi delegate — fire-and-forget qua `start(staffTaskWorkflow)`
+- Does not block on delegate — fire-and-forget via `start(staffTaskWorkflow)`
 
 **Implementation pattern:**
 
@@ -128,16 +128,16 @@ export async function POST(req: Request) {
 }
 ```
 
-### Lớp 2 — Staff (async, durable)
+### Layer 2 — Staff (async, durable)
 
-Mỗi delegated task = một Vercel Workflow run chứa `DurableAgent`.
+Each delegated task = one Vercel Workflow run containing `DurableAgent`.
 
 **Responsibilities:**
 
-- Execute task brief với staff-specific instructions, skills, tools
-- **Report progress** qua `reportProgress` sau mỗi workflow/agent step
-- Append draft text vào `task_preview` khi agent stream
-- Save deliverable; enqueue `notification` + SSE khi xong
+- Execute task brief with staff-specific instructions, skills, tools
+- **Report progress** via `reportProgress` after each workflow/agent step
+- Append draft text to `task_preview` when the agent streams
+- Save deliverable; enqueue `notification` + SSE when complete
 
 **Implementation pattern:**
 
@@ -209,7 +209,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 export const delegateTaskTool = tool({
-  description: "Giao việc cho staff agent. Staff sẽ làm việc nền.",
+  description: "Delegate a task to a staff agent. Staff will work in the background.",
   inputSchema: z.object({
     staffId: z.string(),
     brief: z.string(),
@@ -246,13 +246,13 @@ export const delegateTaskTool = tool({
     return {
       taskId: task.id,
       staffName: staff?.name,
-      message: `Đã giao việc cho ${staff?.name}. Bạn có thể tiếp tục chat.`,
+      message: `Task delegated to ${staff?.name}. You can continue chatting.`,
     };
   },
 });
 ```
 
-## Luồng dữ liệu chính
+## Main Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -263,25 +263,25 @@ sequenceDiagram
     participant S as DurableAgent
     participant SB as VercelSandbox
 
-    U->>A: "Viết bài blog về AI agents"
-    A->>DB: Tìm staff phù hợp
-    alt Có Content Writer
+    U->>A: "Write a blog post about AI agents"
+    A->>DB: Find suitable staff
+    alt Has Content Writer
         A->>W: start(staffTaskWorkflow)
-        A->>U: "Đã giao cho Alex. Bạn có thể tiếp tục chat."
-        W->>SB: createVercelSandbox nếu cần
+        A->>U: "Delegated to Alex. You can continue chatting."
+        W->>SB: createVercelSandbox if needed
         W->>S: DurableAgent.stream(brief)
-    else Chưa có
-        A->>U: "Bạn cần hire Content Writer không?"
-        U->>A: "Có, tone casual"
+    else Not yet hired
+        A->>U: "Do you want to hire a Content Writer?"
+        U->>A: "Yes, casual tone"
         A->>DB: hire_staff(profile)
         A->>W: start(staffTaskWorkflow)
     end
     S-->>W: result
-    W->>DB: Lưu deliverable
+    W->>DB: Save deliverable
     W->>U: SSE notification
 ```
 
-## Cấu trúc thư mục (đề xuất)
+## Directory Structure (proposed)
 
 ```
 nex-staff/
@@ -322,18 +322,18 @@ nex-staff/
 └── docs/
 ```
 
-## Patterns từ co-agent (reference only)
+## Patterns from co-agent (reference only)
 
-Tái sử dụng **patterns**, không import Eve:
+Reuse **patterns**, do not import Eve:
 
 | Pattern                      | Nex Staff implementation                          |
 | ---------------------------- | ------------------------------------------------- |
 | Event-sourced chat           | `chat` + `chat_event` tables                      |
-| DB-stored agent profiles     | `staff` table với instructions/skills/tools JSON  |
-| Better Auth + Drizzle + Neon | Giữ nguyên stack                                  |
-| Dynamic per-turn config      | Load staff profile từ DB khi build `DurableAgent` |
+| DB-stored agent profiles     | `staff` table with instructions/skills/tools JSON |
+| Better Auth + Drizzle + Neon | Same stack                                        |
+| Dynamic per-turn config      | Load staff profile from DB when building `DurableAgent` |
 
-**Khác biệt:**
+**Differences:**
 
 | co-agent                    | Nex Staff                   |
 | --------------------------- | --------------------------- |
@@ -344,29 +344,29 @@ Tái sử dụng **patterns**, không import Eve:
 
 ## Sandbox Strategy
 
-| Staff type     | `useSandbox` | Lý do                                     |
-| -------------- | ------------ | ----------------------------------------- |
-| Content Writer | `true` (MVP) | Đọc brief từ Archive, ghi draft `.md` trong workspace |
-| Researcher     | `false`      | Web search + summarize (post-MVP)         |
-| Data Analyst   | `true`       | Cần chạy scripts, xử lý CSV               |
-| Code Reviewer  | `true`       | File read/write trong workspace           |
+| Staff type     | `useSandbox` | Rationale                                      |
+| -------------- | ------------ | ---------------------------------------------- |
+| Content Writer | `true` (MVP) | Read brief from Archive, write draft `.md` in workspace |
+| Researcher     | `false`      | Web search + summarize (post-MVP)              |
+| Data Analyst   | `true`       | Needs to run scripts, process CSV              |
+| Code Reviewer  | `true`       | File read/write in workspace                   |
 
-Khi `useSandbox: true`:
+When `useSandbox: true`:
 
 1. `createVercelSandbox({ runtime: "node24" })` per task
-2. Seed linked documents từ Blob vào sandbox
+2. Seed linked documents from Blob into sandbox
 3. Expose `run_command`, `read_file`, `write_file` tools wrapping `SandboxSession`
-4. Destroy sandbox sau task complete
+4. Destroy sandbox after task complete
 
-## Quyết định kiến trúc
+## Architecture Decisions
 
-1. **AI SDK thuần** — `ToolLoopAgent` (sync) + `DurableAgent` (async), cùng ecosystem
-2. **Vercel Sandbox per-task** — isolated execution; MVP Writer luôn `useSandbox: true`
-3. **Vercel Workflow** — `start()` fire-and-forget, survive deploys/restarts
-4. **NPC dialogue UX** — RPG dialogue box thay chat bubbles; `useChat` ở data layer
+1. **Pure AI SDK** — `ToolLoopAgent` (sync) + `DurableAgent` (async), same ecosystem
+2. **Vercel Sandbox per-task** — isolated execution; MVP Writer always `useSandbox: true`
+3. **Vercel Workflow** — `start()` fire-and-forget, survives deploys/restarts
+4. **NPC dialogue UX** — RPG dialogue box instead of chat bubbles; `useChat` at data layer
 5. **Per-user isolation** — staff, documents, sandbox scoped by `userId`
 
-## Tài liệu liên quan
+## Related docs
 
 - [AGENT-SYSTEM.md](AGENT-SYSTEM.md) — Hiring, delegation logic
 - [DATA-MODEL.md](DATA-MODEL.md) — Database schema

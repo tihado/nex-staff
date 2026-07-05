@@ -1,39 +1,39 @@
 # Eval Framework — Nex Staff
 
-Tài liệu này trả lời: **làm sao evaluate chất lượng worker agent?** — metrics, loại test, và cấu trúc eval harness.
+This document answers: **how do we evaluate worker agent quality?** — metrics, test types, and eval harness structure.
 
-Liên quan: [PRD.md § Evaluation Strategy](PRD.md), [ROADMAP.md § Success Metrics](ROADMAP.md), [AGENT-SYSTEM.md § Supervision](AGENT-SYSTEM.md).
+Related: [PRD.md § Evaluation Strategy](PRD.md), [ROADMAP.md § Success Metrics](ROADMAP.md), [AGENT-SYSTEM.md § Supervision](AGENT-SYSTEM.md).
 
 ---
 
-## Mapping với docs hiện có
+## Mapping to existing docs
 
-| Thành phần | File gốc | Phạm vi đánh giá |
-|------------|----------|------------------|
-| **Routing accuracy** ≥ 90% | PRD, ROADMAP | Assistant chọn đúng staff — **không** đo output worker |
-| **Deliverable quality** ≥ 7/10 human eval | PRD | Chất lượng **output cuối** |
-| **Task completion rate** ≥ 80% | ROADMAP Phase 2 | **Reliability** worker |
-| **RAG citation accuracy** ≥ 85% | ROADMAP Phase 2 | Chất lượng **tool usage** (research staff) |
-| **20-scenario benchmark** | PRD, ROADMAP risks | Test suite end-to-end Assistant + worker |
+| Component | Source file | Evaluation scope |
+|-----------|-------------|------------------|
+| **Routing accuracy** ≥ 90% | PRD, ROADMAP | Assistant picks correct staff — does **not** measure worker output |
+| **Deliverable quality** ≥ 7/10 human eval | PRD | **Final output** quality |
+| **Task completion rate** ≥ 80% | ROADMAP Phase 2 | Worker **reliability** |
+| **RAG citation accuracy** ≥ 85% | ROADMAP Phase 2 | **Tool usage** quality (research staff) |
+| **20-scenario benchmark** | PRD, ROADMAP risks | End-to-end test suite for Assistant + worker |
 | **Latency KPIs** | PRD | first token < 1s; notification < 30s |
 
-Doc này bổ sung **per-staff metrics**, **loại test chi tiết**, và **eval harness structure** — chưa có trong PRD/ROADMAP.
+This doc adds **per-staff metrics**, **detailed test types**, and **eval harness structure** — not yet covered in PRD/ROADMAP.
 
 ---
 
-## Ba lớp đánh giá
+## Three evaluation layers
 
 ```mermaid
 flowchart TB
-    subgraph L1 [Lớp 1 — Routing]
+    subgraph L1 [Layer 1 — Routing]
         R[Routing eval]
     end
-    subgraph L2 [Lớp 2 — Execution]
+    subgraph L2 [Layer 2 — Execution]
         C[Checkpoint pass rate]
         T[Tool error rate]
         CR[Completion rate]
     end
-    subgraph L3 [Lớp 3 — Output]
+    subgraph L3 [Layer 3 — Output]
         D[Deliverable eval]
         RV[review_deliverable]
     end
@@ -42,29 +42,29 @@ flowchart TB
     D --> RV
 ```
 
-| Lớp | Câu hỏi | Khi chạy |
-|-----|---------|----------|
-| **Routing** | Assistant delegate đúng staff không? | Mỗi delegate; CI routing suite |
-| **Execution** | Worker có hoàn thành đúng quy trình không? | Trong lúc task chạy (checkpoints) + sau task |
-| **Output** | Deliverable có usable không? | Sau `workflow.completed` |
+| Layer | Question | When to run |
+|-------|----------|-------------|
+| **Routing** | Does Assistant delegate to the correct staff? | On every delegate; CI routing suite |
+| **Execution** | Does the worker complete the process correctly? | While task runs (checkpoints) + after task |
+| **Output** | Is the deliverable usable? | After `workflow.completed` |
 
 ---
 
-## A. Metrics theo worker (per-staff dashboard)
+## A. Per-staff metrics (per-staff dashboard)
 
-Aggregate từ DB + eval harness. Hiển thị trên `/staff` hoặc internal admin (Phase 2+).
+Aggregated from DB + eval harness. Displayed on `/staff` or internal admin (Phase 2+).
 
-| Metric | Công thức | Nguồn data |
-|--------|-----------|------------|
+| Metric | Formula | Data source |
+|--------|---------|-------------|
 | `completion_rate` | `completed / (completed + failed)` | `task.status` WHERE `staff_id` |
 | `avg_duration_ms` | `AVG(completedAt - startedAt)` | `task` |
-| `retry_rate` | tasks có `metadata.retryCount > 0` / total | `task.metadata` |
-| `deliverable_score` | LLM-judge hoặc human rubric 1–10 | eval harness / `review_deliverable` |
+| `retry_rate` | tasks with `metadata.retryCount > 0` / total | `task.metadata` |
+| `deliverable_score` | LLM-judge or human rubric 1–10 | eval harness / `review_deliverable` |
 | `checkpoint_pass_rate` | checkpoints `verified` / total checkpoints | `task_checkpoint` |
-| `tool_error_rate` | `agent.tool_result` với error / total tool calls | `task_event` |
-| `routing_accuracy` | delegate đúng staff / total scenarios | eval harness routing runner |
+| `tool_error_rate` | `agent.tool_result` with error / total tool calls | `task_event` |
+| `routing_accuracy` | correct staff delegated / total scenarios | eval harness routing runner |
 
-**Target tham chiếu** (từ PRD/ROADMAP):
+**Reference targets** (from PRD/ROADMAP):
 
 | Metric | Target | Phase |
 |--------|--------|-------|
@@ -76,25 +76,25 @@ Aggregate từ DB + eval harness. Hiển thị trên `/staff` hoặc internal ad
 
 ---
 
-## B. Loại test
+## B. Test types
 
 ### 1. Routing eval
 
-**Mục đích:** Assistant chọn đúng staff hoặc đề xuất hire phù hợp.
+**Purpose:** Assistant picks the correct staff or suggests an appropriate hire.
 
 **Input:** User message + existing roster (mock DB).
 
 **Assert:**
-- `delegate_task.staffId` match expected role, hoặc
-- `hire_staff.role` match expected role khi roster trống
+- `delegate_task.staffId` matches expected role, or
+- `hire_staff.role` matches expected role when roster is empty
 
-**Scenarios:** 20 kịch bản PRD — 5 hire mới, 10 delegate existing, 5 edge cases.
+**Scenarios:** 20 PRD scenarios — 5 new hires, 10 delegate existing, 5 edge cases.
 
-Ví dụ scenario YAML:
+Example scenario YAML:
 
 ```yaml
 id: routing-01
-userMessage: "Viết blog 800 từ về AI agents cho startup founders"
+userMessage: "Write an 800-word blog post about AI agents for startup founders"
 roster:
   - { name: Alex, role: Content Writer, status: idle }
 expected:
@@ -104,50 +104,50 @@ expected:
 
 ### 2. Deliverable eval
 
-**Mục đích:** Output usable không cần sửa lớn.
+**Purpose:** Output is usable without major edits.
 
-**Rubric dimensions** (1–10 mỗi dimension, weighted average):
+**Rubric dimensions** (1–10 per dimension, weighted average):
 
-| Dimension | Weight | Mô tả |
-|-----------|--------|-------|
-| Relevance | 30% | Trả lời đúng brief |
-| Completeness | 25% | Đủ nội dung yêu cầu |
-| Tone | 15% | Khớp tone trong brief/metadata |
-| Citations | 20% | Research tasks: có nguồn hợp lệ |
-| Format | 10% | Markdown/structure đúng yêu cầu |
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| Relevance | 30% | Answers the brief correctly |
+| Completeness | 25% | Meets required content |
+| Tone | 15% | Matches tone in brief/metadata |
+| Citations | 20% | Research tasks: valid sources present |
+| Format | 10% | Markdown/structure meets requirements |
 
-**Pass threshold:** weighted score ≥ 7.0 (khớp PRD).
+**Pass threshold:** weighted score ≥ 7.0 (matches PRD).
 
 **Methods:**
-- **LLM-as-judge** — automated trong CI (fast, noisy)
-- **Human spot-check** — 10% sample mỗi sprint (ground truth)
+- **LLM-as-judge** — automated in CI (fast, noisy)
+- **Human spot-check** — 10% sample each sprint (ground truth)
 
-Rubrics chi tiết: `eval/rubrics/` (xem § C).
+Detailed rubrics: `eval/rubrics/` (see § C).
 
 ### 3. Regression eval
 
-**Mục đích:** Staff không drift sau thay đổi prompt/model.
+**Purpose:** Staff does not drift after prompt/model changes.
 
-**Golden tasks:** 5–10 fixed briefs per staff template, chạy lại sau mỗi deploy.
+**Golden tasks:** 5–10 fixed briefs per staff template, re-run after each deploy.
 
-**Assert:** `deliverable_score` không giảm > 1 điểm so với baseline snapshot.
+**Assert:** `deliverable_score` does not drop > 1 point vs baseline snapshot.
 
 ### 4. Tool eval
 
-**Mục đích:** RAG/sandbox tools hoạt động đúng.
+**Purpose:** RAG/sandbox tools work correctly.
 
-**Ví dụ RAG test:**
-- Seed mock document với known facts
+**Example RAG test:**
+- Seed mock document with known facts
 - Delegate research task
 - Assert deliverable cites document ID + fact matches
 
-**Ví dụ sandbox test:**
-- Delegate analyst task với CSV fixture
+**Example sandbox test:**
+- Delegate analyst task with CSV fixture
 - Assert output file exists + chart generated
 
 ### 5. Integration eval
 
-**Mục đích:** Full workflow hire → delegate → deliver.
+**Purpose:** Full workflow hire → delegate → deliver.
 
 **Trigger:** CI nightly against Vercel preview.
 
@@ -159,9 +159,9 @@ Rubrics chi tiết: `eval/rubrics/` (xem § C).
 
 ---
 
-## C. Eval harness (thiết kế)
+## C. Eval harness (design)
 
-Chưa implement — cấu trúc đề xuất:
+Not yet implemented — proposed structure:
 
 ```
 eval/
@@ -174,9 +174,9 @@ eval/
     deliverable.ts     # LLM-as-judge + score aggregation
     integration.ts     # poll task + run deliverable eval
   rubrics/
-    blog-post.md       # tiêu chí chấm Content Writer
-    research-report.md # tiêu chí chấm Researcher
-    data-analysis.md   # tiêu chí chấm Analyst
+    blog-post.md       # scoring criteria for Content Writer
+    research-report.md # scoring criteria for Researcher
+    data-analysis.md   # scoring criteria for Analyst
   fixtures/
     documents/         # mock PDFs/MD for RAG tests
     csv/               # sample data for Analyst
@@ -213,7 +213,7 @@ interface EvalResult {
 
 ---
 
-## D. Rubrics mẫu
+## D. Sample rubrics
 
 ### blog-post.md (Content Writer)
 
@@ -244,9 +244,9 @@ Pass: ≥ 7.0 weighted.
 
 ---
 
-## E. Liên kết với Supervision Loop
+## E. Link to Supervision Loop
 
-Assistant đánh giá worker **trong runtime** qua tools (không chỉ offline eval):
+Assistant evaluates workers **at runtime** via tools (not just offline eval):
 
 | Tool | Eval layer | Doc |
 |------|------------|-----|
@@ -254,24 +254,24 @@ Assistant đánh giá worker **trong runtime** qua tools (không chỉ offline e
 | `review_deliverable` | Output | [AGENT-SYSTEM.md § Supervision](AGENT-SYSTEM.md) |
 | `check_task_status` | Execution (observability) | [AGENT-SYSTEM.md § Task Observability](AGENT-SYSTEM.md) |
 
-Offline eval harness (doc này) bổ sung **regression + benchmark** cho CI; runtime tools bổ sung **per-task quality gate**.
+Offline eval harness (this doc) adds **regression + benchmark** for CI; runtime tools add **per-task quality gate**.
 
 ---
 
-## F. Roadmap eval
+## F. Eval roadmap
 
 | Phase | Deliverable |
 |-------|-------------|
 | 1 | Eval harness MVP: routing runner + 5 deliverable scenarios |
 | 1.5 | Checkpoint pass rate metric; `verify_checkpoint` integration tests |
 | 2 | Regression golden tasks; RAG tool eval; per-staff dashboard |
-| 3 | Eval-driven "level up" — chỉ update staff instructions khi score ≥ baseline |
+| 3 | Eval-driven "level up" — only update staff instructions when score ≥ baseline |
 
-Chi tiết timeline: [ROADMAP.md](ROADMAP.md).
+Timeline details: [ROADMAP.md](ROADMAP.md).
 
 ---
 
-## Tài liệu liên quan
+## Related docs
 
 - [PRD.md](PRD.md) — Evaluation Strategy, KPIs
 - [ROADMAP.md](ROADMAP.md) — Success metrics by phase

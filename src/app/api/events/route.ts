@@ -15,6 +15,7 @@ import type { TaskSummary } from "@/lib/tasks/types";
 import { getServerViewer } from "@/lib/viewer";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 600;
 
 function shouldEmitProgress(taskRow: TaskSummary): boolean {
   return taskRow.status === "pending" || taskRow.status === "running";

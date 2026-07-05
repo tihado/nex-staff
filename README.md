@@ -5,6 +5,7 @@
 Nex Staff is a web platform for **solo founders** who need a company-sized skill set on a one-person budget — and a journey that doesn't grind them down. Most tools help you *work* alone. We help you feel like you're **building with a team**, so you keep showing up.
 
 <p align="center">
+  <img src="docs/images/avatars/king.svg" width="72" alt="Boss" title="Boss" />
   <img src="docs/images/avatars/assistant.svg" width="72" alt="Assistant" title="Assistant" />
   <img src="docs/images/avatars/staff-02.svg" width="72" alt="Aria" title="Aria" />
   <img src="docs/images/avatars/staff-04.svg" width="72" alt="Leo" title="Leo" />

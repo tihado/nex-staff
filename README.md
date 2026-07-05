@@ -4,6 +4,16 @@
 
 Nex Staff is a web platform for **solo founders** who need a company-sized skill set on a one-person budget — and a journey that doesn't grind them down. Most tools help you *work* alone. We help you feel like you're **building with a team**, so you keep showing up.
 
+<p align="center">
+  <img src="docs/images/avatars/king.svg" width="72" alt="Boss" title="Boss" />
+  <img src="docs/images/avatars/assistant.svg" width="72" alt="Assistant" title="Assistant" />
+  <img src="docs/images/avatars/staff-02.svg" width="72" alt="Aria" title="Aria" />
+  <img src="docs/images/avatars/staff-04.svg" width="72" alt="Leo" title="Leo" />
+  <img src="docs/images/avatars/staff-05.svg" width="72" alt="Elena" title="Elena" />
+  <img src="docs/images/avatars/staff-06.svg" width="72" alt="Chloe" title="Chloe" />
+  <img src="docs/images/avatars/staff-09.svg" width="72" alt="Jean-Pierre" title="Jean-Pierre" />
+</p>
+
 ![Nex Staff workspace — top-down pixel office with staff desks, Archive Room, Task Board, and Reception](docs/images/workspace.png)
 
 ---
@@ -45,6 +55,8 @@ Current AI products treat you like a power user in a terminal. Nex Staff treats 
 
 You run a **pixel office** — not a spreadsheet with a chat box. An **Assistant** is your coordinator at Reception. You walk the floor, see who's working, hire specialists, and delegate quests. Staff work **async in the background**; when they finish, you get a **quest complete** moment — a notification, a walk-in, a deliverable to open. Small wins stack up. The project moves. **You stay in the game.**
 
+![Assistant dialogue — RPG overlay for talking to your coordinator at Reception](docs/images/assistant-dialogue.png)
+
 ```
 You (Boss)
     │
@@ -67,6 +79,8 @@ Building alone is hard on morale. Nex Staff is designed around **momentum and pr
 - **People to talk to** — NPC dialogue with the Assistant and staff, not a cold prompt window
 - **Wins you can feel** — task board progress, `!` emotes when work is done, quest-complete banners
 - **Forward motion without waiting** — delegate and keep exploring; staff ship while you plan the next move
+
+![Task Board — active missions, quest detail, and coordinator chat](docs/images/task-board.png)
 
 The goal isn't only faster output. It's making the founder journey **less lonely and less boring** — so you keep building long after the initial excitement fades.
 
